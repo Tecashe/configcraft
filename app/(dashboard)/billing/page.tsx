@@ -46,21 +46,6 @@ export default function BillingPage() {
       if (response.ok) {
         const data = await response.json()
         setSubscription(data)
-      } else if (response.status === 404) {
-        // Create a default free subscription
-        setSubscription({
-          id: "free",
-          plan: "FREE",
-          status: "ACTIVE",
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          usage: {
-            toolsUsed: 0,
-            toolsLimit: 1,
-            teamMembers: 1,
-            teamLimit: 3,
-          },
-          invoices: [],
-        })
       }
     } catch (error) {
       console.error("Failed to fetch subscription:", error)
@@ -120,9 +105,9 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="container mx-auto p-6 max-w-7xl">
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-[#888888]" />
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </div>
     )
@@ -130,10 +115,10 @@ export default function BillingPage() {
 
   if (!subscription) {
     return (
-      <div className="p-6">
+      <div className="container mx-auto p-6 max-w-7xl">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4 text-[#E0E0E0]">No Subscription Found</h1>
-          <p className="text-[#B0B0B0] mb-4">Please contact support to set up your subscription.</p>
+          <h1 className="text-2xl font-bold mb-4">No Subscription Found</h1>
+          <p className="text-muted-foreground mb-4">Please contact support to set up your subscription.</p>
         </div>
       </div>
     )
@@ -201,78 +186,71 @@ export default function BillingPage() {
   ]
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 text-[#E0E0E0]">Billing & Subscription</h1>
-        <p className="text-[#B0B0B0]">Manage your subscription, usage, and billing information</p>
+        <h1 className="text-3xl font-bold mb-2">Billing & Subscription</h1>
+        <p className="text-muted-foreground">Manage your subscription, usage, and billing information</p>
       </div>
 
       {/* Current Plan & Usage */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-[#1E1E1E] border-[#444444]">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between text-[#E0E0E0]">
+            <CardTitle className="flex items-center justify-between">
               Current Plan
-              <Badge
-                variant={subscription.status === "ACTIVE" ? "default" : "secondary"}
-                className="bg-green-600 text-white"
-              >
-                {subscription.status}
-              </Badge>
+              <Badge variant={subscription.status === "ACTIVE" ? "default" : "secondary"}>{subscription.status}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-2 text-[#E0E0E0]">{subscription.plan}</div>
-            <p className="text-[#B0B0B0] mb-4">Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</p>
-            <Button
-              variant="outline"
-              className="w-full border-[#444444] text-[#E0E0E0] hover:bg-[#444444] bg-transparent"
-              onClick={handleManageSubscription}
-            >
+            <div className="text-2xl font-bold mb-2">{subscription.plan}</div>
+            <p className="text-muted-foreground mb-4">
+              Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+            </p>
+            <Button variant="outline" className="w-full bg-transparent" onClick={handleManageSubscription}>
               Manage Subscription
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1E1E1E] border-[#444444]">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-[#E0E0E0]">Tools Usage</CardTitle>
+            <CardTitle>Tools Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-2 text-[#E0E0E0]">
+            <div className="text-2xl font-bold mb-2">
               {subscription.usage.toolsUsed}/{subscription.usage.toolsLimit}
             </div>
-            <div className="w-full bg-[#444444] rounded-full h-2 mb-4">
+            <div className="w-full bg-secondary rounded-full h-2 mb-4">
               <div
-                className="bg-[#888888] h-2 rounded-full"
+                className="bg-primary h-2 rounded-full"
                 style={{
                   width: `${Math.min((subscription.usage.toolsUsed / subscription.usage.toolsLimit) * 100, 100)}%`,
                 }}
               ></div>
             </div>
-            <p className="text-sm text-[#B0B0B0]">
+            <p className="text-sm text-muted-foreground">
               {subscription.usage.toolsLimit - subscription.usage.toolsUsed} tools remaining
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1E1E1E] border-[#444444]">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-[#E0E0E0]">Team Members</CardTitle>
+            <CardTitle>Team Members</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-2 text-[#E0E0E0]">
+            <div className="text-2xl font-bold mb-2">
               {subscription.usage.teamMembers}/{subscription.usage.teamLimit}
             </div>
-            <div className="w-full bg-[#444444] rounded-full h-2 mb-4">
+            <div className="w-full bg-secondary rounded-full h-2 mb-4">
               <div
-                className="bg-[#888888] h-2 rounded-full"
+                className="bg-primary h-2 rounded-full"
                 style={{
                   width: `${Math.min((subscription.usage.teamMembers / subscription.usage.teamLimit) * 100, 100)}%`,
                 }}
               ></div>
             </div>
-            <p className="text-sm text-[#B0B0B0]">
+            <p className="text-sm text-muted-foreground">
               {subscription.usage.teamLimit - subscription.usage.teamMembers} seats available
             </p>
           </CardContent>
@@ -281,13 +259,13 @@ export default function BillingPage() {
 
       {/* Usage Alert */}
       {subscription.usage.toolsUsed / subscription.usage.toolsLimit > 0.8 && (
-        <Card className="mb-8 border-orange-500 bg-orange-950/20">
+        <Card className="mb-8 border-orange-200 bg-orange-50">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-orange-400" />
+              <AlertCircle className="h-5 w-5 text-orange-600" />
               <div>
-                <p className="font-medium text-orange-300">Approaching Tool Limit</p>
-                <p className="text-sm text-orange-400">
+                <p className="font-medium text-orange-800">Approaching Tool Limit</p>
+                <p className="text-sm text-orange-700">
                   You're using {subscription.usage.toolsUsed} of {subscription.usage.toolsLimit} tools. Consider
                   upgrading to avoid interruptions.
                 </p>
@@ -295,7 +273,7 @@ export default function BillingPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="ml-auto border-orange-500 text-orange-300 hover:bg-orange-950 bg-transparent"
+                className="ml-auto bg-transparent"
                 onClick={() => handleUpgrade("PROFESSIONAL")}
               >
                 Upgrade Plan
@@ -307,37 +285,32 @@ export default function BillingPage() {
 
       {/* Subscription Plans */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-6 text-[#E0E0E0]">Available Plans</h2>
+        <h2 className="text-2xl font-bold mb-6">Available Plans</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => (
-            <Card
-              key={plan.name}
-              className={`relative bg-[#1E1E1E] border-[#444444] ${plan.current ? "border-[#888888] shadow-lg" : ""}`}
-            >
+            <Card key={plan.name} className={`relative ${plan.current ? "border-primary shadow-lg" : ""}`}>
               {plan.current && (
-                <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-[#888888] text-[#121212]">
-                  Current Plan
-                </Badge>
+                <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2">Current Plan</Badge>
               )}
               <CardHeader>
-                <CardTitle className="text-xl text-[#E0E0E0]">{plan.name}</CardTitle>
-                <div className="text-3xl font-bold text-[#E0E0E0]">
+                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                <div className="text-3xl font-bold">
                   {plan.price}
-                  <span className="text-sm font-normal text-[#B0B0B0]">/{plan.period}</span>
+                  <span className="text-sm font-normal text-muted-foreground">/{plan.period}</span>
                 </div>
-                <CardDescription className="text-[#B0B0B0]">{plan.description}</CardDescription>
+                <CardDescription>{plan.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 mb-6">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-400" />
-                      <span className="text-sm text-[#E0E0E0]">{feature}</span>
+                      <Check className="h-4 w-4 text-green-600" />
+                      <span className="text-sm">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Button
-                  className={`w-full ${plan.current ? "border-[#444444] text-[#E0E0E0] hover:bg-[#444444]" : "bg-[#888888] hover:bg-[#666666] text-[#121212]"}`}
+                  className="w-full"
                   variant={plan.current ? "outline" : "default"}
                   disabled={plan.current || upgrading === plan.planKey}
                   onClick={() => (plan.name === "Enterprise" ? null : handleUpgrade(plan.planKey))}
@@ -360,50 +333,45 @@ export default function BillingPage() {
 
       {/* Payment Method & Invoices */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="bg-[#1E1E1E] border-[#444444]">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-[#E0E0E0]">
+            <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
               Payment Method
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-[#B0B0B0] mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Manage your payment methods through the Stripe billing portal.
             </p>
-            <Button
-              variant="outline"
-              className="w-full border-[#444444] text-[#E0E0E0] hover:bg-[#444444] bg-transparent"
-              onClick={handleManageSubscription}
-            >
+            <Button variant="outline" className="w-full bg-transparent" onClick={handleManageSubscription}>
               Manage Payment Methods
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1E1E1E] border-[#444444]">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-[#E0E0E0]">Recent Invoices</CardTitle>
+            <CardTitle>Recent Invoices</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {subscription.invoices.length > 0 ? (
                 subscription.invoices.map((invoice) => (
-                  <div
-                    key={invoice.id}
-                    className="flex items-center justify-between p-3 border border-[#444444] rounded-lg"
-                  >
+                  <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
-                      <p className="font-medium text-[#E0E0E0]">${(invoice.amount / 100).toFixed(2)}</p>
-                      <p className="text-sm text-[#B0B0B0]">{new Date(invoice.createdAt).toLocaleDateString()}</p>
+                      <p className="font-medium">${(invoice.amount / 100).toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(invoice.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
                     <div className="text-right">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs bg-[#444444] text-[#B0B0B0]">
+                        <Badge variant="secondary" className="text-xs">
                           {invoice.status}
                         </Badge>
                         {invoice.pdfUrl && (
-                          <Button variant="ghost" size="sm" asChild className="text-[#888888] hover:text-[#E0E0E0]">
+                          <Button variant="ghost" size="sm" asChild>
                             <a href={invoice.pdfUrl} target="_blank" rel="noopener noreferrer">
                               <Download className="h-4 w-4" />
                             </a>
@@ -414,15 +382,11 @@ export default function BillingPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-[#B0B0B0]">No invoices yet</p>
+                <p className="text-sm text-muted-foreground">No invoices yet</p>
               )}
             </div>
-            <Separator className="my-4 bg-[#444444]" />
-            <Button
-              variant="outline"
-              className="w-full border-[#444444] text-[#E0E0E0] hover:bg-[#444444] bg-transparent"
-              onClick={handleManageSubscription}
-            >
+            <Separator className="my-4" />
+            <Button variant="outline" className="w-full bg-transparent" onClick={handleManageSubscription}>
               View All Invoices
             </Button>
           </CardContent>

@@ -1,47 +1,46 @@
-"use client"
+ "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
-  Search,
   Plus,
+  Search,
   MoreHorizontal,
   Eye,
+  Edit,
+  Copy,
   Trash2,
   ExternalLink,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   Loader2,
+  Wrench,
+  Calendar,
+  Users,
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 interface Tool {
   id: string
   name: string
   description: string
+  status: string
   category: string
-  status: "DRAFT" | "GENERATING" | "GENERATED" | "PUBLISHED" | "ERROR"
-  generationStatus: "pending" | "generating" | "generated" | "error"
   createdAt: string
   updatedAt: string
-  previewUrl?: string
   publishedUrl?: string
-  generationError?: string
+  _count?: {
+    usageRecords: number
+  }
 }
 
 export default function ToolsPage() {
   const [tools, setTools] = useState<Tool[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
-  const { toast } = useToast()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
 
   useEffect(() => {
     fetchTools()
@@ -52,263 +51,270 @@ export default function ToolsPage() {
       const response = await fetch("/api/tools")
       if (response.ok) {
         const data = await response.json()
-        setTools(data)
+        setTools(data.tools || [])
       }
     } catch (error) {
       console.error("Failed to fetch tools:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load tools",
-        variant: "destructive",
-      })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (toolId: string) => {
-    try {
-      const response = await fetch(`/api/tools/${toolId}`, {
-        method: "DELETE",
-      })
-      if (response.ok) {
-        setTools(tools.filter((tool) => tool.id !== toolId))
-        toast({
-          title: "Tool Deleted",
-          description: "Tool has been successfully deleted.",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete tool",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const filteredTools = tools.filter((tool) => {
-    const matchesSearch =
-      tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.category.toLowerCase().includes(searchQuery.toLowerCase())
-
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "published" && tool.status === "PUBLISHED") ||
-      (activeTab === "draft" && tool.status === "DRAFT") ||
-      (activeTab === "generating" && tool.status === "GENERATING")
-
-    return matchesSearch && matchesTab
-  })
-
-  const getStatusIcon = (status: string, generationStatus: string) => {
-    switch (status) {
-      case "PUBLISHED":
-        return <CheckCircle className="h-4 w-4 text-green-400" />
-      case "GENERATING":
-        return <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
-      case "ERROR":
-        return <AlertCircle className="h-4 w-4 text-red-400" />
-      default:
-        return <Clock className="h-4 w-4 text-[#888888]" />
-    }
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "PUBLISHED":
-        return "bg-green-600 text-white"
+      case "DRAFT":
+        return "bg-[#444444] text-[#B0B0B0]"
       case "GENERATING":
-        return "bg-blue-600 text-white"
+        return "bg-blue-900 text-blue-200"
       case "GENERATED":
+        return "bg-green-900 text-green-200"
+      case "PUBLISHED":
         return "bg-[#888888] text-[#121212]"
+      case "ARCHIVED":
+        return "bg-orange-900 text-orange-200"
       case "ERROR":
-        return "bg-red-600 text-white"
+        return "bg-red-900 text-red-200"
       default:
         return "bg-[#444444] text-[#B0B0B0]"
     }
   }
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "DRAFT":
+        return "Draft"
+      case "GENERATING":
+        return "Generating..."
+      case "GENERATED":
+        return "Ready"
+      case "PUBLISHED":
+        return "Live"
+      case "ARCHIVED":
+        return "Archived"
+      case "ERROR":
+        return "Error"
+      default:
+        return status
+    }
+  }
+
+  const filteredTools = tools.filter((tool) => {
+    const matchesSearch =
+      tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tool.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === "all" || tool.category === selectedCategory
+
+    return matchesSearch && matchesCategory
+  })
+
+  const categories = ["all", ...Array.from(new Set(tools.map((tool) => tool.category)))]
+
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-[#888888]" />
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-[#888888]" />
+          <p className="text-[#B0B0B0]">Loading your tools...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-[#121212]">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-[#E0E0E0]">Tools</h1>
-          <p className="text-[#B0B0B0] mt-1">Manage your custom business tools</p>
-        </div>
-        <Link href="/tools/create">
-          <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212]">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Tool
-          </Button>
-        </Link>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[#B0B0B0]" />
-            <Input
-              placeholder="Search tools..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-[#1E1E1E] border-[#444444] text-[#E0E0E0]"
-            />
+      <div className="border-b border-[#444444] bg-[#121212]">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-3xl font-bold text-[#E0E0E0]">My Tools</h1>
+              <p className="text-[#B0B0B0]">Manage and deploy your custom business tools</p>
+            </div>
+            <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212]" asChild>
+              <Link href="/tools/create">
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Tool
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-[#1E1E1E] border-[#444444]">
-          <TabsTrigger value="all" className="data-[state=active]:bg-[#888888] data-[state=active]:text-[#121212]">
-            All Tools ({tools.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="published"
-            className="data-[state=active]:bg-[#888888] data-[state=active]:text-[#121212]"
-          >
-            Published ({tools.filter((t) => t.status === "PUBLISHED").length})
-          </TabsTrigger>
-          <TabsTrigger value="draft" className="data-[state=active]:bg-[#888888] data-[state=active]:text-[#121212]">
-            Draft ({tools.filter((t) => t.status === "DRAFT").length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="generating"
-            className="data-[state=active]:bg-[#888888] data-[state=active]:text-[#121212]"
-          >
-            Generating ({tools.filter((t) => t.status === "GENERATING").length})
-          </TabsTrigger>
-        </TabsList>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filters and Search */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[#B0B0B0]" />
+            <Input
+              placeholder="Search tools by name or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
+            />
+          </div>
+          <div className="flex gap-2">
+            {categories.map((category) => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className={
+                  selectedCategory === category
+                    ? "bg-[#888888] text-[#121212]"
+                    : "border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
+                }
+              >
+                {category === "all" ? "All" : category}
+              </Button>
+            ))}
+          </div>
+        </div>
 
-        <TabsContent value={activeTab} className="mt-6">
-          {filteredTools.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTools.map((tool) => (
-                <Card key={tool.id} className="bg-[#1E1E1E] border-[#444444] hover:border-[#888888] transition-colors">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
+        {/* Tools Grid */}
+        {filteredTools.length === 0 ? (
+          <Card className="bg-[#121212] border-[#444444]">
+            <CardContent className="p-12 text-center">
+              <Wrench className="w-16 h-16 text-[#888888] mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-[#E0E0E0] mb-2">
+                {searchTerm || selectedCategory !== "all" ? "No tools found" : "No tools yet"}
+              </h3>
+              <p className="text-[#B0B0B0] mb-6">
+                {searchTerm || selectedCategory !== "all"
+                  ? "Try adjusting your search or filter criteria."
+                  : "Create your first custom business tool to get started."}
+              </p>
+              {!searchTerm && selectedCategory === "all" && (
+                <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212]" asChild>
+                  <Link href="/tools/create">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Your First Tool
+                  </Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTools.map((tool) => (
+              <Card
+                key={tool.id}
+                className="bg-[#121212] border-[#444444] hover:border-[#888888] transition-colors group"
+              >
+                <CardContent className="p-0">
+                  {/* Tool Preview */}
+                  <div className="aspect-video bg-[#444444] rounded-t-lg overflow-hidden relative">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Wrench className="w-12 h-12 text-[#888888]" />
+                    </div>
+                    {tool.status === "PUBLISHED" && (
+                      <div className="absolute top-2 right-2">
+                        <Badge className="bg-green-900 text-green-200">
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          Live
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tool Info */}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <CardTitle className="text-lg text-[#E0E0E0] mb-1">{tool.name}</CardTitle>
-                        <CardDescription className="text-[#B0B0B0] text-sm">{tool.description}</CardDescription>
+                        <h3 className="font-semibold text-[#E0E0E0] text-lg mb-1 line-clamp-1">{tool.name}</h3>
+                        <p className="text-sm text-[#B0B0B0] mb-2">{tool.category}</p>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-[#B0B0B0] hover:text-[#E0E0E0]">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-[#B0B0B0] hover:bg-[#444444] opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-[#1E1E1E] border-[#444444]">
-                          <DropdownMenuItem asChild className="text-[#E0E0E0] hover:bg-[#444444]">
+                        <DropdownMenuContent align="end" className="bg-[#121212] border-[#444444]">
+                          <DropdownMenuItem className="text-[#E0E0E0] hover:bg-[#444444]" asChild>
                             <Link href={`/tools/${tool.id}`}>
-                              <Eye className="h-4 w-4 mr-2" />
+                              <Eye className="w-4 h-4 mr-2" />
                               View Details
                             </Link>
                           </DropdownMenuItem>
-                          {tool.previewUrl && (
-                            <DropdownMenuItem asChild className="text-[#E0E0E0] hover:bg-[#444444]">
-                              <a href={tool.previewUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Open Preview
+                          {tool.status === "PUBLISHED" && tool.publishedUrl && (
+                            <DropdownMenuItem className="text-[#E0E0E0] hover:bg-[#444444]" asChild>
+                              <a href={tool.publishedUrl} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Open Tool
                               </a>
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(tool.id)}
-                            className="text-red-400 hover:bg-red-950"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                          <DropdownMenuItem className="text-[#E0E0E0] hover:bg-[#444444]">
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-[#E0E0E0] hover:bg-[#444444]">
+                            <Copy className="w-4 h-4 mr-2" />
+                            Clone
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-400 hover:bg-red-900/20">
+                            <Trash2 className="w-4 h-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary" className="text-xs bg-[#444444] text-[#B0B0B0]">
-                          {tool.category}
-                        </Badge>
-                        <div className="flex items-center space-x-2">
-                          {getStatusIcon(tool.status, tool.generationStatus)}
-                          <Badge className={`text-xs ${getStatusColor(tool.status)}`}>{tool.status}</Badge>
-                        </div>
-                      </div>
 
-                      {tool.generationError && (
-                        <div className="text-xs text-red-400 bg-red-950/20 p-2 rounded">{tool.generationError}</div>
-                      )}
+                    <p className="text-sm text-[#B0B0B0] mb-4 line-clamp-2">
+                      {tool.description || "No description available"}
+                    </p>
 
-                      <div className="flex items-center justify-between text-xs text-[#B0B0B0]">
-                        <span>Created {new Date(tool.createdAt).toLocaleDateString()}</span>
-                        <span>Updated {new Date(tool.updatedAt).toLocaleDateString()}</span>
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Link href={`/tools/${tool.id}`} className="flex-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full border-[#444444] text-[#E0E0E0] hover:bg-[#444444] bg-transparent"
-                          >
-                            View Details
-                          </Button>
-                        </Link>
-                        {tool.previewUrl && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            asChild
-                            className="border-[#444444] text-[#E0E0E0] hover:bg-[#444444] bg-transparent"
-                          >
-                            <a href={tool.previewUrl} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
+                    {/* Status and Stats */}
+                    <div className="flex items-center justify-between mb-4">
+                      <Badge className={getStatusColor(tool.status)}>{getStatusLabel(tool.status)}</Badge>
+                      <div className="flex items-center text-xs text-[#B0B0B0]">
+                        <Users className="w-3 h-3 mr-1" />
+                        {tool._count?.usageRecords || 0} uses
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-[#444444] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-[#B0B0B0]" />
-              </div>
-              <h3 className="text-lg font-medium text-[#E0E0E0] mb-2">
-                {searchQuery ? "No tools found" : "No tools yet"}
-              </h3>
-              <p className="text-[#B0B0B0] mb-4">
-                {searchQuery ? "Try adjusting your search terms" : "Create your first tool to get started"}
-              </p>
-              {!searchQuery && (
-                <Link href="/tools/create">
-                  <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212]">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Tool
-                  </Button>
-                </Link>
-              )}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+
+                    {/* Dates */}
+                    <div className="flex items-center justify-between text-xs text-[#B0B0B0] mb-4">
+                      <div className="flex items-center">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        Created {new Date(tool.createdAt).toLocaleDateString()}
+                      </div>
+                      <div>Updated {new Date(tool.updatedAt).toLocaleDateString()}</div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1 bg-[#888888] hover:bg-[#666666] text-[#121212]" asChild>
+                        <Link href={`/tools/${tool.id}`}>
+                          <Eye className="w-3 h-3 mr-1" />
+                          View
+                        </Link>
+                      </Button>
+                      {tool.status === "PUBLISHED" && tool.publishedUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
+                          asChild
+                        >
+                          <a href={tool.publishedUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
