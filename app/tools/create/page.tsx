@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,126 +9,225 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Separator } from "@/components/ui/separator"
 import {
-  ArrowLeft,
+  Zap,
   ArrowRight,
-  Sparkles,
-  Wrench,
-  Users,
-  BarChart3,
-  DollarSign,
-  Calendar,
-  Package,
+  ArrowLeft,
   Loader2,
   CheckCircle,
-  Lightbulb,
+  MessageSquare,
+  Brain,
+  Clock,
+  Users,
+  Database,
+  Workflow,
 } from "lucide-react"
 import Link from "next/link"
 
+interface RequirementsAnalysis {
+  toolType: string
+  dataFields: string[]
+  userRoles: string[]
+  workflows: string[]
+  integrations: string[]
+  complexity: "simple" | "medium" | "complex"
+  estimatedHours: number
+  followUpQuestions: string[]
+}
+
 export default function CreateToolPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const templateId = searchParams.get("template")
+
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
+  const [analysis, setAnalysis] = useState<RequirementsAnalysis | null>(null)
+  const [conversationHistory, setConversationHistory] = useState<
+    Array<{
+      type: "user" | "ai"
+      content: string
+      timestamp: Date
+    }>
+  >([])
 
   const [formData, setFormData] = useState({
     name: "",
-    category: "",
     description: "",
     requirements: "",
-    features: [] as string[],
+    category: "",
+    additionalContext: "",
   })
 
-  const totalSteps = 3
+  const totalSteps = 4
   const progress = (currentStep / totalSteps) * 100
 
-  const categories = [
-    { value: "sales", label: "Sales & CRM", icon: BarChart3, description: "Lead tracking, pipeline management" },
-    { value: "hr", label: "HR & People", icon: Users, description: "Employee management, onboarding" },
-    { value: "finance", label: "Finance", icon: DollarSign, description: "Expense tracking, budgeting" },
-    { value: "operations", label: "Operations", icon: Package, description: "Inventory, asset management" },
-    { value: "project", label: "Project Management", icon: Calendar, description: "Task tracking, collaboration" },
-    { value: "other", label: "Other", icon: Wrench, description: "Custom business processes" },
-  ]
+  // Load template data if templateId is provided
+  useEffect(() => {
+    if (templateId) {
+      // In a real app, fetch template data from API
+      const templateData = getTemplateData(templateId)
+      if (templateData) {
+        setFormData({
+          name: templateData.name,
+          description: templateData.description,
+          requirements: templateData.requirements,
+          category: templateData.category,
+          additionalContext: "",
+        })
+      }
+    }
+  }, [templateId])
 
-  const commonFeatures = [
-    "User authentication",
-    "Data export/import",
-    "Email notifications",
-    "Team collaboration",
-    "Mobile responsive",
-    "Search & filtering",
-    "Analytics dashboard",
-    "API integration",
-    "Custom branding",
-    "Approval workflows",
-  ]
-
-  const examples = {
-    sales:
-      "A customer relationship management system that tracks leads from initial contact through deal closure. Include contact information, deal stages, follow-up reminders, sales pipeline visualization, and team collaboration features.",
-    hr: "An employee onboarding system that guides new hires through their first weeks. Include document upload, task checklists, training modules, manager assignments, and progress tracking.",
-    finance:
-      "An expense reporting tool that allows employees to submit expenses with receipt photos. Include approval workflows, budget tracking, reimbursement status, and spending analytics.",
-    operations:
-      "An inventory management system that tracks stock levels across multiple locations. Include supplier information, reorder alerts, barcode scanning, and inventory reports.",
-    project:
-      "A project management dashboard that tracks tasks, deadlines, and team progress. Include Kanban boards, time tracking, file sharing, and milestone reporting.",
-    other:
-      "Describe your specific business process in detail, including who will use it, what data it should handle, and what outcomes you want to achieve.",
+  const getTemplateData = (id: string) => {
+    const templates: Record<string, any> = {
+      "lead-tracker": {
+        name: "Lead Tracking System",
+        description: "Track leads from initial contact through deal closure",
+        requirements:
+          "I need a customer onboarding tracker that helps my sales team manage leads from initial contact through deal closure. It should include contact information, deal stages, follow-up reminders, and team collaboration features.",
+        category: "Sales & CRM",
+      },
+      "inventory-management": {
+        name: "Inventory Management System",
+        description: "Track stock levels, manage suppliers, and automate reorder processes",
+        requirements:
+          "I need an inventory management system to track stock levels, manage suppliers, and automate reorder processes. It should include low stock alerts, supplier management, purchase order generation, and inventory reports.",
+        category: "Operations",
+      },
+      "expense-reporting": {
+        name: "Expense Report System",
+        description: "Submit, approve, and track employee expenses",
+        requirements:
+          "I need an employee expense reporting system where employees can submit expenses with receipts, managers can approve them, and we can track reimbursements. It should include receipt upload, approval workflows, and expense categories.",
+        category: "Finance",
+      },
+    }
+    return templates[id]
   }
 
-  const handleFeatureToggle = (feature: string) => {
+  const handleAnalyzeRequirements = async () => {
+    if (!formData.requirements || formData.requirements.length < 20) {
+      setError("Please provide at least 20 characters describing your requirements")
+      return
+    }
+
+    setAnalyzing(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/tools/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requirements: formData.requirements,
+          context: conversationHistory.map((h) => h.content),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to analyze requirements")
+      }
+
+      const result = await response.json()
+      setAnalysis(result.analysis)
+
+      // Add to conversation history
+      setConversationHistory((prev) => [
+        ...prev,
+        {
+          type: "user",
+          content: formData.requirements,
+          timestamp: new Date(),
+        },
+        {
+          type: "ai",
+          content: `I've analyzed your requirements and identified this as a ${result.analysis.toolType} with ${result.analysis.complexity} complexity. Here are some follow-up questions to refine the requirements.`,
+          timestamp: new Date(),
+        },
+      ])
+
+      setCurrentStep(2)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to analyze requirements")
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  const handleAnswerFollowUp = async (question: string, answer: string) => {
+    if (!answer.trim()) return
+
+    setConversationHistory((prev) => [
+      ...prev,
+      {
+        type: "user",
+        content: `Q: ${question}\nA: ${answer}`,
+        timestamp: new Date(),
+      },
+    ])
+
+    // Update additional context
     setFormData((prev) => ({
       ...prev,
-      features: prev.features.includes(feature)
-        ? prev.features.filter((f) => f !== feature)
-        : [...prev.features, feature],
+      additionalContext: prev.additionalContext + `\n${question}: ${answer}`,
     }))
   }
 
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
+  const handleGenerateTool = async () => {
+    if (!formData.name || !formData.requirements) {
+      setError("Please provide a tool name and requirements")
+      return
     }
-  }
 
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
-
-  const handleSubmit = async () => {
     setLoading(true)
     setError(null)
 
     try {
-      const response = await fetch("/api/tools", {
+      const response = await fetch("/api/tools/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           name: formData.name,
-          category: formData.category,
           description: formData.description,
-          requirements: formData.requirements,
-          features: formData.features,
+          requirements: formData.requirements + "\n\nAdditional Context:\n" + formData.additionalContext,
+          category: formData.category || analysis?.toolType || "Custom",
         }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to create tool")
+        throw new Error(errorData.error || "Failed to generate tool")
       }
 
       const result = await response.json()
-      router.push(`/tools/${result.id}`)
+
+      // Redirect to tool page to show generation progress
+      router.push(`/tools/${result.toolId}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred while creating the tool")
+      setError(err instanceof Error ? err.message : "Failed to generate tool")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const getComplexityColor = (complexity: string) => {
+    switch (complexity) {
+      case "simple":
+        return "bg-green-900 text-green-200"
+      case "medium":
+        return "bg-yellow-900 text-yellow-200"
+      case "complex":
+        return "bg-red-900 text-red-200"
+      default:
+        return "bg-gray-900 text-gray-200"
     }
   }
 
@@ -137,26 +236,18 @@ export default function CreateToolPage() {
       {/* Header */}
       <div className="border-b" style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                style={{ borderColor: "#444444", color: "#B0B0B0", backgroundColor: "transparent" }}
+          <div className="flex justify-between items-center py-4">
+            <Link href="/tools" className="flex items-center space-x-2">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: "#888888" }}
               >
-                <Link href="/tools">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Tools
-                </Link>
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold" style={{ color: "#E0E0E0" }}>
-                  Create New Tool
-                </h1>
-                <p style={{ color: "#B0B0B0" }}>Build a custom business tool with AI</p>
+                <Zap className="w-5 h-5" style={{ color: "#121212" }} />
               </div>
-            </div>
+              <span className="text-xl font-bold" style={{ color: "#E0E0E0" }}>
+                ConfigCraft
+              </span>
+            </Link>
             <div className="text-sm" style={{ color: "#B0B0B0" }}>
               Step {currentStep} of {totalSteps}
             </div>
@@ -164,8 +255,8 @@ export default function CreateToolPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-3xl mx-auto">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-4xl mx-auto">
           {/* Progress Bar */}
           <div className="mb-8">
             <Progress value={progress} className="h-2" />
@@ -179,27 +270,27 @@ export default function CreateToolPage() {
             </div>
           )}
 
-          {/* Step 1: Basic Information */}
+          {/* Step 1: Requirements Input */}
           {currentStep === 1 && (
-            <Card style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
+            <Card className="shadow-xl" style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
               <CardHeader className="text-center">
                 <div
                   className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
                   style={{ backgroundColor: "#888888" }}
                 >
-                  <Sparkles className="w-8 h-8" style={{ color: "#121212" }} />
+                  <MessageSquare className="w-8 h-8" style={{ color: "#121212" }} />
                 </div>
                 <CardTitle className="text-2xl font-bold" style={{ color: "#E0E0E0" }}>
-                  What tool do you want to build?
+                  Describe Your Business Tool
                 </CardTitle>
                 <CardDescription style={{ color: "#B0B0B0" }}>
-                  Give your tool a name and choose a category
+                  Tell us what you need and our AI will help design the perfect solution
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="name" style={{ color: "#E0E0E0" }}>
-                    Tool name *
+                    Tool Name *
                   </Label>
                   <Input
                     id="name"
@@ -212,98 +303,26 @@ export default function CreateToolPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label style={{ color: "#E0E0E0" }}>Category *</Label>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {categories.map((category) => (
-                      <Card
-                        key={category.value}
-                        className={`cursor-pointer transition-all hover:shadow-md ${
-                          formData.category === category.value ? "ring-2" : ""
-                        }`}
-                        style={{
-                          backgroundColor: formData.category === category.value ? "#444444" : "#121212",
-                          borderColor: formData.category === category.value ? "#888888" : "#444444",
-                        }}
-                        onClick={() => setFormData({ ...formData, category: category.value })}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center space-x-3">
-                            <div
-                              className="w-10 h-10 rounded-lg flex items-center justify-center"
-                              style={{ backgroundColor: "#888888" }}
-                            >
-                              <category.icon className="w-5 h-5" style={{ color: "#121212" }} />
-                            </div>
-                            <div>
-                              <h3 className="font-medium" style={{ color: "#E0E0E0" }}>
-                                {category.label}
-                              </h3>
-                              <p className="text-sm" style={{ color: "#B0B0B0" }}>
-                                {category.description}
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="description" style={{ color: "#E0E0E0" }}>
-                    Brief description
+                    Brief Description
                   </Label>
-                  <Textarea
+                  <Input
                     id="description"
-                    placeholder="A short description of what this tool will do..."
+                    placeholder="One-line summary of what this tool does"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
                     style={{ backgroundColor: "#444444", borderColor: "#444444", color: "#E0E0E0" }}
                     className="placeholder:text-[#B0B0B0]"
                   />
                 </div>
 
-                <div className="flex justify-end pt-4">
-                  <Button
-                    onClick={handleNext}
-                    disabled={!formData.name || !formData.category}
-                    style={{ backgroundColor: "#888888", color: "#121212" }}
-                    className="hover:opacity-90"
-                  >
-                    Continue
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Detailed Requirements */}
-          {currentStep === 2 && (
-            <Card style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
-              <CardHeader className="text-center">
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                  style={{ backgroundColor: "#888888" }}
-                >
-                  <Lightbulb className="w-8 h-8" style={{ color: "#121212" }} />
-                </div>
-                <CardTitle className="text-2xl font-bold" style={{ color: "#E0E0E0" }}>
-                  Describe your requirements
-                </CardTitle>
-                <CardDescription style={{ color: "#B0B0B0" }}>
-                  The more detail you provide, the better your tool will be
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="requirements" style={{ color: "#E0E0E0" }}>
-                    Detailed requirements *
+                    Detailed Requirements *
                   </Label>
                   <Textarea
                     id="requirements"
-                    placeholder={examples[formData.category as keyof typeof examples] || examples.other}
+                    placeholder="Describe in detail what you need this tool to do. Include who will use it, what data it should handle, what processes it should support, and what outcomes you want to achieve..."
                     value={formData.requirements}
                     onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
                     rows={8}
@@ -311,7 +330,7 @@ export default function CreateToolPage() {
                     className="placeholder:text-[#B0B0B0]"
                   />
                   <p className="text-xs" style={{ color: "#888888" }}>
-                    Include who will use it, what data it should handle, key features needed, and desired outcomes.
+                    {formData.requirements.length}/20 characters minimum
                   </p>
                 </div>
 
@@ -320,25 +339,168 @@ export default function CreateToolPage() {
                     💡 Tips for better results:
                   </h4>
                   <ul className="text-sm space-y-1" style={{ color: "#B0B0B0" }}>
-                    <li>• Be specific about user roles and permissions</li>
-                    <li>• Mention any integrations you need</li>
-                    <li>• Describe the workflow step by step</li>
-                    <li>• Include any reporting or analytics needs</li>
+                    <li>• Be specific about who will use the tool</li>
+                    <li>• Describe the data you need to track</li>
+                    <li>• Mention any workflows or approval processes</li>
+                    <li>• Include integration requirements</li>
                   </ul>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button
+                    onClick={handleAnalyzeRequirements}
+                    disabled={
+                      !formData.name || !formData.requirements || formData.requirements.length < 20 || analyzing
+                    }
+                    style={{ backgroundColor: "#888888", color: "#121212" }}
+                    className="hover:opacity-90"
+                  >
+                    {analyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-4 h-4 mr-2" />
+                        Analyze with AI
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 2: AI Analysis Results */}
+          {currentStep === 2 && analysis && (
+            <Card className="shadow-xl" style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
+              <CardHeader className="text-center">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: "#888888" }}
+                >
+                  <Brain className="w-8 h-8" style={{ color: "#121212" }} />
+                </div>
+                <CardTitle className="text-2xl font-bold" style={{ color: "#E0E0E0" }}>
+                  AI Analysis Complete
+                </CardTitle>
+                <CardDescription style={{ color: "#B0B0B0" }}>
+                  Here's what we understand about your requirements
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Analysis Overview */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                        Tool Type
+                      </h3>
+                      <Badge style={{ backgroundColor: "#888888", color: "#121212" }}>{analysis.toolType}</Badge>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                        Complexity
+                      </h3>
+                      <Badge className={getComplexityColor(analysis.complexity)}>{analysis.complexity}</Badge>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                        <Clock className="w-4 h-4 inline mr-1" />
+                        Estimated Time
+                      </h3>
+                      <p style={{ color: "#B0B0B0" }}>{analysis.estimatedHours} hours</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                        <Users className="w-4 h-4 inline mr-1" />
+                        User Roles
+                      </h3>
+                      <div className="flex flex-wrap gap-1">
+                        {analysis.userRoles.map((role, index) => (
+                          <Badge key={index} variant="outline" style={{ borderColor: "#444444", color: "#B0B0B0" }}>
+                            {role}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                        <Database className="w-4 h-4 inline mr-1" />
+                        Data Fields
+                      </h3>
+                      <div className="flex flex-wrap gap-1">
+                        {analysis.dataFields.slice(0, 4).map((field, index) => (
+                          <Badge key={index} variant="outline" style={{ borderColor: "#444444", color: "#B0B0B0" }}>
+                            {field}
+                          </Badge>
+                        ))}
+                        {analysis.dataFields.length > 4 && (
+                          <Badge variant="outline" style={{ borderColor: "#444444", color: "#B0B0B0" }}>
+                            +{analysis.dataFields.length - 4} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                        <Workflow className="w-4 h-4 inline mr-1" />
+                        Key Workflows
+                      </h3>
+                      <div className="flex flex-wrap gap-1">
+                        {analysis.workflows.slice(0, 3).map((workflow, index) => (
+                          <Badge key={index} variant="outline" style={{ borderColor: "#444444", color: "#B0B0B0" }}>
+                            {workflow}
+                          </Badge>
+                        ))}
+                        {analysis.workflows.length > 3 && (
+                          <Badge variant="outline" style={{ borderColor: "#444444", color: "#B0B0B0" }}>
+                            +{analysis.workflows.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator style={{ backgroundColor: "#444444" }} />
+
+                {/* Follow-up Questions */}
+                <div>
+                  <h3 className="font-semibold mb-4" style={{ color: "#E0E0E0" }}>
+                    Help us refine your requirements
+                  </h3>
+                  <div className="space-y-4">
+                    {analysis.followUpQuestions.map((question, index) => (
+                      <FollowUpQuestion
+                        key={index}
+                        question={question}
+                        onAnswer={(answer) => handleAnswerFollowUp(question, answer)}
+                      />
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex justify-between pt-4">
                   <Button
                     variant="outline"
-                    onClick={handleBack}
+                    onClick={() => setCurrentStep(1)}
                     style={{ borderColor: "#444444", color: "#B0B0B0", backgroundColor: "transparent" }}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
                   <Button
-                    onClick={handleNext}
-                    disabled={!formData.requirements}
+                    onClick={() => setCurrentStep(3)}
                     style={{ backgroundColor: "#888888", color: "#121212" }}
                     className="hover:opacity-90"
                   >
@@ -350,9 +512,9 @@ export default function CreateToolPage() {
             </Card>
           )}
 
-          {/* Step 3: Features & Review */}
-          {currentStep === 3 && (
-            <Card style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
+          {/* Step 3: Review & Customize */}
+          {currentStep === 3 && analysis && (
+            <Card className="shadow-xl" style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
               <CardHeader className="text-center">
                 <div
                   className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -361,111 +523,86 @@ export default function CreateToolPage() {
                   <CheckCircle className="w-8 h-8" style={{ color: "#121212" }} />
                 </div>
                 <CardTitle className="text-2xl font-bold" style={{ color: "#E0E0E0" }}>
-                  Select additional features
+                  Review & Customize
                 </CardTitle>
                 <CardDescription style={{ color: "#B0B0B0" }}>
-                  Choose optional features to include in your tool
+                  Final review before we generate your custom business tool
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <Label style={{ color: "#E0E0E0" }}>Optional features (select any that apply)</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {commonFeatures.map((feature) => (
-                      <Badge
-                        key={feature}
-                        variant={formData.features.includes(feature) ? "default" : "outline"}
-                        className={`cursor-pointer p-2 text-center justify-center ${
-                          formData.features.includes(feature) ? "" : "hover:opacity-80"
-                        }`}
+                {/* Conversation History */}
+                <div>
+                  <h3 className="font-semibold mb-4" style={{ color: "#E0E0E0" }}>
+                    Conversation Summary
+                  </h3>
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {conversationHistory.map((message, index) => (
+                      <div
+                        key={index}
+                        className={`p-3 rounded-lg ${message.type === "user" ? "ml-4" : "mr-4"}`}
                         style={{
-                          backgroundColor: formData.features.includes(feature) ? "#888888" : "transparent",
-                          color: formData.features.includes(feature) ? "#121212" : "#B0B0B0",
-                          borderColor: "#444444",
+                          backgroundColor: message.type === "user" ? "#444444" : "#333333",
                         }}
-                        onClick={() => handleFeatureToggle(feature)}
                       >
-                        {feature}
-                      </Badge>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium" style={{ color: "#888888" }}>
+                            {message.type === "user" ? "You" : "AI Assistant"}
+                          </span>
+                          <span className="text-xs" style={{ color: "#888888" }}>
+                            {message.timestamp.toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <p className="text-sm" style={{ color: "#E0E0E0" }}>
+                          {message.content}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Review Section */}
-                <div className="space-y-4 pt-6 border-t" style={{ borderColor: "#444444" }}>
-                  <h3 className="font-semibold" style={{ color: "#E0E0E0" }}>
-                    Review your tool
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: "#B0B0B0" }}>
-                        Name
-                      </p>
-                      <p style={{ color: "#E0E0E0" }}>{formData.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: "#B0B0B0" }}>
-                        Category
-                      </p>
-                      <p style={{ color: "#E0E0E0" }}>{categories.find((c) => c.value === formData.category)?.label}</p>
-                    </div>
-                    {formData.description && (
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: "#B0B0B0" }}>
-                          Description
-                        </p>
-                        <p style={{ color: "#E0E0E0" }}>{formData.description}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: "#B0B0B0" }}>
-                        Requirements
-                      </p>
-                      <p className="text-sm" style={{ color: "#E0E0E0" }}>
-                        {formData.requirements.substring(0, 200)}...
-                      </p>
-                    </div>
-                    {formData.features.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: "#B0B0B0" }}>
-                          Selected Features
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {formData.features.map((feature) => (
-                            <Badge key={feature} style={{ backgroundColor: "#444444", color: "#E0E0E0" }}>
-                              {feature}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                <Separator style={{ backgroundColor: "#444444" }} />
+
+                {/* Final Details */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <Label style={{ color: "#E0E0E0" }}>Tool Name</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      style={{ backgroundColor: "#444444", borderColor: "#444444", color: "#E0E0E0" }}
+                    />
+                  </div>
+                  <div>
+                    <Label style={{ color: "#E0E0E0" }}>Category</Label>
+                    <Input
+                      value={formData.category || analysis.toolType}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      style={{ backgroundColor: "#444444", borderColor: "#444444", color: "#E0E0E0" }}
+                    />
                   </div>
                 </div>
 
-                <div className="p-4 rounded-lg" style={{ backgroundColor: "#444444" }}>
-                  <h4 className="font-medium mb-2" style={{ color: "#E0E0E0" }}>
-                    🚀 What happens next?
-                  </h4>
-                  <ul className="text-sm space-y-1" style={{ color: "#B0B0B0" }}>
-                    <li>• AI will analyze your requirements and generate your tool</li>
-                    <li>• You'll be able to preview and test the tool</li>
-                    <li>• Once satisfied, publish it with a custom URL</li>
-                    <li>• Share with your team and start using immediately</li>
-                  </ul>
+                <div>
+                  <Label style={{ color: "#E0E0E0" }}>Description</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    style={{ backgroundColor: "#444444", borderColor: "#444444", color: "#E0E0E0" }}
+                  />
                 </div>
 
                 <div className="flex justify-between pt-4">
                   <Button
                     variant="outline"
-                    onClick={handleBack}
-                    disabled={loading}
+                    onClick={() => setCurrentStep(2)}
                     style={{ borderColor: "#444444", color: "#B0B0B0", backgroundColor: "transparent" }}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
                   <Button
-                    onClick={handleSubmit}
+                    onClick={handleGenerateTool}
                     disabled={loading}
                     style={{ backgroundColor: "#888888", color: "#121212" }}
                     className="hover:opacity-90"
@@ -473,12 +610,12 @@ export default function CreateToolPage() {
                     {loading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating Tool...
+                        Generating...
                       </>
                     ) : (
                       <>
-                        Create Tool
-                        <Sparkles className="w-4 h-4 ml-2" />
+                        <Zap className="w-4 h-4 mr-2" />
+                        Generate Tool
                       </>
                     )}
                   </Button>
@@ -488,6 +625,54 @@ export default function CreateToolPage() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Follow-up Question Component
+function FollowUpQuestion({ question, onAnswer }: { question: string; onAnswer: (answer: string) => void }) {
+  const [answer, setAnswer] = useState("")
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = () => {
+    if (answer.trim()) {
+      onAnswer(answer)
+      setSubmitted(true)
+    }
+  }
+
+  return (
+    <div className="p-4 rounded-lg" style={{ backgroundColor: "#444444" }}>
+      <p className="font-medium mb-3" style={{ color: "#E0E0E0" }}>
+        {question}
+      </p>
+      {!submitted ? (
+        <div className="flex space-x-2">
+          <Input
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="Your answer..."
+            style={{ backgroundColor: "#333333", borderColor: "#333333", color: "#E0E0E0" }}
+            className="placeholder:text-[#B0B0B0]"
+            onKeyPress={(e) => e.key === "Enter" && handleSubmit()}
+          />
+          <Button
+            onClick={handleSubmit}
+            size="sm"
+            disabled={!answer.trim()}
+            style={{ backgroundColor: "#888888", color: "#121212" }}
+          >
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center space-x-2">
+          <CheckCircle className="w-4 h-4 text-green-400" />
+          <span className="text-sm" style={{ color: "#B0B0B0" }}>
+            {answer}
+          </span>
+        </div>
+      )}
     </div>
   )
 }

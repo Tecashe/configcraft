@@ -1,44 +1,36 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { requireCompany } from "@/lib/auth"
-import { openai } from "@/lib/openai"
+import { requireAuth } from "@/lib/auth"
+import { aiRequirementsService } from "@/lib/openai"
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await requireCompany()
+    const user = await requireAuth()
     const body = await req.json()
-    const { description } = body
+    const { requirements, context = [] } = body
 
-    if (!description || description.length < 10) {
-      return NextResponse.json({ error: "Description too short" }, { status: 400 })
+    if (!requirements || requirements.length < 20) {
+      return NextResponse.json({ error: "Requirements must be at least 20 characters long" }, { status: 400 })
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a business analyst. Analyze user requirements and provide helpful suggestions for improving their tool description. Be concise and actionable.",
-        },
-        {
-          role: "user",
-          content: `Analyze this tool requirement and suggest improvements: "${description}"`,
-        },
-      ],
-      temperature: 0.5,
-      max_tokens: 200,
-    })
+    console.log("Analyzing requirements:", requirements.substring(0, 100) + "...")
 
-    const suggestions =
-      completion.choices[0]?.message?.content ||
-      "Consider adding more details about user roles, data fields, and desired workflows."
+    // Use AI to analyze the requirements
+    const analysis = await aiRequirementsService.analyzeRequirements(requirements)
 
-    return NextResponse.json({ suggestions })
-  } catch (error) {
-    console.error("Analysis error:", error)
+    // Generate follow-up questions if context is provided
+    let followUpQuestions = analysis.followUpQuestions
+    if (context.length > 0) {
+      followUpQuestions = await aiRequirementsService.generateFollowUpQuestions(requirements, context)
+    }
+
     return NextResponse.json({
-      suggestions:
-        "Consider mentioning specific integrations you need (Slack, Salesforce, etc.) and any approval workflows required.",
+      analysis: {
+        ...analysis,
+        followUpQuestions,
+      },
     })
+  } catch (error) {
+    console.error("Requirements analysis error:", error)
+    return NextResponse.json({ error: "Failed to analyze requirements" }, { status: 500 })
   }
 }
