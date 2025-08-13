@@ -57,13 +57,14 @@
   --chart-5: 340 75% 55%;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+/* Removed @layer base wrapper and converted @apply to regular CSS */
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 /* Custom animations for the demo section */
