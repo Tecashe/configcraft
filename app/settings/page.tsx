@@ -45,7 +45,7 @@ export default function SettingsPage() {
       avatar: "/placeholder.svg?height=32&width=32",
     },
   ]
-//ygyug
+
   const apiKeys = [
     {
       id: 1,
