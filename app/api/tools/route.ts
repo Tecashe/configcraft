@@ -1,40 +1,35 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 import { requireCompany } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
   try {
     const { user, company } = await requireCompany()
     const { searchParams } = new URL(req.url)
-    const status = searchParams.get("status")
     const category = searchParams.get("category")
+    const search = searchParams.get("search")
 
     const where: any = {
       companyId: company.id,
     }
 
-    if (status) {
-      where.status = status
+    if (category && category !== "all") {
+      where.category = category
     }
 
-    if (category) {
-      where.category = category
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ]
     }
 
     const tools = await prisma.tool.findMany({
       where,
       include: {
-        creator: {
-          select: {
-            firstName: true,
-            lastName: true,
-            imageUrl: true,
-          },
-        },
         _count: {
           select: {
             usageRecords: true,
-            analytics: true,
           },
         },
       },
@@ -43,7 +38,7 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    return NextResponse.json(tools)
+    return NextResponse.json({ tools })
   } catch (error) {
     console.error("Tools fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -54,41 +49,25 @@ export async function POST(req: NextRequest) {
   try {
     const { user, company } = await requireCompany()
     const body = await req.json()
-    const { name, description, category, config, schema, ui } = body
+    const { name, description, category } = body
 
-    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-")
+    if (!name) {
+      return NextResponse.json({ error: "Tool name is required" }, { status: 400 })
+    }
 
     const tool = await prisma.tool.create({
       data: {
         name,
-        description,
-        slug,
-        category,
-        config,
-        schema,
-        ui,
+        description: description || "",
+        category: category || "Custom",
+        slug: name.toLowerCase().replace(/[^a-z0-9]/g, "-"),
         creatorId: user.id,
         companyId: company.id,
         status: "DRAFT",
-      },
-      include: {
-        creator: {
-          select: {
-            firstName: true,
-            lastName: true,
-            imageUrl: true,
-          },
-        },
-      },
-    })
-
-    // Track usage
-    await prisma.usageRecord.create({
-      data: {
-        type: "TOOL_CREATED",
-        userId: user.id,
-        companyId: company.id,
-        toolId: tool.id,
+        generationStatus: "pending",
+        config: {},
+        schema: {},
+        ui: {},
       },
     })
 

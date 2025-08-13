@@ -1,39 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 import { requireCompany } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { user, company } = await requireCompany()
+    const toolId = params.id
 
     const tool = await prisma.tool.findFirst({
       where: {
-        id: params.id,
+        id: toolId,
         companyId: company.id,
       },
       include: {
-        creator: {
+        _count: {
           select: {
-            firstName: true,
-            lastName: true,
-            imageUrl: true,
+            usageRecords: true,
           },
-        },
-        versions: {
-          orderBy: {
-            createdAt: "desc",
-          },
-        },
-        integrations: {
-          include: {
-            integration: true,
-          },
-        },
-        analytics: {
-          orderBy: {
-            date: "desc",
-          },
-          take: 30,
         },
       },
     })
@@ -52,12 +35,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { user, company } = await requireCompany()
+    const toolId = params.id
     const body = await req.json()
-    const { name, description, category, config, schema, ui, status } = body
 
     const tool = await prisma.tool.findFirst({
       where: {
-        id: params.id,
+        id: toolId,
         companyId: company.id,
       },
     })
@@ -66,54 +49,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Tool not found" }, { status: 404 })
     }
 
-    // Create version if config changed
-    if (config && JSON.stringify(config) !== JSON.stringify(tool.config)) {
-      await prisma.toolVersion.create({
-        data: {
-          toolId: tool.id,
-          version: `${Number.parseFloat(tool.version) + 0.1}`,
-          config: tool.config,
-          schema: tool.schema,
-          ui: tool.ui,
-          changelog: "Updated configuration",
-        },
-      })
-    }
-
     const updatedTool = await prisma.tool.update({
-      where: { id: params.id },
+      where: { id: toolId },
       data: {
-        name,
-        description,
-        category,
-        config,
-        schema,
-        ui,
-        status,
-        publishedAt: status === "PUBLISHED" ? new Date() : tool.publishedAt,
-      },
-      include: {
-        creator: {
-          select: {
-            firstName: true,
-            lastName: true,
-            imageUrl: true,
-          },
-        },
+        name: body.name || tool.name,
+        description: body.description || tool.description,
+        category: body.category || tool.category,
+        updatedAt: new Date(),
       },
     })
-
-    // Track usage
-    if (status === "PUBLISHED" && tool.status !== "PUBLISHED") {
-      await prisma.usageRecord.create({
-        data: {
-          type: "TOOL_PUBLISHED",
-          userId: user.id,
-          companyId: company.id,
-          toolId: tool.id,
-        },
-      })
-    }
 
     return NextResponse.json(updatedTool)
   } catch (error) {
@@ -125,10 +69,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { user, company } = await requireCompany()
+    const toolId = params.id
 
     const tool = await prisma.tool.findFirst({
       where: {
-        id: params.id,
+        id: toolId,
         companyId: company.id,
       },
     })
@@ -138,7 +83,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     await prisma.tool.delete({
-      where: { id: params.id },
+      where: { id: toolId },
     })
 
     return NextResponse.json({ success: true })

@@ -1,41 +1,142 @@
+// "use client"
+
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, ArrowRight, Zap, Shield, Users, Clock } from "lucide-react"
+import {
+  Zap,
+  ArrowRight,
+  CheckCircle,
+  Users,
+  Clock,
+  Shield,
+  Sparkles,
+  BarChart3,
+  Puzzle,
+  Rocket,
+  Star,
+  Play,
+} from "lucide-react"
 import Link from "next/link"
 
-export default function LandingPage() {
+export default function HomePage() {
+  const features = [
+    {
+      icon: Zap,
+      title: "AI-Powered Generation",
+      description: "Describe your business process and watch AI create a custom tool in minutes",
+    },
+    {
+      icon: Puzzle,
+      title: "No-Code Required",
+      description: "Build sophisticated business tools without writing a single line of code",
+    },
+    {
+      icon: Users,
+      title: "Team Collaboration",
+      description: "Share tools with your team and collaborate in real-time",
+    },
+    {
+      icon: Shield,
+      title: "Enterprise Security",
+      description: "Bank-level security with SOC 2 compliance and data encryption",
+    },
+    {
+      icon: BarChart3,
+      title: "Analytics & Insights",
+      description: "Track usage and performance with detailed analytics dashboards",
+    },
+    {
+      icon: Rocket,
+      title: "Instant Deployment",
+      description: "Deploy your tools instantly with custom URLs and sharing options",
+    },
+  ]
+
+  const testimonials = [
+    {
+      name: "Sarah Johnson",
+      role: "Operations Manager",
+      company: "TechFlow Inc",
+      content:
+        "ConfigCraft saved us months of development time. We built our entire onboarding system in just 2 hours.",
+      rating: 5,
+    },
+    {
+      name: "Mike Chen",
+      role: "CEO",
+      company: "GrowthLabs",
+      content: "The AI understands exactly what we need. It's like having a developer who speaks business language.",
+      rating: 5,
+    },
+    {
+      name: "Lisa Davis",
+      role: "Project Manager",
+      company: "DataSync",
+      content: "Our team productivity increased by 40% after implementing ConfigCraft tools across our workflows.",
+      rating: 5,
+    },
+  ]
+
+  const useCases = [
+    {
+      title: "Customer Onboarding",
+      description: "Streamline new customer setup with automated workflows",
+      icon: Users,
+    },
+    {
+      title: "Inventory Management",
+      description: "Track stock levels and manage suppliers efficiently",
+      icon: BarChart3,
+    },
+    {
+      title: "Project Tracking",
+      description: "Monitor project progress with custom dashboards",
+      icon: Rocket,
+    },
+    {
+      title: "Expense Reporting",
+      description: "Automate expense submission and approval processes",
+      icon: CheckCircle,
+    },
+  ]
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen" style={{ backgroundColor: "#121212" }}>
       {/* Header */}
-      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+      <header className="border-b" style={{ borderColor: "#444444", backgroundColor: "#121212" }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: "#888888" }}
+              >
+                <Zap className="w-5 h-5" style={{ color: "#121212" }} />
               </div>
-              <span className="text-xl font-bold text-gray-900">ConfigCraft</span>
+              <span className="text-xl font-bold" style={{ color: "#E0E0E0" }}>
+                ConfigCraft
+              </span>
             </div>
             <nav className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="#features" className="font-medium hover:opacity-80" style={{ color: "#B0B0B0" }}>
                 Features
-              </a>
-              <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
+              </Link>
+              <Link href="#pricing" className="font-medium hover:opacity-80" style={{ color: "#B0B0B0" }}>
                 Pricing
-              </a>
-              <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Testimonials
-              </a>
-              <Button variant="outline" size="sm" asChild>
+              </Link>
+              <Link href="#about" className="font-medium hover:opacity-80" style={{ color: "#B0B0B0" }}>
+                About
+              </Link>
+              <Button
+                variant="outline"
+                asChild
+                style={{ borderColor: "#444444", color: "#B0B0B0", backgroundColor: "transparent" }}
+              >
                 <Link href="/auth/signin">Sign In</Link>
               </Button>
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                asChild
-              >
-                <Link href="/auth/signup">Start Free Trial</Link>
+              <Button asChild style={{ backgroundColor: "#888888", color: "#121212" }} className="hover:opacity-90">
+                <Link href="/auth/signup">Get Started</Link>
               </Button>
             </nav>
           </div>
@@ -43,522 +144,356 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 lg:py-32 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto">
-            <Badge className="mb-6 bg-purple-100 text-purple-800 hover:bg-purple-100">AI-Powered Business Tools</Badge>
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Custom business tools in{" "}
-              <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                24 hours
-              </span>
-              , not 6 months
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-              ConfigCraft uses AI to understand your business requirements and creates production-ready internal tools
-              instantly. No coding required, no lengthy development cycles.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-3"
-                asChild
-              >
-                <Link href="/auth/signup">
-                  Start Building Your Tool
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3 bg-transparent">
-                Book Demo
-              </Button>
-            </div>
-            <div className="mt-12 flex items-center justify-center space-x-8 text-sm text-gray-500">
-              <div className="flex items-center">
-                <Shield className="w-4 h-4 mr-2" />
-                SOC2 Compliant
-              </div>
-              <div className="flex items-center">
-                <Shield className="w-4 h-4 mr-2" />
-                GDPR Ready
-              </div>
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-2" />
-                24/7 Support
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Problem/Solution Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                Stop waiting months for simple business tools
-              </h2>
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-red-600 font-bold">✗</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Expensive custom development</h3>
-                    <p className="text-gray-600">$50K+ and 6+ months for basic internal tools</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-red-600 font-bold">✗</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Generic software that doesn't fit</h3>
-                    <p className="text-gray-600">Force your processes into rigid, one-size-fits-all solutions</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-red-600 font-bold">✗</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Spreadsheet chaos</h3>
-                    <p className="text-gray-600">Manual processes that break as you scale</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-8 rounded-2xl">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">ConfigCraft delivers:</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                    <span className="text-gray-700">Custom tools in 24 hours</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                    <span className="text-gray-700">90% cost reduction vs custom dev</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                    <span className="text-gray-700">Perfect fit for your processes</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                    <span className="text-gray-700">Scales with your business</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Interactive Demo Section */}
-      <section id="features" className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">See ConfigCraft in action</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Watch how our AI transforms your business requirements into production-ready tools
-            </p>
-          </div>
-          <div className="max-w-4xl mx-auto">
-            <Card className="overflow-hidden shadow-2xl">
-              <CardContent className="p-0">
-                <div className="bg-gray-900 p-4 flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-gray-400 text-sm ml-4">ConfigCraft AI Assistant</span>
-                </div>
-                <div className="p-8 bg-white">
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-sm font-bold">AI</span>
-                      </div>
-                      <div className="bg-gray-100 rounded-lg p-4 max-w-md">
-                        <p className="text-gray-800">
-                          Hi! I'm here to help you build a custom business tool. What process would you like to
-                          streamline?
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 justify-end">
-                      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg p-4 max-w-md">
-                        <p>
-                          I need a customer onboarding tracker for my sales team. We currently use spreadsheets but it's
-                          getting messy.
-                        </p>
-                      </div>
-                      <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                        <Users className="w-4 h-4 text-gray-600" />
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-sm font-bold">AI</span>
-                      </div>
-                      <div className="bg-gray-100 rounded-lg p-4 max-w-md">
-                        <p className="text-gray-800">
-                          Perfect! I'll create a customer onboarding tracker with lead capture, progress tracking, and
-                          team collaboration features. This will take about 30 seconds...
-                        </p>
-                        <div className="mt-3 flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
-                          <div
-                            className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.1s" }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Simple, transparent pricing</h2>
-            <p className="text-xl text-gray-600">Choose the plan that fits your business needs</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Starter Plan */}
-            <Card className="relative">
-              <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl font-bold">Starter</CardTitle>
-                <CardDescription className="text-gray-600">Perfect for small teams</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-gray-900">$2K</span>
-                  <span className="text-gray-600">/tool</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>1 custom tool</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Up to 10 users</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Basic integrations</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Email support</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>24-hour delivery</span>
-                </div>
-                <Button className="w-full mt-6 bg-transparent" variant="outline">
-                  Get Started
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Professional Plan */}
-            <Card className="relative border-purple-200 shadow-lg">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">Most Popular</Badge>
-              </div>
-              <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl font-bold">Professional</CardTitle>
-                <CardDescription className="text-gray-600">For growing businesses</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-gray-900">$7K</span>
-                  <span className="text-gray-600">/tool</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Unlimited tools</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Up to 100 users</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Advanced integrations</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Priority support</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Custom branding</span>
-                </div>
-                <Button className="w-full mt-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
-                  Start Free Trial
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Enterprise Plan */}
-            <Card className="relative">
-              <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl font-bold">Enterprise</CardTitle>
-                <CardDescription className="text-gray-600">For large organizations</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-gray-900">Custom</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Unlimited everything</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Unlimited users</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Custom integrations</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Dedicated support</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>SLA guarantee</span>
-                </div>
-                <Button className="w-full mt-6 bg-transparent" variant="outline">
-                  Contact Sales
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section id="testimonials" className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Trusted by growing businesses</h2>
-            <p className="text-xl text-gray-600">See what our customers are saying about ConfigCraft</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <span key={i}>★</span>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-4">
-                  "ConfigCraft saved us 6 months and $80K on our inventory management system. The AI understood exactly
-                  what we needed."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Sarah Chen</p>
-                    <p className="text-sm text-gray-600">Operations Director, TechFlow</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <span key={i}>★</span>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-4">
-                  "We've built 3 different tools with ConfigCraft. Each one perfectly fits our unique processes. Game
-                  changer for our productivity."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Mike Rodriguez</p>
-                    <p className="text-sm text-gray-600">CEO, GrowthLabs</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <span key={i}>★</span>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-4">
-                  "The speed is incredible. What would have taken our dev team months was delivered in 24 hours. Quality
-                  exceeded expectations."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Emily Watson</p>
-                    <p className="text-sm text-gray-600">CTO, DataSync</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-purple-600 to-blue-600">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to build your first tool?</h2>
-          <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
-            Join hundreds of businesses that have streamlined their operations with ConfigCraft
+      <section className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "#121212" }}>
+        <div className="container mx-auto text-center">
+          <Badge className="mb-6" style={{ backgroundColor: "#444444", color: "#E0E0E0" }}>
+            <Sparkles className="w-4 h-4 mr-2" />
+            AI-Powered Business Tools
+          </Badge>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6" style={{ color: "#E0E0E0" }}>
+            Build Custom Business Tools
+            <br />
+            <span style={{ color: "#888888" }}>in Minutes, Not Months</span>
+          </h1>
+          <p className="text-xl mb-8 max-w-3xl mx-auto" style={{ color: "#B0B0B0" }}>
+            Transform your business processes with AI-generated tools. Just describe what you need, and our AI builds it
+            for you. No coding required, no lengthy development cycles.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 text-lg px-8 py-3" asChild>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+            <Button
+              size="lg"
+              asChild
+              style={{ backgroundColor: "#888888", color: "#121212" }}
+              className="hover:opacity-90"
+            >
               <Link href="/auth/signup">
-                Start Building Your Tool
-                <ArrowRight className="ml-2 w-5 h-5" />
+                Start Building Free
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
             </Button>
             <Button
               variant="outline"
               size="lg"
-              className="border-white text-white hover:bg-white hover:text-purple-600 text-lg px-8 py-3 bg-transparent"
+              style={{ borderColor: "#444444", color: "#B0B0B0", backgroundColor: "transparent" }}
             >
-              Book Demo
+              <Play className="w-5 h-5 mr-2" />
+              Watch Demo
             </Button>
+          </div>
+          <div className="flex items-center justify-center space-x-6 text-sm" style={{ color: "#B0B0B0" }}>
+            <div className="flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2" style={{ color: "#888888" }} />
+              Free 14-day trial
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2" style={{ color: "#888888" }} />
+              No credit card required
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2" style={{ color: "#888888" }} />
+              Cancel anytime
+            </div>
           </div>
         </div>
       </section>
 
+      {/* Demo Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "#121212" }}>
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: "#E0E0E0" }}>
+              See ConfigCraft in Action
+            </h2>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: "#B0B0B0" }}>
+              Watch how easy it is to create a custom business tool from just a simple description
+            </p>
+          </div>
+          <Card className="max-w-4xl mx-auto" style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
+            <CardContent className="p-8">
+              <div
+                className="aspect-video rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: "#444444" }}
+              >
+                <div className="text-center">
+                  <Play className="w-16 h-16 mx-auto mb-4" style={{ color: "#888888" }} />
+                  <h3 className="text-xl font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                    Interactive Demo
+                  </h3>
+                  <p style={{ color: "#B0B0B0" }}>See how ConfigCraft transforms ideas into working tools</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "#121212" }}>
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: "#E0E0E0" }}>
+              Everything You Need to Build Better
+            </h2>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: "#B0B0B0" }}>
+              Powerful features that make creating custom business tools as easy as describing what you need
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <Card
+                key={index}
+                className="p-6 hover:shadow-lg transition-shadow"
+                style={{ backgroundColor: "#121212", borderColor: "#444444" }}
+              >
+                <CardContent className="p-0">
+                  <div
+                    className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
+                    style={{ backgroundColor: "#444444" }}
+                  >
+                    <feature.icon className="w-6 h-6" style={{ color: "#888888" }} />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                    {feature.title}
+                  </h3>
+                  <p style={{ color: "#B0B0B0" }}>{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "#121212" }}>
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: "#E0E0E0" }}>
+              Built for Every Business Need
+            </h2>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: "#B0B0B0" }}>
+              From startups to enterprises, ConfigCraft adapts to your unique business processes
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {useCases.map((useCase, index) => (
+              <Card
+                key={index}
+                className="p-6 text-center hover:shadow-lg transition-shadow"
+                style={{ backgroundColor: "#121212", borderColor: "#444444" }}
+              >
+                <CardContent className="p-0">
+                  <div
+                    className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4"
+                    style={{ backgroundColor: "#444444" }}
+                  >
+                    <useCase.icon className="w-8 h-8" style={{ color: "#888888" }} />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2" style={{ color: "#E0E0E0" }}>
+                    {useCase.title}
+                  </h3>
+                  <p className="text-sm" style={{ color: "#B0B0B0" }}>
+                    {useCase.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "#121212" }}>
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: "#E0E0E0" }}>
+              Trusted by Growing Businesses
+            </h2>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: "#B0B0B0" }}>
+              See what our customers are saying about ConfigCraft
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="p-6" style={{ backgroundColor: "#121212", borderColor: "#444444" }}>
+                <CardContent className="p-0">
+                  <div className="flex mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-5 h-5 fill-current" style={{ color: "#888888" }} />
+                    ))}
+                  </div>
+                  <p className="mb-4" style={{ color: "#B0B0B0" }}>
+                    "{testimonial.content}"
+                  </p>
+                  <div>
+                    <p className="font-semibold" style={{ color: "#E0E0E0" }}>
+                      {testimonial.name}
+                    </p>
+                    <p className="text-sm" style={{ color: "#888888" }}>
+                      {testimonial.role} at {testimonial.company}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "#121212" }}>
+        <div className="container mx-auto">
+          <Card className="p-12 text-center" style={{ backgroundColor: "#444444", borderColor: "#444444" }}>
+            <CardContent className="p-0">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: "#E0E0E0" }}>
+                Ready to Transform Your Business?
+              </h2>
+              <p className="text-xl mb-8 max-w-2xl mx-auto" style={{ color: "#B0B0B0" }}>
+                Join thousands of businesses already using ConfigCraft to streamline their operations
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+                <Button
+                  size="lg"
+                  asChild
+                  style={{ backgroundColor: "#888888", color: "#121212" }}
+                  className="hover:opacity-90"
+                >
+                  <Link href="/auth/signup">
+                    Start Your Free Trial
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  style={{ borderColor: "#888888", color: "#888888", backgroundColor: "transparent" }}
+                >
+                  Schedule a Demo
+                </Button>
+              </div>
+              <div className="flex items-center justify-center space-x-6 text-sm" style={{ color: "#B0B0B0" }}>
+                <div className="flex items-center">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Setup in 5 minutes
+                </div>
+                <div className="flex items-center">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Enterprise security
+                </div>
+                <div className="flex items-center">
+                  <Users className="w-4 h-4 mr-2" />
+                  24/7 support
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <footer
+        className="border-t py-12 px-4 sm:px-6 lg:px-8"
+        style={{ borderColor: "#444444", backgroundColor: "#121212" }}
+      >
+        <div className="container mx-auto">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white" />
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: "#888888" }}
+                >
+                  <Zap className="w-5 h-5" style={{ color: "#121212" }} />
                 </div>
-                <span className="text-xl font-bold">ConfigCraft</span>
+                <span className="text-xl font-bold" style={{ color: "#E0E0E0" }}>
+                  ConfigCraft
+                </span>
               </div>
-              <p className="text-gray-400">AI-powered custom business tools in 24 hours, not 6 months.</p>
+              <p style={{ color: "#B0B0B0" }}>AI-powered business tools that adapt to your unique needs.</p>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Product</h3>
-              <ul className="space-y-2 text-gray-400">
+              <h3 className="font-semibold mb-4" style={{ color: "#E0E0E0" }}>
+                Product
+              </h3>
+              <ul className="space-y-2">
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Features
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Templates
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Integrations
-                  </a>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
+                    API
+                  </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-gray-400">
+              <h3 className="font-semibold mb-4" style={{ color: "#E0E0E0" }}>
+                Company
+              </h3>
+              <ul className="space-y-2">
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     About
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Blog
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Careers
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Contact
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-gray-400">
+              <h3 className="font-semibold mb-4" style={{ color: "#E0E0E0" }}>
+                Support
+              </h3>
+              <ul className="space-y-2">
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Help Center
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Documentation
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
                     Status
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Security
-                  </a>
+                  <Link href="#" className="hover:opacity-80" style={{ color: "#B0B0B0" }}>
+                    Privacy
+                  </Link>
                 </li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400">© 2024 ConfigCraft. All rights reserved.</p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                Privacy
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                Terms
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                Cookies
-              </a>
-            </div>
+          <div className="border-t pt-8 mt-8 text-center" style={{ borderColor: "#444444" }}>
+            <p style={{ color: "#B0B0B0" }}>© 2024 ConfigCraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

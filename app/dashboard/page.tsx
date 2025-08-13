@@ -23,6 +23,7 @@ import {
   Search,
   Bell,
   Loader2,
+  Sparkles,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -37,10 +38,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
-          <p className="text-gray-600">Loading dashboard...</p>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-[#888888]" />
+          <p className="text-[#B0B0B0]">Loading dashboard...</p>
         </div>
       </div>
     )
@@ -48,10 +49,12 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading dashboard: {error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <p className="text-red-400 mb-4">Error loading dashboard: {error}</p>
+          <Button onClick={() => window.location.reload()} className="bg-[#888888] hover:bg-[#666666] text-[#121212]">
+            Retry
+          </Button>
         </div>
       </div>
     )
@@ -60,7 +63,7 @@ export default function DashboardPage() {
   const userData = {
     name: user?.fullName || `${user?.firstName} ${user?.lastName}` || "User",
     email: user?.primaryEmailAddress?.emailAddress || "",
-    company: "Your Company", // Will be updated with real company data
+    company: "Your Company",
     avatar: user?.imageUrl || "",
   }
 
@@ -76,15 +79,19 @@ export default function DashboardPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "DRAFT":
-        return "bg-gray-100 text-gray-800"
+        return "bg-[#444444] text-[#B0B0B0]"
+      case "GENERATING":
+        return "bg-blue-900 text-blue-200"
       case "GENERATED":
-        return "bg-blue-100 text-blue-800"
+        return "bg-green-900 text-green-200"
       case "PUBLISHED":
-        return "bg-green-100 text-green-800"
+        return "bg-[#888888] text-[#121212]"
       case "ARCHIVED":
-        return "bg-orange-100 text-orange-800"
+        return "bg-orange-900 text-orange-200"
+      case "ERROR":
+        return "bg-red-900 text-red-200"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-[#444444] text-[#B0B0B0]"
     }
   }
 
@@ -92,12 +99,16 @@ export default function DashboardPage() {
     switch (status) {
       case "DRAFT":
         return "Draft"
+      case "GENERATING":
+        return "Generating..."
       case "GENERATED":
         return "Ready for Review"
       case "PUBLISHED":
         return "Live"
       case "ARCHIVED":
         return "Archived"
+      case "ERROR":
+        return "Error"
       default:
         return status
     }
@@ -113,16 +124,16 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#121212] flex">
       {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div className="w-64 bg-[#121212] border-r border-[#444444] flex flex-col">
         {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-[#444444]">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-sm font-bold">C</span>
+            <div className="w-8 h-8 bg-gradient-to-r from-[#888888] to-[#666666] rounded-lg flex items-center justify-center">
+              <span className="text-[#121212] text-sm font-bold">C</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">ConfigCraft</span>
+            <span className="text-xl font-bold text-[#E0E0E0]">ConfigCraft</span>
           </div>
         </div>
 
@@ -135,8 +146,8 @@ export default function DashboardPage() {
                   href={item.href}
                   className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                     activeTab === item.id
-                      ? "bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 border border-purple-200"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-[#444444] text-[#E0E0E0] border border-[#888888]"
+                      : "text-[#B0B0B0] hover:bg-[#444444] hover:text-[#E0E0E0]"
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
@@ -148,12 +159,12 @@ export default function DashboardPage() {
         </nav>
 
         {/* User Profile */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-[#444444]">
           <div className="flex items-center space-x-3 p-2">
             <UserButton />
             <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-gray-900">{userData.name}</p>
-              <p className="text-xs text-gray-500">{userData.company}</p>
+              <p className="text-sm font-medium text-[#E0E0E0]">{userData.name}</p>
+              <p className="text-xs text-[#B0B0B0]">{userData.company}</p>
             </div>
           </div>
         </div>
@@ -162,25 +173,28 @@ export default function DashboardPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-[#121212] border-b border-[#444444] px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {userData.name}</p>
+              <h1 className="text-2xl font-bold text-[#E0E0E0]">Dashboard</h1>
+              <p className="text-[#B0B0B0]">Welcome back, {userData.name}</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <Input placeholder="Search tools..." className="pl-10 w-64" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-[#B0B0B0]" />
+                <Input
+                  placeholder="Search tools..."
+                  className="pl-10 w-64 bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
+                />
               </div>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
+              >
                 <Bell className="w-4 h-4" />
               </Button>
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                asChild
-              >
+              <Button size="sm" className="bg-[#888888] hover:bg-[#666666] text-[#121212]" asChild>
                 <Link href="/tools/create">
                   <Plus className="w-4 h-4 mr-2" />
                   Create New Tool
@@ -194,16 +208,16 @@ export default function DashboardPage() {
         <main className="flex-1 p-6">
           {/* Welcome Section */}
           <div className="mb-8">
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white">
+            <div className="bg-gradient-to-r from-[#888888] to-[#666666] rounded-xl p-6 text-[#121212]">
               <h2 className="text-2xl font-bold mb-2">Welcome to {userData.company}!</h2>
-              <p className="text-purple-100 mb-4">
+              <p className="text-[#121212] opacity-80 mb-4">
                 You've created {stats.toolsCount} custom tools and have {stats.membersCount} team members. Current plan:{" "}
                 {stats.subscription}
               </p>
-              <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100" asChild>
+              <Button size="lg" className="bg-[#121212] text-[#E0E0E0] hover:bg-[#333333]" asChild>
                 <Link href="/tools/create">
                   <Plus className="w-5 h-5 mr-2" />
-                  Create Your Next Tool
+                  Create Your First Tool
                 </Link>
               </Button>
             </div>
@@ -211,54 +225,59 @@ export default function DashboardPage() {
 
           {/* Quick Stats */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card>
+            <Card className="bg-[#121212] border-[#444444]">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Tools Created</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.toolsCount}</p>
+                    <p className="text-sm font-medium text-[#B0B0B0]">Tools Created</p>
+                    <p className="text-3xl font-bold text-[#E0E0E0]">{stats.toolsCount}</p>
                   </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Wrench className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-[#444444] rounded-lg flex items-center justify-center">
+                    <Wrench className="w-6 h-6 text-[#888888]" />
                   </div>
                 </div>
                 <div className="flex items-center mt-4 text-sm">
-                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-green-600">{stats.usageThisMonth} this month</span>
+                  <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
+                  <span className="text-green-400">{stats.usageThisMonth} this month</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-[#121212] border-[#444444]">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Team Members</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.membersCount}</p>
+                    <p className="text-sm font-medium text-[#B0B0B0]">Team Members</p>
+                    <p className="text-3xl font-bold text-[#E0E0E0]">{stats.membersCount}</p>
                   </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Users className="w-6 h-6 text-green-600" />
+                  <div className="w-12 h-12 bg-[#444444] rounded-lg flex items-center justify-center">
+                    <Users className="w-6 h-6 text-[#888888]" />
                   </div>
                 </div>
                 <div className="flex items-center mt-4 text-sm">
-                  <span className="text-gray-600">Active members</span>
+                  <span className="text-[#B0B0B0]">Active members</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-[#121212] border-[#444444]">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Current Plan</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.subscription}</p>
+                    <p className="text-sm font-medium text-[#B0B0B0]">Current Plan</p>
+                    <p className="text-3xl font-bold text-[#E0E0E0]">{stats.subscription}</p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-[#444444] rounded-lg flex items-center justify-center">
+                    <Activity className="w-6 h-6 text-[#888888]" />
                   </div>
                 </div>
                 <div className="flex items-center mt-4 text-sm">
-                  <Button variant="outline" size="sm" asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
+                    asChild
+                  >
                     <Link href="/billing">Manage Plan</Link>
                   </Button>
                 </div>
@@ -269,19 +288,27 @@ export default function DashboardPage() {
           {/* Recent Tools */}
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Recent Tools</h3>
-              <Button variant="outline" size="sm" asChild>
+              <h3 className="text-xl font-bold text-[#E0E0E0]">Recent Tools</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
+                asChild
+              >
                 <Link href="/tools">View All Tools</Link>
               </Button>
             </div>
 
             {recentTools.length === 0 ? (
-              <Card>
+              <Card className="bg-[#121212] border-[#444444]">
                 <CardContent className="p-8 text-center">
-                  <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">No tools yet</h4>
-                  <p className="text-gray-600 mb-4">Create your first custom business tool to get started.</p>
-                  <Button asChild>
+                  <Sparkles className="w-12 h-12 text-[#888888] mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-[#E0E0E0] mb-2">Ready to build your first tool?</h4>
+                  <p className="text-[#B0B0B0] mb-4">
+                    Create custom business tools in minutes with AI. Just describe what you need, and we'll build it for
+                    you.
+                  </p>
+                  <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212]" asChild>
                     <Link href="/tools/create">
                       <Plus className="w-4 h-4 mr-2" />
                       Create Your First Tool
@@ -292,9 +319,12 @@ export default function DashboardPage() {
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recentTools.map((tool: any) => (
-                  <Card key={tool.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <Card
+                    key={tool.id}
+                    className="bg-[#121212] border-[#444444] hover:border-[#888888] transition-colors cursor-pointer"
+                  >
                     <CardContent className="p-0">
-                      <div className="aspect-video bg-gray-100 rounded-t-lg overflow-hidden">
+                      <div className="aspect-video bg-[#444444] rounded-t-lg overflow-hidden">
                         <img
                           src="/placeholder.svg?height=120&width=200"
                           alt={tool.name}
@@ -303,38 +333,42 @@ export default function DashboardPage() {
                       </div>
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-semibold text-gray-900 line-clamp-1">{tool.name}</h4>
+                          <h4 className="font-semibold text-[#E0E0E0] line-clamp-1">{tool.name}</h4>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-[#B0B0B0] hover:bg-[#444444]"
+                              >
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                            <DropdownMenuContent align="end" className="bg-[#121212] border-[#444444]">
+                              <DropdownMenuItem className="text-[#E0E0E0] hover:bg-[#444444]">
                                 <Copy className="w-4 h-4 mr-2" />
                                 Clone Tool
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem className="text-[#E0E0E0] hover:bg-[#444444]">
                                 <BarChart3 className="w-4 h-4 mr-2" />
                                 View Analytics
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem className="text-[#E0E0E0] hover:bg-[#444444]">
                                 <UserPlus className="w-4 h-4 mr-2" />
                                 Manage Team
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{tool.description}</p>
+                        <p className="text-sm text-[#B0B0B0] mb-3 line-clamp-2">{tool.description}</p>
                         <div className="flex items-center justify-between">
                           <Badge className={getStatusColor(tool.status)}>{getStatusLabel(tool.status)}</Badge>
-                          <div className="flex items-center text-xs text-gray-500">
+                          <div className="flex items-center text-xs text-[#B0B0B0]">
                             <Users className="w-3 h-3 mr-1" />
                             {tool._count?.usageRecords || 0} uses
                           </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-[#B0B0B0] mt-2">
                           Updated {new Date(tool.updatedAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -347,45 +381,45 @@ export default function DashboardPage() {
 
           {/* Quick Actions */}
           <div className="mt-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h3>
+            <h3 className="text-xl font-bold text-[#E0E0E0] mb-6">Quick Actions</h3>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <Card className="bg-[#121212] border-[#444444] hover:border-[#888888] transition-colors cursor-pointer">
                 <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Plus className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-[#444444] rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <Plus className="w-6 h-6 text-[#888888]" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Create Tool</h4>
-                  <p className="text-sm text-gray-600">Build a new custom tool</p>
+                  <h4 className="font-semibold text-[#E0E0E0] mb-1">Create Tool</h4>
+                  <p className="text-sm text-[#B0B0B0]">Build a new custom tool</p>
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <Card className="bg-[#121212] border-[#444444] hover:border-[#888888] transition-colors cursor-pointer">
                 <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Template className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-[#444444] rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <Template className="w-6 h-6 text-[#888888]" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Browse Templates</h4>
-                  <p className="text-sm text-gray-600">Start from a template</p>
+                  <h4 className="font-semibold text-[#E0E0E0] mb-1">Browse Templates</h4>
+                  <p className="text-sm text-[#B0B0B0]">Start from a template</p>
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <Card className="bg-[#121212] border-[#444444] hover:border-[#888888] transition-colors cursor-pointer">
                 <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <UserPlus className="w-6 h-6 text-green-600" />
+                  <div className="w-12 h-12 bg-[#444444] rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <UserPlus className="w-6 h-6 text-[#888888]" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Invite Team</h4>
-                  <p className="text-sm text-gray-600">Add team members</p>
+                  <h4 className="font-semibold text-[#E0E0E0] mb-1">Invite Team</h4>
+                  <p className="text-sm text-[#B0B0B0]">Add team members</p>
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <Card className="bg-[#121212] border-[#444444] hover:border-[#888888] transition-colors cursor-pointer">
                 <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Puzzle className="w-6 h-6 text-orange-600" />
+                  <div className="w-12 h-12 bg-[#444444] rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <Puzzle className="w-6 h-6 text-[#888888]" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Integrations</h4>
-                  <p className="text-sm text-gray-600">Connect your tools</p>
+                  <h4 className="font-semibold text-[#E0E0E0] mb-1">Integrations</h4>
+                  <p className="text-sm text-[#B0B0B0]">Connect your tools</p>
                 </CardContent>
               </Card>
             </div>

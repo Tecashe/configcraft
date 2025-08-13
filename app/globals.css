@@ -2,71 +2,160 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 18 18 18; /* #121212 */
-  --foreground: 224 224 224; /* #E0E0E0 */
-  --card: 18 18 18; /* #121212 */
-  --card-foreground: 224 224 224; /* #E0E0E0 */
-  --popover: 18 18 18; /* #121212 */
-  --popover-foreground: 224 224 224; /* #E0E0E0 */
-  --primary: 136 136 136; /* #888888 */
-  --primary-foreground: 18 18 18; /* #121212 */
-  --secondary: 68 68 68; /* #444444 */
-  --secondary-foreground: 224 224 224; /* #E0E0E0 */
-  --muted: 68 68 68; /* #444444 */
-  --muted-foreground: 176 176 176; /* #B0B0B0 */
-  --accent: 136 136 136; /* #888888 */
-  --accent-foreground: 18 18 18; /* #121212 */
-  --destructive: 239 68 68;
-  --destructive-foreground: 248 250 252;
-  --border: 68 68 68; /* #444444 */
-  --input: 68 68 68; /* #444444 */
-  --ring: 136 136 136; /* #888888 */
-  --chart-1: 136 136 136;
-  --chart-2: 176 176 176;
-  --chart-3: 68 68 68;
-  --chart-4: 224 224 224;
-  --chart-5: 18 18 18;
-  --radius: 0.5rem;
+@layer base {
+  :root {
+    --background: 18 18 18; /* #121212 */
+    --foreground: 224 224 224; /* #E0E0E0 */
+    --card: 18 18 18; /* #121212 */
+    --card-foreground: 224 224 224; /* #E0E0E0 */
+    --popover: 18 18 18; /* #121212 */
+    --popover-foreground: 224 224 224; /* #E0E0E0 */
+    --primary: 136 136 136; /* #888888 */
+    --primary-foreground: 18 18 18; /* #121212 */
+    --secondary: 68 68 68; /* #444444 */
+    --secondary-foreground: 224 224 224; /* #E0E0E0 */
+    --muted: 68 68 68; /* #444444 */
+    --muted-foreground: 176 176 176; /* #B0B0B0 */
+    --accent: 136 136 136; /* #888888 */
+    --accent-foreground: 18 18 18; /* #121212 */
+    --destructive: 220 38 38; /* Keep red for errors but darker */
+    --destructive-foreground: 224 224 224; /* #E0E0E0 */
+    --border: 68 68 68; /* #444444 */
+    --input: 68 68 68; /* #444444 */
+    --ring: 136 136 136; /* #888888 */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 18 18 18; /* #121212 */
+    --foreground: 224 224 224; /* #E0E0E0 */
+    --card: 18 18 18; /* #121212 */
+    --card-foreground: 224 224 224; /* #E0E0E0 */
+    --popover: 18 18 18; /* #121212 */
+    --popover-foreground: 224 224 224; /* #E0E0E0 */
+    --primary: 136 136 136; /* #888888 */
+    --primary-foreground: 18 18 18; /* #121212 */
+    --secondary: 68 68 68; /* #444444 */
+    --secondary-foreground: 224 224 224; /* #E0E0E0 */
+    --muted: 68 68 68; /* #444444 */
+    --muted-foreground: 176 176 176; /* #B0B0B0 */
+    --accent: 136 136 136; /* #888888 */
+    --accent-foreground: 18 18 18; /* #121212 */
+    --destructive: 220 38 38;
+    --destructive-foreground: 224 224 224; /* #E0E0E0 */
+    --border: 68 68 68; /* #444444 */
+    --input: 68 68 68; /* #444444 */
+    --ring: 136 136 136; /* #888888 */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-color: #121212 !important;
+    color: #e0e0e0 !important;
+  }
+
+  /* Force all backgrounds to use our color scheme */
+  .bg-white {
+    background-color: #121212 !important;
+  }
+
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-gray-200 {
+    background-color: #444444 !important;
+  }
+
+  .text-gray-900,
+  .text-black {
+    color: #e0e0e0 !important;
+  }
+
+  .text-gray-600,
+  .text-gray-700 {
+    color: #b0b0b0 !important;
+  }
+
+  .text-gray-500 {
+    color: #888888 !important;
+  }
+
+  .border-gray-200,
+  .border-gray-300 {
+    border-color: #444444 !important;
+  }
+
+  /* Remove any yellow/amber colors */
+  .text-yellow-400,
+  .text-amber-400,
+  .bg-yellow-100,
+  .bg-amber-100 {
+    color: #888888 !important;
+    background-color: #444444 !important;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #444444;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #888888;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #666666;
+  }
+
+  /* Ensure all cards use dark theme */
+  .card {
+    background-color: #121212 !important;
+    border-color: #444444 !important;
+    color: #e0e0e0 !important;
+  }
+
+  /* Fix any remaining light elements */
+  input,
+  textarea,
+  select {
+    background-color: #444444 !important;
+    border-color: #444444 !important;
+    color: #e0e0e0 !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #b0b0b0 !important;
+  }
+
+  /* Dropdown menus */
+  [role="menu"],
+  [role="listbox"] {
+    background-color: #121212 !important;
+    border-color: #444444 !important;
+  }
+
+  /* Buttons */
+  button {
+    border-color: #444444 !important;
+  }
+
+  /* Remove any gradients that might use other colors */
+  .bg-gradient-to-r,
+  .bg-gradient-to-br {
+    background: linear-gradient(to right, #888888, #666666) !important;
+  }
 }
 
-.dark {
-  --background: 18 18 18; /* #121212 */
-  --foreground: 224 224 224; /* #E0E0E0 */
-  --card: 18 18 18; /* #121212 */
-  --card-foreground: 224 224 224; /* #E0E0E0 */
-  --popover: 18 18 18; /* #121212 */
-  --popover-foreground: 224 224 224; /* #E0E0E0 */
-  --primary: 136 136 136; /* #888888 */
-  --primary-foreground: 18 18 18; /* #121212 */
-  --secondary: 68 68 68; /* #444444 */
-  --secondary-foreground: 224 224 224; /* #E0E0E0 */
-  --muted: 68 68 68; /* #444444 */
-  --muted-foreground: 176 176 176; /* #B0B0B0 */
-  --accent: 136 136 136; /* #888888 */
-  --accent-foreground: 18 18 18; /* #121212 */
-  --destructive: 239 68 68;
-  --destructive-foreground: 248 250 252;
-  --border: 68 68 68; /* #444444 */
-  --input: 68 68 68; /* #444444 */
-  --ring: 136 136 136; /* #888888 */
-  --chart-1: 136 136 136;
-  --chart-2: 176 176 176;
-  --chart-3: 68 68 68;
-  --chart-4: 224 224 224;
-  --chart-5: 18 18 18;
-}
-
-* {
-  border-color: hsl(var(--border));
-}
-
-body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
-
-/* Custom animations for the demo section */
+/* Custom animations */
 @keyframes bounce {
   0%,
   20%,
@@ -89,16 +178,4 @@ body {
 
 .animate-bounce {
   animation: bounce 1s infinite;
-}
-
-/* Dark theme specific styles */
-.bg-gradient-to-r {
-  background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)));
-}
-
-.text-gradient {
-  background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
