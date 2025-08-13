@@ -1,4 +1,3 @@
-
 import type { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
@@ -8,12 +7,12 @@ export function addSecurityHeaders(response: NextResponse): NextResponse {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://*.clerk.accounts.dev https://*.clerk.com https://www.google.com https://www.gstatic.com https://accounts.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://api.openai.com https://api.stripe.com https://checkout.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
-      "frame-src https://js.stripe.com https://checkout.stripe.com",
+      "connect-src 'self' https://api.openai.com https://api.stripe.com https://checkout.stripe.com https://*.clerk.accounts.dev https://*.clerk.com https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com",
+      "frame-src https://js.stripe.com https://checkout.stripe.com https://accounts.google.com https://www.google.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
