@@ -1,0 +1,402 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - integrates with Clerk
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  companies     CompanyMember[]
+  ownedCompanies Company[]      @relation("CompanyOwner")
+  tools         Tool[]
+  usageRecords  UsageRecord[]
+  apiKeys       ApiKey[]
+
+  @@map("users")
+}
+
+// Company/Organization model
+model Company {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  logoUrl     String?
+  website     String?
+  industry    String?
+  size        CompanySize @default(SMALL)
+  domain      String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Owner relationship
+  ownerId String
+  owner   User   @relation("CompanyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Relationships
+  members       CompanyMember[]
+  tools         Tool[]
+  subscriptions Subscription[]
+  integrations  Integration[]
+  usageRecords  UsageRecord[]
+  apiKeys       ApiKey[]
+
+  @@map("companies")
+}
+
+enum CompanySize {
+  SMALL     // 1-10 employees
+  MEDIUM    // 11-50 employees
+  LARGE     // 51-200 employees
+  ENTERPRISE // 200+ employees
+}
+
+// Company membership model
+model CompanyMember {
+  id        String           @id @default(cuid())
+  role      CompanyRole      @default(MEMBER)
+  status    MembershipStatus @default(ACTIVE)
+  joinedAt  DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relationships
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@map("company_members")
+}
+
+enum CompanyRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+// Tool model - the custom business tools created by users
+model Tool {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  slug        String
+  status      ToolStatus @default(DRAFT)
+  category    String?
+  
+  // Tool configuration
+  config      Json // Stores the tool configuration, fields, workflows, etc.
+  schema      Json // Stores the data schema for the tool
+  ui          Json // Stores UI configuration and styling
+  
+  // Metadata
+  isPublic    Boolean  @default(false)
+  url         String?  // Custom URL for the tool
+  version     String   @default("1.0.0")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  publishedAt DateTime?
+
+  // Relationships
+  creatorId String
+  creator   User    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Related models
+  versions      ToolVersion[]
+  usageRecords  UsageRecord[]
+  integrations  ToolIntegration[]
+  analytics     ToolAnalytics[]
+
+  @@unique([companyId, slug])
+  @@map("tools")
+}
+
+enum ToolStatus {
+  DRAFT
+  GENERATED
+  PUBLISHED
+  ARCHIVED
+}
+
+// Tool versions for version control
+model ToolVersion {
+  id          String   @id @default(cuid())
+  version     String
+  config      Json
+  schema      Json
+  ui          Json
+  changelog   String?
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  toolId String
+  tool   Tool   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([toolId, version])
+  @@map("tool_versions")
+}
+
+// Template model
+model Template {
+  id          String         @id @default(cuid())
+  name        String
+  description String
+  category    String
+  tags        String[]
+  config      Json
+  schema      Json
+  ui          Json
+  preview     Json?
+  isPublic    Boolean        @default(true)
+  rating      Float?
+  downloads   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("templates")
+}
+
+// Integration model
+model Integration {
+  id          String            @id @default(cuid())
+  name        String
+  type        IntegrationType
+  provider    String
+  config      Json
+  credentials Json? // Encrypted credentials
+  status      IntegrationStatus @default(DISCONNECTED)
+  lastSyncAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relationships
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Related models
+  toolIntegrations ToolIntegration[]
+  logs             IntegrationLog[]
+
+  @@unique([companyId, provider])
+  @@map("integrations")
+}
+
+enum IntegrationType {
+  CRM
+  DATABASE
+  PAYMENT
+  STORAGE
+  COMMUNICATION
+  PRODUCTIVITY
+  ANALYTICS
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  PENDING
+}
+
+// Tool-specific integrations
+model ToolIntegration {
+  id        String   @id @default(cuid())
+  config    Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  toolId        String
+  tool          Tool        @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  integrationId String
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([toolId, integrationId])
+  @@map("tool_integrations")
+}
+
+// Integration logs
+model IntegrationLog {
+  id        String    @id @default(cuid())
+  level     LogLevel
+  message   String
+  data      Json?
+  createdAt DateTime  @default(now())
+
+  // Relationships
+  integrationId String
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@map("integration_logs")
+}
+
+enum LogLevel {
+  INFO
+  WARN
+  ERROR
+}
+
+// Subscription model for billing
+model Subscription {
+  id                String             @id @default(cuid())
+  plan              SubscriptionPlan
+  status            SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId  String?
+  stripeSubscriptionId String?
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean           @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  // Relationships
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Related models
+  invoices Invoice[]
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  INCOMPLETE
+}
+
+// Invoice model
+model Invoice {
+  id             String        @id @default(cuid())
+  stripeInvoiceId String?      @unique
+  amount         Int           // Amount in cents
+  currency       String        @default("usd")
+  status         InvoiceStatus
+  paidAt         DateTime?
+  dueDate        DateTime
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relationships
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+// Usage tracking model
+model UsageRecord {
+  id        String    @id @default(cuid())
+  type      UsageType
+  count     Int       @default(1)
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  // Relationships
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  toolId    String?
+  tool      Tool?    @relation(fields: [toolId], references: [id], onDelete: SetNull)
+
+  @@map("usage_records")
+}
+
+enum UsageType {
+  TOOL_CREATED
+  TOOL_PUBLISHED
+  TOOL_VIEW
+  TOOL_INTERACTION
+  API_CALL
+  INTEGRATION_SYNC
+  EXPORT_DATA
+}
+
+// Tool analytics model
+model ToolAnalytics {
+  id        String   @id @default(cuid())
+  date      DateTime
+  views     Int      @default(0)
+  interactions Int   @default(0)
+  uniqueUsers Int    @default(0)
+  createdAt DateTime @default(now())
+
+  // Relationships
+  toolId String
+  tool   Tool   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([toolId, date])
+  @@map("tool_analytics")
+}
+
+// API Keys model
+model ApiKey {
+  id          String       @id @default(cuid())
+  name        String
+  key         String       @unique
+  permissions String[]     // Array of permissions
+  status      ApiKeyStatus @default(ACTIVE)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relationships
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  INACTIVE
+  REVOKED
+}
