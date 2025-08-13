@@ -112,13 +112,25 @@ model Tool {
   schema      Json // Stores the data schema for the tool
   ui          Json // Stores UI configuration and styling
   
+  // V0 Integration fields
+  v0Code      String?    // Generated code from v0
+  previewUrl  String?    // Preview URL from v0
+  publishedUrl String?   // Published tool URL
+  generatedAt DateTime?  // When v0 generation completed
+  publishedAt DateTime?  // When tool was published
+  
+  // Requirements and generation
+  requirements String?   // Original user requirements
+  v0Prompt     String?   // Processed prompt sent to v0
+  generationStatus String @default("pending") // pending, generating, generated, error
+  generationError String? // Error message if generation failed
+  
   // Metadata
   isPublic    Boolean  @default(false)
   url         String?  // Custom URL for the tool
   version     String   @default("1.0.0")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  publishedAt DateTime?
 
   // Relationships
   creatorId String
@@ -138,9 +150,11 @@ model Tool {
 
 enum ToolStatus {
   DRAFT
+  GENERATING
   GENERATED
   PUBLISHED
   ARCHIVED
+  ERROR
 }
 
 // Tool versions for version control
@@ -150,6 +164,7 @@ model ToolVersion {
   config      Json
   schema      Json
   ui          Json
+  v0Code      String?
   changelog   String?
   isActive    Boolean  @default(false)
   createdAt   DateTime @default(now())
