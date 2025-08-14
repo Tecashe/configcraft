@@ -1,4 +1,4 @@
-"use client"
+// "use client"
 
 import { useState } from "react"
 import { useUser } from "@clerk/nextjs"
@@ -28,6 +28,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input"
 import { UserButton } from "@/components/auth/user-button"
 import Link from "next/link"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 interface RecentTool {
   id: string
@@ -290,6 +291,76 @@ export function DashboardClient({
             </Card>
           </div>
 
+          {/* Charts and Recent Activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Usage Chart */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Usage Over Time</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={usageData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgb(71 85 105)" />
+                      <XAxis dataKey="date" stroke="rgb(148 163 184)" fontSize={12} />
+                      <YAxis stroke="rgb(148 163 184)" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgb(30 41 59)",
+                          border: "1px solid rgb(71 85 105)",
+                          borderRadius: "8px",
+                          color: "white",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="usage"
+                        stroke="rgb(59 130 246)"
+                        strokeWidth={2}
+                        dot={{ fill: "rgb(59 130 246)", strokeWidth: 2, r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-white">New tool created</p>
+                      <p className="text-xs text-slate-400">2 hours ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                      <Users className="w-4 h-4 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-white">Team member invited</p>
+                      <p className="text-xs text-slate-400">1 day ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
+                      <Activity className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-white">Tool published</p>
+                      <p className="text-xs text-slate-400">2 days ago</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Recent Tools */}
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -391,45 +462,53 @@ export function DashboardClient({
           <div className="mt-8">
             <h3 className="text-xl font-bold text-white mb-6">Quick Actions</h3>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Plus className="w-6 h-6 text-blue-400" />
-                  </div>
-                  <h4 className="font-semibold text-white mb-1">Create Tool</h4>
-                  <p className="text-sm text-slate-400">Build a new custom tool</p>
-                </CardContent>
-              </Card>
+              <Link href={`/${organizationSlug}/tools/create`}>
+                <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <Plus className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <h4 className="font-semibold text-white mb-1">Create Tool</h4>
+                    <p className="text-sm text-slate-400">Build a new custom tool</p>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Template className="w-6 h-6 text-purple-400" />
-                  </div>
-                  <h4 className="font-semibold text-white mb-1">Browse Templates</h4>
-                  <p className="text-sm text-slate-400">Start from a template</p>
-                </CardContent>
-              </Card>
+              <Link href={`/${organizationSlug}/templates`}>
+                <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <Template className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <h4 className="font-semibold text-white mb-1">Browse Templates</h4>
+                    <p className="text-sm text-slate-400">Start from a template</p>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <UserPlus className="w-6 h-6 text-green-400" />
-                  </div>
-                  <h4 className="font-semibold text-white mb-1">Invite Team</h4>
-                  <p className="text-sm text-slate-400">Add team members</p>
-                </CardContent>
-              </Card>
+              <Link href={`/${organizationSlug}/settings`}>
+                <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <UserPlus className="w-6 h-6 text-green-400" />
+                    </div>
+                    <h4 className="font-semibold text-white mb-1">Invite Team</h4>
+                    <p className="text-sm text-slate-400">Add team members</p>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Puzzle className="w-6 h-6 text-orange-400" />
-                  </div>
-                  <h4 className="font-semibold text-white mb-1">Integrations</h4>
-                  <p className="text-sm text-slate-400">Connect your tools</p>
-                </CardContent>
-              </Card>
+              <Link href={`/${organizationSlug}/integrations`}>
+                <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <Puzzle className="w-6 h-6 text-orange-400" />
+                    </div>
+                    <h4 className="font-semibold text-white mb-1">Integrations</h4>
+                    <p className="text-sm text-slate-400">Connect your tools</p>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
           </div>
         </main>
