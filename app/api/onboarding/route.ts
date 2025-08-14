@@ -1,260 +1,97 @@
-// import { type NextRequest, NextResponse } from "next/server"
-// import { currentUser } from "@clerk/nextjs/server"
-// import { prisma } from "@/lib/prisma"
 
-// export async function POST(req: NextRequest) {
-//   try {
-//     const user = await currentUser()
-//     if (!user) {
-//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-//     }
-
-//     const body = await req.json()
-//     console.log("Onboarding request body:", body)
-
-//     const { companyName, companySize, industry, primaryUseCase, integrations, toolRequirements } = body
-
-//     // Validate required fields
-//     if (!companyName || typeof companyName !== "string" || !companyName.trim()) {
-//       return NextResponse.json({ error: "Company name is required" }, { status: 400 })
-//     }
-
-//     const cleanCompanyName = companyName.trim()
-
-//     // Create or update user in database
-//     const dbUser = await prisma.user.upsert({
-//       where: { clerkId: user.id },
-//       update: {
-//         email: user.emailAddresses[0]?.emailAddress || "",
-//         firstName: user.firstName || "",
-//         lastName: user.lastName || "",
-//         imageUrl: user.imageUrl || "",
-//       },
-//       create: {
-//         clerkId: user.id,
-//         email: user.emailAddresses[0]?.emailAddress || "",
-//         firstName: user.firstName || "",
-//         lastName: user.lastName || "",
-//         imageUrl: user.imageUrl || "",
-//       },
-//     })
-
-//     console.log("User created/updated:", dbUser.id)
-
-//     // Generate a safe slug from company name
-//     const baseSlug = cleanCompanyName
-//       .toLowerCase()
-//       .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
-//       .replace(/\s+/g, "-") // Replace spaces with hyphens
-//       .replace(/-+/g, "-") // Replace multiple hyphens with single
-//       .replace(/^-+|-+$/g, "") // Remove leading/trailing hyphens
-//       .substring(0, 50) // Limit length
-
-//     // Fallback if slug is empty
-//     const slug = baseSlug || "organization"
-
-//     // Ensure slug is unique
-//     let uniqueSlug = slug
-//     let counter = 1
-//     while (await prisma.organization.findUnique({ where: { slug: uniqueSlug } })) {
-//       uniqueSlug = `${slug}-${counter}`
-//       counter++
-//     }
-
-//     console.log("Generated unique slug:", uniqueSlug)
-
-//     // Create organization
-//     const organization = await prisma.organization.create({
-//       data: {
-//         name: cleanCompanyName,
-//         slug: uniqueSlug,
-//         industry: industry || null,
-//         size: companySize || null,
-//         ownerId: dbUser.id,
-//       },
-//     })
-
-//     console.log("Organization created:", organization.id)
-
-//     // Create organization membership
-//     await prisma.organizationMember.create({
-//       data: {
-//         userId: dbUser.clerkId, // Use clerkId for member relationship
-//         organizationId: organization.id,
-//         role: "OWNER",
-//         status: "ACTIVE",
-//       },
-//     })
-
-//     console.log("Organization membership created")
-
-//     // Create free subscription
-//     await prisma.subscription.create({
-//       data: {
-//         organizationId: organization.id,
-//         plan: "FREE",
-//         status: "ACTIVE",
-//         currentPeriodStart: new Date(),
-//         currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-//       },
-//     })
-
-//     console.log("Subscription created")
-
-//     return NextResponse.json({
-//       success: true,
-//       organization: {
-//         id: organization.id,
-//         name: organization.name,
-//         slug: organization.slug,
-//       },
-//     })
-//   } catch (error) {
-//     console.error("Onboarding error details:", error)
-
-//     // More specific error handling
-//     if (error instanceof Error) {
-//       if (error.message.includes("Unique constraint")) {
-//         return NextResponse.json({ error: "Organization name already exists" }, { status: 409 })
-//       }
-//       if (error.message.includes("Foreign key constraint")) {
-//         return NextResponse.json({ error: "User validation failed" }, { status: 400 })
-//       }
-//     }
-
-//     return NextResponse.json(
-//       {
-//         error: "Failed to create organization. Please try again.",
-//         details: process.env.NODE_ENV === "development" ? error : undefined,
-//       },
-//       { status: 500 },
-//     )
-//   }
-// }
 
 // import { type NextRequest, NextResponse } from "next/server"
-// import { currentUser } from "@clerk/nextjs/server"
+// import { auth } from "@clerk/nextjs/server"
 // import { prisma } from "@/lib/prisma"
-// import type { OrganizationSize } from "@prisma/client"
+// import { OrganizationSize } from "@prisma/client"
 
 // // Map form values to Prisma enum values
-// const mapCompanySize = (size: string): OrganizationSize | null => {
+// function mapCompanySize(size: string): OrganizationSize {
 //   switch (size) {
 //     case "1-10":
-//       return "SMALL"
+//       return OrganizationSize.SMALL
 //     case "11-50":
-//       return "MEDIUM"
+//       return OrganizationSize.MEDIUM
 //     case "51-200":
-//       return "LARGE"
-//     case "201-1000":
-//     case "1000+":
-//       return "ENTERPRISE"
+//       return OrganizationSize.LARGE
+//     case "200+":
+//       return OrganizationSize.ENTERPRISE
 //     default:
-//       return null
+//       return OrganizationSize.SMALL
 //   }
 // }
 
-// export async function POST(req: NextRequest) {
+// function generateSlug(name: string): string {
+//   if (!name || typeof name !== "string") {
+//     return `org-${Date.now()}`
+//   }
+
+//   return (
+//     name
+//       .toLowerCase()
+//       .replace(/[^a-z0-9]+/g, "-")
+//       .replace(/^-+|-+$/g, "")
+//       .substring(0, 50) || `org-${Date.now()}`
+//   )
+// }
+
+// export async function POST(request: NextRequest) {
 //   try {
-//     const user = await currentUser()
-//     if (!user) {
+//     const { userId } = await auth()
+
+//     if (!userId) {
 //       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 //     }
 
-//     const body = await req.json()
-//     console.log("Onboarding request body:", body)
-
-//     const { companyName, companySize, industry, primaryUseCase, integrations, toolRequirements } = body
+//     const body = await request.json()
+//     const { companyName, industry, companySize } = body
 
 //     // Validate required fields
-//     if (!companyName || typeof companyName !== "string" || !companyName.trim()) {
+//     if (!companyName || typeof companyName !== "string" || companyName.trim().length === 0) {
 //       return NextResponse.json({ error: "Company name is required" }, { status: 400 })
 //     }
 
-//     const cleanCompanyName = companyName.trim()
+//     if (!industry || typeof industry !== "string") {
+//       return NextResponse.json({ error: "Industry is required" }, { status: 400 })
+//     }
 
-//     // Create or update user in database
-//     const dbUser = await prisma.user.upsert({
-//       where: { clerkId: user.id },
-//       update: {
-//         email: user.emailAddresses[0]?.emailAddress || "",
-//         firstName: user.firstName || "",
-//         lastName: user.lastName || "",
-//         imageUrl: user.imageUrl || "",
-//       },
-//       create: {
-//         clerkId: user.id,
-//         email: user.emailAddresses[0]?.emailAddress || "",
-//         firstName: user.firstName || "",
-//         lastName: user.lastName || "",
-//         imageUrl: user.imageUrl || "",
-//       },
-//     })
+//     if (!companySize || typeof companySize !== "string") {
+//       return NextResponse.json({ error: "Company size is required" }, { status: 400 })
+//     }
 
-//     console.log("User created/updated:", dbUser.id)
-
-//     // Generate a safe slug from company name
-//     const baseSlug = cleanCompanyName
-//       .toLowerCase()
-//       .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
-//       .replace(/\s+/g, "-") // Replace spaces with hyphens
-//       .replace(/-+/g, "-") // Replace multiple hyphens with single
-//       .replace(/^-+|-+$/g, "") // Remove leading/trailing hyphens
-//       .substring(0, 50) // Limit length
-
-//     // Fallback if slug is empty
-//     const slug = baseSlug || "organization"
+//     // Generate a unique slug
+//     const baseSlug = generateSlug(companyName.trim())
+//     let slug = baseSlug
+//     let counter = 1
 
 //     // Ensure slug is unique
-//     let uniqueSlug = slug
-//     let counter = 1
-//     while (await prisma.organization.findUnique({ where: { slug: uniqueSlug } })) {
-//       uniqueSlug = `${slug}-${counter}`
+//     while (await prisma.organization.findUnique({ where: { slug } })) {
+//       slug = `${baseSlug}-${counter}`
 //       counter++
 //     }
 
-//     console.log("Generated unique slug:", uniqueSlug)
+//     // Map the company size to the enum
+//     const mappedSize = mapCompanySize(companySize)
 
-//     // Map company size to Prisma enum
-//     const organizationSize = mapCompanySize(companySize)
-
-//     // Create organization
+//     // Create the organization
 //     const organization = await prisma.organization.create({
 //       data: {
-//         name: cleanCompanyName,
-//         slug: uniqueSlug,
-//         industry: industry || null,
-//         size: organizationSize || "SMALL", // Default to SMALL if no size provided
-//         ownerId: dbUser.id,
+//         name: companyName.trim(),
+//         slug,
+//         industry: industry.trim(),
+//         size: mappedSize,
+//         ownerId: userId,
 //       },
 //     })
 
-//     console.log("Organization created:", organization.id)
-
-//     // Create organization membership
+//     // Create organization membership for the owner
 //     await prisma.organizationMember.create({
 //       data: {
-//         userId: dbUser.clerkId, // Use clerkId for member relationship
+//         userId,
 //         organizationId: organization.id,
 //         role: "OWNER",
-//         status: "ACTIVE",
 //       },
 //     })
-
-//     console.log("Organization membership created")
-
-//     // Create free subscription
-//     await prisma.subscription.create({
-//       data: {
-//         organizationId: organization.id,
-//         plan: "FREE",
-//         status: "ACTIVE",
-//         currentPeriodStart: new Date(),
-//         currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-//       },
-//     })
-
-//     console.log("Subscription created")
 
 //     return NextResponse.json({
 //       success: true,
@@ -265,31 +102,14 @@
 //       },
 //     })
 //   } catch (error) {
-//     console.error("Onboarding error details:", error)
-
-//     // More specific error handling
-//     if (error instanceof Error) {
-//       if (error.message.includes("Unique constraint")) {
-//         return NextResponse.json({ error: "Organization name already exists" }, { status: 409 })
-//       }
-//       if (error.message.includes("Foreign key constraint")) {
-//         return NextResponse.json({ error: "User validation failed" }, { status: 400 })
-//       }
-//     }
-
-//     return NextResponse.json(
-//       {
-//         error: "Failed to create organization. Please try again.",
-//         details: process.env.NODE_ENV === "development" ? error : undefined,
-//       },
-//       { status: 500 },
-//     )
+//     console.error("Onboarding error:", error)
+//     return NextResponse.json({ error: "Failed to create organization" }, { status: 500 })
 //   }
 // }
 
 
 import { type NextRequest, NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
+import { auth, currentUser } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
 import { OrganizationSize } from "@prisma/client"
 
@@ -302,7 +122,8 @@ function mapCompanySize(size: string): OrganizationSize {
       return OrganizationSize.MEDIUM
     case "51-200":
       return OrganizationSize.LARGE
-    case "200+":
+    case "201-1000":
+    case "1000+":
       return OrganizationSize.ENTERPRISE
     default:
       return OrganizationSize.SMALL
@@ -326,26 +147,37 @@ function generateSlug(name: string): string {
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth()
+    const user = await currentUser()
 
-    if (!userId) {
+    if (!userId || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await request.json()
-    const { companyName, industry, companySize } = body
+    const { companyName, industry, companySize, primaryUseCase, integrations, toolRequirements } = body
 
     // Validate required fields
     if (!companyName || typeof companyName !== "string" || companyName.trim().length === 0) {
       return NextResponse.json({ error: "Company name is required" }, { status: 400 })
     }
 
-    if (!industry || typeof industry !== "string") {
-      return NextResponse.json({ error: "Industry is required" }, { status: 400 })
-    }
-
-    if (!companySize || typeof companySize !== "string") {
-      return NextResponse.json({ error: "Company size is required" }, { status: 400 })
-    }
+    // Ensure user exists in our database
+    const dbUser = await prisma.user.upsert({
+      where: { clerkId: userId },
+      update: {
+        email: user.emailAddresses[0]?.emailAddress || "",
+        firstName: user.firstName,
+        lastName: user.lastName,
+        imageUrl: user.imageUrl,
+      },
+      create: {
+        clerkId: userId,
+        email: user.emailAddresses[0]?.emailAddress || "",
+        firstName: user.firstName,
+        lastName: user.lastName,
+        imageUrl: user.imageUrl,
+      },
+    })
 
     // Generate a unique slug
     const baseSlug = generateSlug(companyName.trim())
@@ -359,25 +191,88 @@ export async function POST(request: NextRequest) {
     }
 
     // Map the company size to the enum
-    const mappedSize = mapCompanySize(companySize)
+    const mappedSize = mapCompanySize(companySize || "1-10")
 
     // Create the organization
     const organization = await prisma.organization.create({
       data: {
         name: companyName.trim(),
         slug,
-        industry: industry.trim(),
+        description: toolRequirements || null,
+        industry: industry || null,
         size: mappedSize,
-        ownerId: userId,
+        ownerId: dbUser.id,
       },
     })
 
     // Create organization membership for the owner
     await prisma.organizationMember.create({
       data: {
-        userId,
+        userId: userId, // Use Clerk ID for membership
         organizationId: organization.id,
         role: "OWNER",
+        status: "ACTIVE",
+      },
+    })
+
+    // Create free subscription with proper limits
+    await prisma.subscription.create({
+      data: {
+        organizationId: organization.id,
+        plan: "FREE",
+        status: "ACTIVE",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        toolsLimit: 1,
+        membersLimit: 3,
+        storageLimit: 1000, // 1GB
+        apiCallsLimit: 1000,
+      },
+    })
+
+    // Create initial integrations if selected
+    if (integrations && Array.isArray(integrations) && integrations.length > 0) {
+      const integrationPromises = integrations.map((integrationId: string) => {
+        const integrationMap: Record<string, { name: string; type: string }> = {
+          slack: { name: "Slack", type: "COMMUNICATION" },
+          google: { name: "Google Workspace", type: "PRODUCTIVITY" },
+          microsoft: { name: "Microsoft 365", type: "PRODUCTIVITY" },
+          salesforce: { name: "Salesforce", type: "CRM" },
+          hubspot: { name: "HubSpot", type: "CRM" },
+          zapier: { name: "Zapier", type: "PRODUCTIVITY" },
+        }
+
+        const integration = integrationMap[integrationId]
+        if (integration) {
+          return prisma.integration.create({
+            data: {
+              name: integration.name,
+              type: integration.type as any,
+              provider: integrationId,
+              status: "PENDING",
+              organizationId: organization.id,
+              config: {},
+            },
+          })
+        }
+        return null
+      })
+
+      await Promise.all(integrationPromises.filter(Boolean))
+    }
+
+    // Track usage
+    await prisma.usageRecord.create({
+      data: {
+        type: "MEMBER_INVITED",
+        userId: userId,
+        organizationId: organization.id,
+        metadata: {
+          action: "organization_created",
+          industry,
+          size: mappedSize,
+          primaryUseCase,
+        },
       },
     })
 
