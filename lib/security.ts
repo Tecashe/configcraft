@@ -1,232 +1,29 @@
-// import type { NextRequest, NextResponse } from "next/server"
-// import { z } from "zod"
-
-// export function addSecurityHeaders(response: NextResponse): NextResponse {
-//   // Content Security Policy
-//   response.headers.set(
-//     "Content-Security-Policy",
-//     [
-//       "default-src 'self'",
-//       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://*.clerk.accounts.dev https://*.clerk.com https://www.google.com https://www.gstatic.com https://accounts.google.com",
-//       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-//       "font-src 'self' https://fonts.gstatic.com",
-//       "img-src 'self' data: https: blob:",
-//       "connect-src 'self' https://api.openai.com https://api.stripe.com https://checkout.stripe.com https://*.clerk.accounts.dev https://*.clerk.com https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com",
-//       "frame-src https://js.stripe.com https://checkout.stripe.com https://accounts.google.com https://www.google.com",
-//       "object-src 'none'",
-//       "base-uri 'self'",
-//       "form-action 'self'",
-//     ].join("; "),
-//   )
-
-//   // Security headers
-//   response.headers.set("X-Frame-Options", "DENY")
-//   response.headers.set("X-Content-Type-Options", "nosniff")
-//   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
-//   response.headers.set("X-XSS-Protection", "1; mode=block")
-//   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-
-//   // HSTS (only in production)
-//   if (process.env.NODE_ENV === "production") {
-//     response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
-//   }
-
-//   return response
-// }
-
-// export function setCORSHeaders(response: NextResponse, origin?: string): NextResponse {
-//   const allowedOrigins = [process.env.NEXT_PUBLIC_APP_URL, "http://localhost:3000", "https://localhost:3000"].filter(
-//     Boolean,
-//   )
-
-//   if (origin && allowedOrigins.includes(origin)) {
-//     response.headers.set("Access-Control-Allow-Origin", origin)
-//   }
-
-//   response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-//   response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-//   response.headers.set("Access-Control-Max-Age", "86400")
-
-//   return response
-// }
-
-// // Input validation schemas
-// export const schemas = {
-//   email: z.string().email().max(255),
-//   password: z.string().min(8).max(128),
-//   name: z.string().min(1).max(100).trim(),
-//   description: z.string().max(2000).trim(),
-//   url: z.string().url().max(500),
-//   slug: z
-//     .string()
-//     .regex(/^[a-z0-9-]+$/)
-//     .min(1)
-//     .max(100),
-//   id: z.string().uuid(),
-// }
-
-// export function validateInput<T>(
-//   schema: z.ZodSchema<T>,
-//   data: unknown,
-// ): { success: true; data: T } | { success: false; error: string } {
-//   try {
-//     const result = schema.parse(data)
-//     return { success: true, data: result }
-//   } catch (error) {
-//     if (error instanceof z.ZodError) {
-//       return { success: false, error: error.errors.map((e) => e.message).join(", ") }
-//     }
-//     return { success: false, error: "Invalid input" }
-//   }
-// }
-
-// export function sanitizeHtml(input: string): string {
-//   // Basic HTML sanitization - remove script tags and dangerous attributes
-//   return input
-//     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-//     .replace(/javascript:/gi, "")
-//     .replace(/on\w+\s*=/gi, "")
-//     .trim()
-// }
-
-// export function logSecurityEvent(event: string, details: Record<string, any>, req?: NextRequest) {
-//   const logData = {
-//     timestamp: new Date().toISOString(),
-//     event,
-//     details,
-//     ip: req?.headers.get("x-forwarded-for") || req?.ip,
-//     userAgent: req?.headers.get("user-agent"),
-//     url: req?.url,
-//   }
-
-//   console.warn("SECURITY_EVENT:", JSON.stringify(logData))
-
-//   // In production, send to monitoring service
-//   if (process.env.NODE_ENV === "production") {
-//     // Send to Sentry, DataDog, etc.
-//   }
-// }
-
-// import type { NextRequest, NextResponse } from "next/server"
-// import { z } from "zod"
-
-// export function addSecurityHeaders(response: NextResponse): NextResponse {
-//   // Content Security Policy
-//   response.headers.set(
-//     "Content-Security-Policy",
-//     [
-//       "default-src 'self'",
-//       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://*.clerk.accounts.dev https://*.clerk.com https://www.google.com https://www.gstatic.com https://accounts.google.com",
-//       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-//       "font-src 'self' https://fonts.gstatic.com",
-//       "img-src 'self' data: https: blob:",
-//       "connect-src 'self' https://api.openai.com https://api.stripe.com https://checkout.stripe.com https://*.clerk.accounts.dev https://*.clerk.com https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com https://clerk-telemetry.com",
-//       "frame-src https://js.stripe.com https://checkout.stripe.com https://accounts.google.com https://www.google.com",
-//       "worker-src 'self' blob:",
-//       "object-src 'none'",
-//       "base-uri 'self'",
-//       "form-action 'self'",
-//     ].join("; "),
-//   )
-
-//   // Security headers
-//   response.headers.set("X-Frame-Options", "DENY")
-//   response.headers.set("X-Content-Type-Options", "nosniff")
-//   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
-//   response.headers.set("X-XSS-Protection", "1; mode=block")
-//   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-
-//   // HSTS (only in production)
-//   if (process.env.NODE_ENV === "production") {
-//     response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
-//   }
-
-//   return response
-// }
-
-// export function setCORSHeaders(response: NextResponse, origin?: string): NextResponse {
-//   const allowedOrigins = [process.env.NEXT_PUBLIC_APP_URL, "http://localhost:3000", "https://localhost:3000"].filter(
-//     Boolean,
-//   )
-
-//   if (origin && allowedOrigins.includes(origin)) {
-//     response.headers.set("Access-Control-Allow-Origin", origin)
-//   }
-
-//   response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-//   response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-//   response.headers.set("Access-Control-Max-Age", "86400")
-
-//   return response
-// }
-
-// // Input validation schemas
-// export const schemas = {
-//   email: z.string().email().max(255),
-//   password: z.string().min(8).max(128),
-//   name: z.string().min(1).max(100).trim(),
-//   description: z.string().max(2000).trim(),
-//   url: z.string().url().max(500),
-//   slug: z
-//     .string()
-//     .regex(/^[a-z0-9-]+$/)
-//     .min(1)
-//     .max(100),
-//   id: z.string().uuid(),
-// }
-
-// export function validateInput<T>(
-//   schema: z.ZodSchema<T>,
-//   data: unknown,
-// ): { success: true; data: T } | { success: false; error: string } {
-//   try {
-//     const result = schema.parse(data)
-//     return { success: true, data: result }
-//   } catch (error) {
-//     if (error instanceof z.ZodError) {
-//       return { success: false, error: error.errors.map((e) => e.message).join(", ") }
-//     }
-//     return { success: false, error: "Invalid input" }
-//   }
-// }
-
-// export function sanitizeHtml(input: string): string {
-//   // Basic HTML sanitization - remove script tags and dangerous attributes
-//   return input
-//     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-//     .replace(/javascript:/gi, "")
-//     .replace(/on\w+\s*=/gi, "")
-//     .trim()
-// }
-
-// export function logSecurityEvent(event: string, details: Record<string, any>, req?: NextRequest) {
-//   const logData = {
-//     timestamp: new Date().toISOString(),
-//     event,
-//     details,
-//     ip: req?.headers.get("x-forwarded-for") || req?.ip,
-//     userAgent: req?.headers.get("user-agent"),
-//     url: req?.url,
-//   }
-
-//   console.warn("SECURITY_EVENT:", JSON.stringify(logData))
-
-//   // In production, send to monitoring service
-//   if (process.env.NODE_ENV === "production") {
-//     // Send to Sentry, DataDog, etc.
-//   }
-// }
-
-
 import crypto from "crypto"
+import type { NextResponse } from "next/server"
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "your-32-character-secret-key-here"
 const ALGORITHM = "aes-256-gcm"
 
+// Security headers configuration
+const SECURITY_HEADERS = {
+  "X-DNS-Prefetch-Control": "on",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "X-Frame-Options": "SAMEORIGIN",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "origin-when-cross-origin",
+  "X-XSS-Protection": "1; mode=block",
+}
+
+// CORS configuration
+const ALLOWED_ORIGINS = ["http://localhost:3000", "https://localhost:3000", process.env.NEXT_PUBLIC_APP_URL].filter(
+  Boolean,
+)
+
 export async function encrypt(text: string): Promise<string> {
   try {
     const iv = crypto.randomBytes(16)
-    const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_KEY)
+    const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32)
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
 
     let encrypted = cipher.update(text, "utf8", "hex")
     encrypted += cipher.final("hex")
@@ -251,7 +48,8 @@ export async function decrypt(encryptedData: string): Promise<string> {
     const authTag = Buffer.from(parts[1], "hex")
     const encrypted = parts[2]
 
-    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY)
+    const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32)
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
     decipher.setAuthTag(authTag)
 
     let decrypted = decipher.update(encrypted, "hex", "utf8")
@@ -274,4 +72,90 @@ export function generateApiKey(): string {
 
 export function generateSecureToken(): string {
   return crypto.randomBytes(64).toString("hex")
+}
+
+export function addSecurityHeaders(response: NextResponse): NextResponse {
+  // Add security headers
+  Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+    response.headers.set(key, value)
+  })
+
+  // Add CSP header
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://checkout.stripe.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https: blob:",
+    "connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://api.openai.com https://api.v0.dev",
+    "frame-src 'self' https://js.stripe.com https://checkout.stripe.com",
+  ].join("; ")
+
+  response.headers.set("Content-Security-Policy", csp)
+
+  return response
+}
+
+export function setCORSHeaders(response: NextResponse, origin?: string): NextResponse {
+  // Handle CORS
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin)
+  } else if (process.env.NODE_ENV === "development") {
+    response.headers.set("Access-Control-Allow-Origin", "*")
+  }
+
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+  response.headers.set("Access-Control-Allow-Credentials", "true")
+
+  return response
+}
+
+export function logSecurityEvent(event: string, details: Record<string, any>, request: Request): void {
+  const logData = {
+    timestamp: new Date().toISOString(),
+    event,
+    details,
+    ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+    userAgent: request.headers.get("user-agent") || "unknown",
+    url: request.url,
+  }
+
+  console.warn(`[SECURITY] ${event}:`, logData)
+
+  // In production, you might want to send this to a security monitoring service
+  if (process.env.NODE_ENV === "production") {
+    // Send to monitoring service
+  }
+}
+
+export function encryptCredentials(data: string): string {
+  const algorithm = "aes-256-gcm"
+  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || "default-key", "salt", 32)
+  const iv = crypto.randomBytes(16)
+
+  const cipher = crypto.createCipheriv(algorithm, key, iv)
+  let encrypted = cipher.update(data, "utf8", "hex")
+  encrypted += cipher.final("hex")
+
+  const authTag = cipher.getAuthTag()
+
+  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`
+}
+
+export function decryptCredentials(encryptedData: string): string {
+  const algorithm = "aes-256-gcm"
+  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || "default-key", "salt", 32)
+
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(":")
+  const iv = Buffer.from(ivHex, "hex")
+  const authTag = Buffer.from(authTagHex, "hex")
+
+  const decipher = crypto.createDecipheriv(algorithm, key, iv)
+  decipher.setAuthTag(authTag)
+
+  let decrypted = decipher.update(encrypted, "hex", "utf8")
+  decrypted += decipher.final("utf8")
+
+  return decrypted
 }
