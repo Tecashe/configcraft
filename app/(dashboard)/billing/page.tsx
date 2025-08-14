@@ -331,7 +331,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Payment Method & Invoices */}
+      {/* Payment Method & Invoice*/}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
