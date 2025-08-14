@@ -53,7 +53,7 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Owner relationship
+  // Owner relationship - references User.id (internal ID)
   ownerId String
   owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
@@ -84,7 +84,7 @@ model OrganizationMember {
   joinedAt  DateTime                @default(now())
   updatedAt DateTime                @updatedAt
 
-  // Relationships
+  // Relationships - userId references User.clerkId (Clerk ID)
   userId         String
   user           User         @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
   organizationId String
@@ -121,7 +121,7 @@ model OrganizationInvitation {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   invitedById    String
-  invitedBy      User         @relation(fields: [invitedById], references: [clerkId], onDelete: Cascade)
+  invitedBy      User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, email])
   @@map("organization_invitations")

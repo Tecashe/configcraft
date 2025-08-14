@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create company
-    const company = await prisma.company.create({
+    // Create organization (renamed from company)
+    const organization = await prisma.organization.create({
       data: {
         name: companyName,
         slug: companyName.toLowerCase().replace(/[^a-z0-9]/g, "-"),
@@ -41,11 +41,11 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create company membership
-    await prisma.companyMember.create({
+    // Create organization membership
+    await prisma.organizationMember.create({
       data: {
-        userId: dbUser.id,
-        companyId: company.id,
+        userId: dbUser.clerkId, // Use clerkId for member relationship
+        organizationId: organization.id,
         role: "OWNER",
         status: "ACTIVE",
       },
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // Create free subscription
     await prisma.subscription.create({
       data: {
-        companyId: company.id,
+        organizationId: organization.id,
         plan: "FREE",
         status: "ACTIVE",
         currentPeriodStart: new Date(),
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ success: true, company })
+    return NextResponse.json({ success: true, organization })
   } catch (error) {
     console.error("Onboarding error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

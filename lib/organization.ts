@@ -29,12 +29,33 @@ export async function getCurrentUser() {
   return userId
 }
 
+export async function ensureUserExists(clerkId: string) {
+  let user = await prisma.user.findUnique({
+    where: { clerkId },
+  })
+
+  if (!user) {
+    // Create user if they don't exist (fallback for webhook issues)
+    user = await prisma.user.create({
+      data: {
+        clerkId,
+        email: `${clerkId}@temp.com`, // Temporary email, should be updated by webhook
+      },
+    })
+  }
+
+  return user
+}
+
 export async function getUserOrganizations(): Promise<Organization[]> {
   const userId = await getCurrentUser()
 
+  // Ensure user exists in our database
+  const user = await ensureUserExists(userId)
+
   // Get user's owned organizations
   const ownedOrgs = await prisma.organization.findMany({
-    where: { ownerId: userId },
+    where: { ownerId: user.id },
     include: {
       _count: {
         select: {
@@ -125,12 +146,13 @@ export async function getUserOrganizations(): Promise<Organization[]> {
 
 export async function getOrganizationBySlug(slug: string): Promise<Organization | null> {
   const userId = await getCurrentUser()
+  const user = await ensureUserExists(userId)
 
   // First check if user owns the organization
   const ownedOrg = await prisma.organization.findFirst({
     where: {
       slug,
-      ownerId: userId,
+      ownerId: user.id,
     },
     include: {
       _count: {
@@ -225,6 +247,7 @@ export async function createOrganization(data: {
   website?: string
 }) {
   const userId = await getCurrentUser()
+  const user = await ensureUserExists(userId)
 
   // Check if slug is already taken
   const existing = await prisma.organization.findUnique({
@@ -243,10 +266,10 @@ export async function createOrganization(data: {
       industry: data.industry,
       size: data.size || "SMALL",
       website: data.website,
-      ownerId: userId,
+      ownerId: user.id, // Use internal user.id
       members: {
         create: {
-          userId,
+          userId, // Use clerkId for member relationship
           role: "OWNER",
           status: "ACTIVE",
         },
@@ -259,12 +282,13 @@ export async function createOrganization(data: {
 
 export async function ensureUserHasOrganization(): Promise<string> {
   const userId = await getCurrentUser()
+  const user = await ensureUserExists(userId)
 
   // Check if user has any organizations
   const existingOrg = await prisma.organization.findFirst({
     where: {
       OR: [
-        { ownerId: userId },
+        { ownerId: user.id },
         {
           members: {
             some: {
@@ -283,11 +307,7 @@ export async function ensureUserHasOrganization(): Promise<string> {
   }
 
   // Create a default organization for the user
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-  })
-
-  const defaultName = user?.firstName ? `${user.firstName}'s Organization` : "My Organization"
+  const defaultName = user.firstName ? `${user.firstName}'s Organization` : "My Organization"
   const defaultSlug = `org-${userId.slice(-8)}`
 
   const newOrg = await createOrganization({
@@ -344,6 +364,7 @@ export async function inviteUserToOrganization(
   role: "ADMIN" | "MEMBER" | "VIEWER" = "MEMBER",
 ) {
   const userId = await getCurrentUser()
+  const user = await ensureUserExists(userId)
   const organization = await getOrganizationBySlug(organizationSlug)
 
   if (!organization) {
@@ -378,7 +399,7 @@ export async function inviteUserToOrganization(
       token,
       expiresAt,
       organizationId: organization.id,
-      invitedById: userId,
+      invitedById: user.id, // Use internal user.id
     },
   })
 
@@ -387,6 +408,7 @@ export async function inviteUserToOrganization(
 
 export async function acceptInvitation(token: string) {
   const userId = await getCurrentUser()
+  const user = await ensureUserExists(userId)
 
   const invitation = await prisma.organizationInvitation.findUnique({
     where: { token },
@@ -401,19 +423,14 @@ export async function acceptInvitation(token: string) {
     throw new Error("Invitation has expired")
   }
 
-  // Get user email to verify
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-  })
-
-  if (!user || user.email !== invitation.email) {
+  if (user.email !== invitation.email) {
     throw new Error("Invitation email does not match user email")
   }
 
   // Create membership
   await prisma.organizationMember.create({
     data: {
-      userId,
+      userId, // clerkId for member relationship
       organizationId: invitation.organizationId,
       role: invitation.role,
       status: "ACTIVE",
