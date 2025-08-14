@@ -468,356 +468,381 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowRight, ArrowLeft, Building2, Users, Zap } from "lucide-react"
-import { toast } from "sonner"
+import { Textarea } from "@/components/ui/textarea"
+import { ArrowRight, Building2, Users, Target, Zap, CheckCircle } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
-interface OnboardingData {
-  organizationName: string
-  organizationSize: string
-  industry: string
-  website: string
-  description: string
-  useCases: string[]
-  integrations: string[]
-  requirements: string
-}
-
-const COMPANY_SIZES = [
-  { value: "SMALL", label: "1-10 employees" },
-  { value: "MEDIUM", label: "11-50 employees" },
-  { value: "LARGE", label: "51-200 employees" },
-  { value: "ENTERPRISE", label: "200+ employees" },
+const companySizes = [
+  { value: "1-10", label: "1-10 employees" },
+  { value: "11-50", label: "11-50 employees" },
+  { value: "51-200", label: "51-200 employees" },
+  { value: "201-1000", label: "201-1000 employees" },
+  { value: "1000+", label: "1000+ employees" },
 ]
 
-const INDUSTRIES = [
+const industries = [
   "Technology",
   "Healthcare",
   "Finance",
   "Education",
   "Retail",
   "Manufacturing",
-  "Consulting",
   "Real Estate",
   "Marketing",
+  "Consulting",
   "Other",
 ]
 
-const USE_CASES = [
+const useCases = [
+  "Project Management",
   "Customer Management",
-  "Project Tracking",
-  "Inventory Management",
-  "Lead Generation",
-  "Data Analytics",
+  "Inventory Tracking",
+  "Data Analysis",
   "Team Collaboration",
-  "Document Management",
-  "Workflow Automation",
+  "Process Automation",
+  "Reporting & Analytics",
+  "Other",
 ]
 
-const INTEGRATIONS = [
-  "Google Workspace",
-  "Microsoft 365",
-  "Slack",
-  "Salesforce",
-  "HubSpot",
-  "Stripe",
-  "PayPal",
-  "Zapier",
+const integrations = [
+  { id: "slack", name: "Slack", description: "Team communication" },
+  { id: "google", name: "Google Workspace", description: "Email and docs" },
+  { id: "microsoft", name: "Microsoft 365", description: "Office suite" },
+  { id: "salesforce", name: "Salesforce", description: "CRM platform" },
+  { id: "hubspot", name: "HubSpot", description: "Marketing & sales" },
+  { id: "zapier", name: "Zapier", description: "Automation" },
 ]
 
 export default function OnboardingPage() {
   const { user } = useUser()
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(1)
-  const [isLoading, setIsLoading] = useState(false)
-  const [data, setData] = useState<OnboardingData>({
-    organizationName: user?.firstName ? `${user.firstName}'s Organization` : "My Organization",
-    organizationSize: "",
+  const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState(1)
+  const [formData, setFormData] = useState({
+    companyName: "",
+    companySize: "",
     industry: "",
-    website: "",
-    description: "",
-    useCases: [],
-    integrations: [],
-    requirements: "",
+    primaryUseCase: "",
+    selectedIntegrations: [] as string[],
+    toolRequirements: "",
   })
 
-  const totalSteps = 3
-  const progress = (currentStep / totalSteps) * 100
-
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
-    }
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handlePrev = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
-
-  const handleUseCaseToggle = (useCase: string) => {
-    setData((prev) => ({
+  const handleIntegrationToggle = (integrationId: string) => {
+    setFormData((prev) => ({
       ...prev,
-      useCases: prev.useCases.includes(useCase)
-        ? prev.useCases.filter((uc) => uc !== useCase)
-        : [...prev.useCases, useCase],
-    }))
-  }
-
-  const handleIntegrationToggle = (integration: string) => {
-    setData((prev) => ({
-      ...prev,
-      integrations: prev.integrations.includes(integration)
-        ? prev.integrations.filter((i) => i !== integration)
-        : [...prev.integrations, integration],
+      selectedIntegrations: prev.selectedIntegrations.includes(integrationId)
+        ? prev.selectedIntegrations.filter((id) => id !== integrationId)
+        : [...prev.selectedIntegrations, integrationId],
     }))
   }
 
   const handleSubmit = async () => {
-    setIsLoading(true)
+    if (!formData.companyName.trim()) {
+      toast({
+        title: "Company name required",
+        description: "Please enter your company name to continue.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setLoading(true)
     try {
       const response = await fetch("/api/onboarding", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          companyName: formData.companyName.trim(),
+          companySize: formData.companySize,
+          industry: formData.industry,
+          primaryUseCase: formData.primaryUseCase,
+          integrations: formData.selectedIntegrations,
+          toolRequirements: formData.toolRequirements,
+        }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error("Failed to complete onboarding")
+        throw new Error(data.error || "Failed to complete onboarding")
       }
 
-      const result = await response.json()
-      toast.success("Welcome to ConfigCraft! Your organization has been created.")
+      toast({
+        title: "Welcome to ConfigCraft!",
+        description: "Your organization has been set up successfully.",
+      })
 
-      // Redirect to the new organization dashboard
-      router.push(`/${result.organization.slug}/dashboard`)
+      // Redirect to the organization dashboard
+      router.push(`/${data.organization.slug}/dashboard`)
     } catch (error) {
       console.error("Onboarding error:", error)
-      toast.error("Failed to complete onboarding. Please try again.")
+      toast({
+        title: "Setup failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const canProceedStep1 = data.organizationName && data.organizationSize && data.industry
-  const canProceedStep2 = data.useCases.length > 0
-  const canSubmit = canProceedStep1 && canProceedStep2
+  const nextStep = () => {
+    if (step === 1 && !formData.companyName.trim()) {
+      toast({
+        title: "Company name required",
+        description: "Please enter your company name to continue.",
+        variant: "destructive",
+      })
+      return
+    }
+    setStep((prev) => Math.min(prev + 1, 4))
+  }
+
+  const prevStep = () => {
+    setStep((prev) => Math.max(prev - 1, 1))
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        {/* Progress Header */}
+        {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome to ConfigCraft</h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">Let's set up your organization in just a few steps</p>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4">
-            <div
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
+          <div className="flex items-center justify-center space-x-3 mb-6">
+            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700">
+              <span className="text-white text-lg font-bold">C</span>
+            </div>
+            <span className="text-2xl font-bold text-white">ConfigCraft</span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Step {currentStep} of {totalSteps}
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome to ConfigCraft</h1>
+          <p className="text-slate-400">Let's set up your organization and get you started</p>
         </div>
 
-        <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full w-fit">
-              {currentStep === 1 && <Building2 className="h-6 w-6 text-white" />}
-              {currentStep === 2 && <Users className="h-6 w-6 text-white" />}
-              {currentStep === 3 && <Zap className="h-6 w-6 text-white" />}
-            </div>
-            <CardTitle className="text-2xl">
-              {currentStep === 1 && "Organization Details"}
-              {currentStep === 2 && "How will you use ConfigCraft?"}
-              {currentStep === 3 && "Integrations & Requirements"}
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-slate-400">Step {step} of 4</span>
+            <span className="text-sm text-slate-400">{Math.round((step / 4) * 100)}% complete</span>
+          </div>
+          <div className="w-full bg-slate-800 rounded-full h-2">
+            <div
+              className="bg-slate-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(step / 4) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              {step === 1 && (
+                <>
+                  <Building2 className="w-5 h-5 mr-2" />
+                  Company Information
+                </>
+              )}
+              {step === 2 && (
+                <>
+                  <Users className="w-5 h-5 mr-2" />
+                  Organization Details
+                </>
+              )}
+              {step === 3 && (
+                <>
+                  <Target className="w-5 h-5 mr-2" />
+                  Use Case & Goals
+                </>
+              )}
+              {step === 4 && (
+                <>
+                  <Zap className="w-5 h-5 mr-2" />
+                  Integrations
+                </>
+              )}
             </CardTitle>
-            <CardDescription>
-              {currentStep === 1 && "Tell us about your organization"}
-              {currentStep === 2 && "Select your primary use cases"}
-              {currentStep === 3 && "Connect your tools and share requirements"}
+            <CardDescription className="text-slate-400">
+              {step === 1 && "Tell us about your company"}
+              {step === 2 && "Help us understand your organization"}
+              {step === 3 && "What do you want to build?"}
+              {step === 4 && "Connect your favorite tools"}
             </CardDescription>
           </CardHeader>
-
           <CardContent className="space-y-6">
-            {/* Step 1: Organization Details */}
-            {currentStep === 1 && (
+            {step === 1 && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="organizationName">Organization Name *</Label>
+                  <Label htmlFor="companyName" className="text-white">
+                    Company Name *
+                  </Label>
                   <Input
-                    id="organizationName"
-                    value={data.organizationName}
-                    onChange={(e) => setData((prev) => ({ ...prev, organizationName: e.target.value }))}
-                    placeholder="Enter your organization name"
-                    className="mt-1"
+                    id="companyName"
+                    placeholder="Enter your company name"
+                    value={formData.companyName}
+                    onChange={(e) => handleInputChange("companyName", e.target.value)}
+                    className="bg-slate-900 border-slate-600 text-white placeholder-slate-400"
                   />
                 </div>
-
                 <div>
-                  <Label htmlFor="organizationSize">Organization Size *</Label>
+                  <Label htmlFor="companySize" className="text-white">
+                    Company Size
+                  </Label>
                   <Select
-                    value={data.organizationSize}
-                    onValueChange={(value) => setData((prev) => ({ ...prev, organizationSize: value }))}
+                    value={formData.companySize}
+                    onValueChange={(value) => handleInputChange("companySize", value)}
                   >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select organization size" />
+                    <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+                      <SelectValue placeholder="Select company size" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {COMPANY_SIZES.map((size) => (
-                        <SelectItem key={size.value} value={size.value}>
+                    <SelectContent className="bg-slate-800 border-slate-600">
+                      {companySizes.map((size) => (
+                        <SelectItem key={size.value} value={size.value} className="text-white hover:bg-slate-700">
                           {size.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+            )}
 
+            {step === 2 && (
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="industry">Industry *</Label>
-                  <Select
-                    value={data.industry}
-                    onValueChange={(value) => setData((prev) => ({ ...prev, industry: value }))}
-                  >
-                    <SelectTrigger className="mt-1">
+                  <Label htmlFor="industry" className="text-white">
+                    Industry
+                  </Label>
+                  <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
+                    <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
                       <SelectValue placeholder="Select your industry" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {INDUSTRIES.map((industry) => (
-                        <SelectItem key={industry} value={industry}>
+                    <SelectContent className="bg-slate-800 border-slate-600">
+                      {industries.map((industry) => (
+                        <SelectItem key={industry} value={industry} className="text-white hover:bg-slate-700">
                           {industry}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div>
-                  <Label htmlFor="website">Website (Optional)</Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    value={data.website}
-                    onChange={(e) => setData((prev) => ({ ...prev, website: e.target.value }))}
-                    placeholder="https://yourcompany.com"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Description (Optional)</Label>
-                  <Input
-                    id="description"
-                    value={data.description}
-                    onChange={(e) => setData((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Brief description of your organization"
-                    className="mt-1"
-                  />
-                </div>
               </div>
             )}
 
-            {/* Step 2: Use Cases */}
-            {currentStep === 2 && (
+            {step === 3 && (
               <div className="space-y-4">
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Select the primary ways you plan to use ConfigCraft (select at least one):
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  {USE_CASES.map((useCase) => (
-                    <div key={useCase} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={useCase}
-                        checked={data.useCases.includes(useCase)}
-                        onCheckedChange={() => handleUseCaseToggle(useCase)}
-                      />
-                      <Label htmlFor={useCase} className="text-sm font-normal">
-                        {useCase}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Integrations & Requirements */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
                 <div>
-                  <Label className="text-base font-medium">Integrations (Optional)</Label>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                    Select the tools you'd like to integrate with:
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {INTEGRATIONS.map((integration) => (
-                      <div key={integration} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={integration}
-                          checked={data.integrations.includes(integration)}
-                          onCheckedChange={() => handleIntegrationToggle(integration)}
-                        />
-                        <Label htmlFor={integration} className="text-sm font-normal">
-                          {integration}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
+                  <Label htmlFor="primaryUseCase" className="text-white">
+                    Primary Use Case
+                  </Label>
+                  <Select
+                    value={formData.primaryUseCase}
+                    onValueChange={(value) => handleInputChange("primaryUseCase", value)}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+                      <SelectValue placeholder="What's your main goal?" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-600">
+                      {useCases.map((useCase) => (
+                        <SelectItem key={useCase} value={useCase} className="text-white hover:bg-slate-700">
+                          {useCase}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
                 <div>
-                  <Label htmlFor="requirements">Special Requirements (Optional)</Label>
-                  <textarea
-                    id="requirements"
-                    value={data.requirements}
-                    onChange={(e) => setData((prev) => ({ ...prev, requirements: e.target.value }))}
-                    placeholder="Tell us about any specific requirements, compliance needs, or custom features you need..."
-                    className="mt-1 w-full min-h-[100px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                  <Label htmlFor="toolRequirements" className="text-white">
+                    Describe your ideal tool
+                  </Label>
+                  <Textarea
+                    id="toolRequirements"
+                    placeholder="Tell us what kind of business tool you'd like to build..."
+                    value={formData.toolRequirements}
+                    onChange={(e) => handleInputChange("toolRequirements", e.target.value)}
+                    className="bg-slate-900 border-slate-600 text-white placeholder-slate-400"
                     rows={4}
                   />
                 </div>
               </div>
             )}
 
-            {/* Navigation Buttons */}
+            {step === 4 && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-white">Select integrations you'd like to use</Label>
+                  <p className="text-sm text-slate-400 mb-4">You can add more integrations later</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {integrations.map((integration) => (
+                      <div
+                        key={integration.id}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                          formData.selectedIntegrations.includes(integration.id)
+                            ? "border-slate-500 bg-slate-700"
+                            : "border-slate-600 bg-slate-900 hover:bg-slate-800"
+                        }`}
+                        onClick={() => handleIntegrationToggle(integration.id)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            checked={formData.selectedIntegrations.includes(integration.id)}
+                            onChange={() => handleIntegrationToggle(integration.id)}
+                            className="border-slate-500"
+                          />
+                          <div>
+                            <p className="text-white font-medium">{integration.name}</p>
+                            <p className="text-sm text-slate-400">{integration.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between pt-6">
               <Button
                 variant="outline"
-                onClick={handlePrev}
-                disabled={currentStep === 1}
-                className="flex items-center gap-2 bg-transparent"
+                onClick={prevStep}
+                disabled={step === 1}
+                className="border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
               >
-                <ArrowLeft className="h-4 w-4" />
                 Previous
               </Button>
-
-              {currentStep < totalSteps ? (
-                <Button
-                  onClick={handleNext}
-                  disabled={(currentStep === 1 && !canProceedStep1) || (currentStep === 2 && !canProceedStep2)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
-                >
+              {step < 4 ? (
+                <Button onClick={nextStep} className="bg-slate-700 hover:bg-slate-600 text-white">
                   Next
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={!canSubmit || isLoading}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                  disabled={loading}
+                  className="bg-slate-700 hover:bg-slate-600 text-white"
                 >
-                  {isLoading ? "Creating..." : "Complete Setup"}
-                  <ArrowRight className="h-4 w-4" />
+                  {loading ? "Setting up..." : "Complete Setup"}
+                  <CheckCircle className="w-4 h-4 ml-2" />
                 </Button>
               )}
             </div>
           </CardContent>
         </Card>
+
+        {/* User Info */}
+        <div className="text-center mt-8">
+          <p className="text-slate-400 text-sm">
+            Setting up for {user?.firstName} {user?.lastName} ({user?.primaryEmailAddress?.emailAddress})
+          </p>
+        </div>
       </div>
     </div>
   )
