@@ -26,15 +26,13 @@ import {
   Cpu,
 } from "lucide-react"
 import Link from "next/link"
-import { ensureUserHasOrganization } from "@/utils/organizationUtils"
 
 export default async function HomePage() {
   const { userId } = await auth()
 
   if (userId) {
-    // User is authenticated, redirect to their organization dashboard
-    const orgSlug = await ensureUserHasOrganization()
-    redirect(`/${orgSlug}/dashboard`)
+    // User is authenticated, redirect to dashboard (which will handle org routing)
+    redirect("/dashboard")
   }
 
   // User is not authenticated, show landing page

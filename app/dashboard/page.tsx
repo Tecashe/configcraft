@@ -1,4 +1,4 @@
- "use client"
+"use client"
 
 import { useState } from "react"
 import { useUser } from "@clerk/nextjs"
@@ -31,22 +31,51 @@ import { UserButton } from "@/components/auth/user-button"
 import { useDashboardData } from "@/hooks/use-dashboard-data"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { currentUser } from "@clerk/nextjs/server"
-import { ensureUserHasOrganization } from "@/utils/organizationUtils"
+import { auth } from "@clerk/nextjs/server"
+import { prisma } from "@/lib/prisma"
 
 export default async function DashboardPage() {
-  const user = await currentUser()
+  const { userId } = await auth()
 
-  if (!user) {
+  if (!userId) {
     redirect("/auth/signin")
   }
 
   try {
-    // Try to get user's organization and redirect to it
-    const organizationSlug = await ensureUserHasOrganization()
-    redirect(`/${organizationSlug}/dashboard`)
+    // Ensure user exists in database
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    })
+
+    if (!user) {
+      // User doesn't exist in our database, redirect to onboarding
+      redirect("/onboarding")
+    }
+
+    // Find user's first organization
+    const membership = await prisma.organizationMember.findFirst({
+      where: {
+        userId,
+        status: "ACTIVE",
+      },
+      include: {
+        organization: true,
+      },
+      orderBy: {
+        joinedAt: "asc",
+      },
+    })
+
+    if (!membership) {
+      // User has no organizations, redirect to onboarding
+      redirect("/onboarding")
+    }
+
+    // Redirect to organization dashboard
+    redirect(`/${membership.organization.slug}/dashboard`)
   } catch (error) {
-    // If there's an error or no organization, redirect to onboarding
+    console.error("Dashboard redirect error:", error)
+    // If there's any error, redirect to onboarding to start fresh
     redirect("/onboarding")
   }
 
