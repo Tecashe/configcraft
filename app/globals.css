@@ -4,178 +4,102 @@
 
 @layer base {
   :root {
-    --background: 18 18 18; /* #121212 */
-    --foreground: 224 224 224; /* #E0E0E0 */
-    --card: 18 18 18; /* #121212 */
-    --card-foreground: 224 224 224; /* #E0E0E0 */
-    --popover: 18 18 18; /* #121212 */
-    --popover-foreground: 224 224 224; /* #E0E0E0 */
-    --primary: 136 136 136; /* #888888 */
-    --primary-foreground: 18 18 18; /* #121212 */
-    --secondary: 68 68 68; /* #444444 */
-    --secondary-foreground: 224 224 224; /* #E0E0E0 */
-    --muted: 68 68 68; /* #444444 */
-    --muted-foreground: 176 176 176; /* #B0B0B0 */
-    --accent: 136 136 136; /* #888888 */
-    --accent-foreground: 18 18 18; /* #121212 */
-    --destructive: 220 38 38; /* Keep red for errors but darker */
-    --destructive-foreground: 224 224 224; /* #E0E0E0 */
-    --border: 68 68 68; /* #444444 */
-    --input: 68 68 68; /* #444444 */
-    --ring: 136 136 136; /* #888888 */
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 18 18 18; /* #121212 */
-    --foreground: 224 224 224; /* #E0E0E0 */
-    --card: 18 18 18; /* #121212 */
-    --card-foreground: 224 224 224; /* #E0E0E0 */
-    --popover: 18 18 18; /* #121212 */
-    --popover-foreground: 224 224 224; /* #E0E0E0 */
-    --primary: 136 136 136; /* #888888 */
-    --primary-foreground: 18 18 18; /* #121212 */
-    --secondary: 68 68 68; /* #444444 */
-    --secondary-foreground: 224 224 224; /* #E0E0E0 */
-    --muted: 68 68 68; /* #444444 */
-    --muted-foreground: 176 176 176; /* #B0B0B0 */
-    --accent: 136 136 136; /* #888888 */
-    --accent-foreground: 18 18 18; /* #121212 */
-    --destructive: 220 38 38;
-    --destructive-foreground: 224 224 224; /* #E0E0E0 */
-    --border: 68 68 68; /* #444444 */
-    --input: 68 68 68; /* #444444 */
-    --ring: 136 136 136; /* #888888 */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 32.6% 17.5%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
   }
+}
 
+@layer base {
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
-    background-color: #121212 !important;
-    color: #e0e0e0 !important;
-  }
-
-  /* Force all backgrounds to use our color scheme */
-  .bg-white {
-    background-color: #121212 !important;
-  }
-
-  .bg-gray-50,
-  .bg-gray-100,
-  .bg-gray-200 {
-    background-color: #444444 !important;
-  }
-
-  .text-gray-900,
-  .text-black {
-    color: #e0e0e0 !important;
-  }
-
-  .text-gray-600,
-  .text-gray-700 {
-    color: #b0b0b0 !important;
-  }
-
-  .text-gray-500 {
-    color: #888888 !important;
-  }
-
-  .border-gray-200,
-  .border-gray-300 {
-    border-color: #444444 !important;
-  }
-
-  /* Remove any yellow/amber colors */
-  .text-yellow-400,
-  .text-amber-400,
-  .bg-yellow-100,
-  .bg-amber-100 {
-    color: #888888 !important;
-    background-color: #444444 !important;
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #444444;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #888888;
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #666666;
-  }
-
-  /* Ensure all cards use dark theme */
-  .card {
-    background-color: #121212 !important;
-    border-color: #444444 !important;
-    color: #e0e0e0 !important;
-  }
-
-  /* Fix any remaining light elements */
-  input,
-  textarea,
-  select {
-    background-color: #444444 !important;
-    border-color: #444444 !important;
-    color: #e0e0e0 !important;
-  }
-
-  input::placeholder,
-  textarea::placeholder {
-    color: #b0b0b0 !important;
-  }
-
-  /* Dropdown menus */
-  [role="menu"],
-  [role="listbox"] {
-    background-color: #121212 !important;
-    border-color: #444444 !important;
-  }
-
-  /* Buttons */
-  button {
-    border-color: #444444 !important;
-  }
-
-  /* Remove any gradients that might use other colors */
-  .bg-gradient-to-r,
-  .bg-gradient-to-br {
-    background: linear-gradient(to right, #888888, #666666) !important;
   }
 }
 
-/* Custom animations */
-@keyframes bounce {
-  0%,
-  20%,
-  53%,
-  80%,
-  100% {
-    transform: translateY(0);
+@layer components {
+  /* Navigation Components */
+  .config-nav-item {
+    @apply flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors;
   }
-  40%,
-  43% {
-    transform: translateY(-8px);
-  }
-  70% {
-    transform: translateY(-4px);
-  }
-  90% {
-    transform: translateY(-2px);
-  }
-}
 
-.animate-bounce {
-  animation: bounce 1s infinite;
+  .config-nav-item-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .config-nav-item-inactive {
+    @apply text-muted-foreground hover:bg-muted hover:text-foreground;
+  }
+
+  /* Button Components */
+  .config-button-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .config-button-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+
+  /* Card Components */
+  .config-card {
+    @apply bg-card text-card-foreground border border-border rounded-lg shadow-sm;
+  }
+
+  /* Status Colors */
+  .config-status-success {
+    @apply text-status-success;
+  }
+
+  .config-status-warning {
+    @apply text-status-warning;
+  }
+
+  .config-status-error {
+    @apply text-status-error;
+  }
+
+  .config-status-info {
+    @apply text-status-info;
+  }
 }

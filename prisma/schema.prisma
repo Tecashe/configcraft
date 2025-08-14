@@ -21,71 +21,80 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relationships
-  companies     CompanyMember[]
-  ownedCompanies Company[]      @relation("CompanyOwner")
-  tools         Tool[]
-  usageRecords  UsageRecord[]
-  apiKeys       ApiKey[]
+  // Organization relationships
+  organizationMemberships OrganizationMember[]
+  ownedOrganizations      Organization[]       @relation("OrganizationOwner")
+  sentInvitations         OrganizationInvitation[]
+  
+  // Direct relationships (for backward compatibility)
+  tools        Tool[]
+  usageRecords UsageRecord[]
+  apiKeys      ApiKey[]
 
   @@map("users")
 }
 
-// Company/Organization model
-model Company {
-  id          String      @id @default(cuid())
+// Organization model (renamed from Company for clarity)
+model Organization {
+  id          String           @id @default(cuid())
   name        String
-  slug        String      @unique
+  slug        String           @unique
   description String?
   logoUrl     String?
   website     String?
   industry    String?
-  size        CompanySize @default(SMALL)
+  size        OrganizationSize @default(SMALL)
   domain      String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  
+  // Settings
+  customBranding Boolean @default(false)
+  brandColors    Json?   // Store custom brand colors
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Owner relationship
   ownerId String
-  owner   User   @relation("CompanyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   // Relationships
-  members       CompanyMember[]
+  members       OrganizationMember[]
   tools         Tool[]
   subscriptions Subscription[]
   integrations  Integration[]
   usageRecords  UsageRecord[]
   apiKeys       ApiKey[]
+  invitations   OrganizationInvitation[]
 
-  @@map("companies")
+  @@map("organizations")
 }
 
-enum CompanySize {
-  SMALL     // 1-10 employees
-  MEDIUM    // 11-50 employees
-  LARGE     // 51-200 employees
+enum OrganizationSize {
+  SMALL      // 1-10 employees
+  MEDIUM     // 11-50 employees
+  LARGE      // 51-200 employees
   ENTERPRISE // 200+ employees
 }
 
-// Company membership model
-model CompanyMember {
-  id        String           @id @default(cuid())
-  role      CompanyRole      @default(MEMBER)
-  status    MembershipStatus @default(ACTIVE)
-  joinedAt  DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+// Organization membership model
+model OrganizationMember {
+  id        String                  @id @default(cuid())
+  role      OrganizationMemberRole  @default(MEMBER)
+  status    MembershipStatus        @default(ACTIVE)
+  joinedAt  DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
 
   // Relationships
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, companyId])
-  @@map("company_members")
+  @@unique([userId, organizationId])
+  @@map("organization_members")
 }
 
-enum CompanyRole {
+enum OrganizationMemberRole {
   OWNER
   ADMIN
   MEMBER
@@ -96,6 +105,26 @@ enum MembershipStatus {
   ACTIVE
   INACTIVE
   PENDING
+}
+
+// Organization invitations
+model OrganizationInvitation {
+  id        String                  @id @default(cuid())
+  email     String
+  role      OrganizationMemberRole  @default(MEMBER)
+  token     String                  @unique
+  expiresAt DateTime
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  // Relationships
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedById    String
+  invitedBy      User         @relation(fields: [invitedById], references: [clerkId], onDelete: Cascade)
+
+  @@unique([organizationId, email])
+  @@map("organization_invitations")
 }
 
 // Tool model - the custom business tools created by users
@@ -120,10 +149,10 @@ model Tool {
   publishedAt DateTime?  // When tool was published
   
   // Requirements and generation
-  requirements String?   // Original user requirements
-  v0Prompt     String?   // Processed prompt sent to v0
-  generationStatus String @default("pending") // pending, generating, generated, error
-  generationError String? // Error message if generation failed
+  requirements     String?           // Original user requirements
+  v0Prompt         String?           // Processed prompt sent to v0
+  generationStatus GenerationStatus  @default(pending)
+  generationError  String?           // Error message if generation failed
   
   // Metadata
   isPublic    Boolean  @default(false)
@@ -133,10 +162,10 @@ model Tool {
   updatedAt   DateTime @updatedAt
 
   // Relationships
-  creatorId String
-  creator   User    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creatorId      String
+  creator        User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Related models
   versions      ToolVersion[]
@@ -144,7 +173,7 @@ model Tool {
   integrations  ToolIntegration[]
   analytics     ToolAnalytics[]
 
-  @@unique([companyId, slug])
+  @@unique([organizationId, slug])
   @@map("tools")
 }
 
@@ -155,6 +184,13 @@ enum ToolStatus {
   PUBLISHED
   ARCHIVED
   ERROR
+}
+
+enum GenerationStatus {
+  pending
+  generating
+  generated
+  error
 }
 
 // Tool versions for version control
@@ -179,7 +215,7 @@ model ToolVersion {
 
 // Template model
 model Template {
-  id          String         @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String
   category    String
@@ -188,11 +224,18 @@ model Template {
   schema      Json
   ui          Json
   preview     Json?
-  isPublic    Boolean        @default(true)
+  previewUrl  String?  // Preview image URL
+  
+  // Template metadata
+  isPublic    Boolean  @default(true)
   rating      Float?
-  downloads   Int            @default(0)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  downloads   Int      @default(0)
+  difficulty  String   @default("Easy") // Easy, Medium, Hard
+  setupTime   String   @default("5 min")
+  features    String[] // List of features
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("templates")
 }
@@ -204,21 +247,21 @@ model Integration {
   type        IntegrationType
   provider    String
   config      Json
-  credentials Json? // Encrypted credentials
-  status      IntegrationStatus @default(DISCONNECTED)
+  credentials Json?             // Encrypted credentials
+  status      IntegrationStatus @default(PENDING)
   lastSyncAt  DateTime?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
   // Relationships
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Related models
   toolIntegrations ToolIntegration[]
   logs             IntegrationLog[]
 
-  @@unique([companyId, provider])
+  @@unique([organizationId, provider])
   @@map("integrations")
 }
 
@@ -233,10 +276,10 @@ enum IntegrationType {
 }
 
 enum IntegrationStatus {
+  PENDING
   CONNECTED
   DISCONNECTED
   ERROR
-  PENDING
 }
 
 // Tool-specific integrations
@@ -280,20 +323,28 @@ enum LogLevel {
 
 // Subscription model for billing
 model Subscription {
-  id                String             @id @default(cuid())
-  plan              SubscriptionPlan
-  status            SubscriptionStatus @default(ACTIVE)
-  stripeCustomerId  String?
-  stripeSubscriptionId String?
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean           @default(false)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  id                     String             @id @default(cuid())
+  plan                   SubscriptionPlan
+  status                 SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId       String?
+  stripeSubscriptionId   String?
+  stripePriceId          String?
+  currentPeriodStart     DateTime
+  currentPeriodEnd       DateTime
+  cancelAtPeriodEnd      Boolean            @default(false)
+  trialEndsAt            DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  // Usage limits
+  toolsLimit    Int @default(1)
+  membersLimit  Int @default(3)
+  storageLimit  Int @default(1000) // MB
+  apiCallsLimit Int @default(1000) // per month
 
   // Relationships
-  companyId String  @unique
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Related models
   invoices Invoice[]
@@ -314,19 +365,22 @@ enum SubscriptionStatus {
   PAST_DUE
   UNPAID
   INCOMPLETE
+  TRIALING
 }
 
 // Invoice model
 model Invoice {
-  id             String        @id @default(cuid())
-  stripeInvoiceId String?      @unique
-  amount         Int           // Amount in cents
-  currency       String        @default("usd")
-  status         InvoiceStatus
-  paidAt         DateTime?
-  dueDate        DateTime
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  stripeInvoiceId String?       @unique
+  amount          Int           // Amount in cents
+  currency        String        @default("usd")
+  status          InvoiceStatus
+  invoiceUrl      String?       // Stripe invoice URL
+  pdfUrl          String?       // PDF download URL
+  paidAt          DateTime?
+  dueDate         DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Relationships
   subscriptionId String
@@ -352,12 +406,12 @@ model UsageRecord {
   createdAt DateTime  @default(now())
 
   // Relationships
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  toolId    String?
-  tool      Tool?    @relation(fields: [toolId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  toolId         String?
+  tool           Tool?        @relation(fields: [toolId], references: [id], onDelete: SetNull)
 
   @@map("usage_records")
 }
@@ -370,16 +424,18 @@ enum UsageType {
   API_CALL
   INTEGRATION_SYNC
   EXPORT_DATA
+  MEMBER_INVITED
+  TEMPLATE_USED
 }
 
 // Tool analytics model
 model ToolAnalytics {
-  id        String   @id @default(cuid())
-  date      DateTime
-  views     Int      @default(0)
-  interactions Int   @default(0)
-  uniqueUsers Int    @default(0)
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  date         DateTime
+  views        Int      @default(0)
+  interactions Int      @default(0)
+  uniqueUsers  Int      @default(0)
+  createdAt    DateTime @default(now())
 
   // Relationships
   toolId String
@@ -402,10 +458,10 @@ model ApiKey {
   updatedAt   DateTime     @updatedAt
 
   // Relationships
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("api_keys")
 }
@@ -414,4 +470,19 @@ enum ApiKeyStatus {
   ACTIVE
   INACTIVE
   REVOKED
+}
+
+// Audit log for tracking changes
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // CREATE, UPDATE, DELETE, etc.
+  resource  String   // tool, organization, user, etc.
+  resourceId String
+  userId    String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
 }

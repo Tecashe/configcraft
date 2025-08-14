@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,17 +36,36 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true)
   const [upgrading, setUpgrading] = useState<string | null>(null)
   const { toast } = useToast()
+  const params = useParams()
+  const orgSlug = params?.slug as string
 
   useEffect(() => {
-    fetchSubscription()
-  }, [])
+    if (orgSlug) {
+      fetchSubscription()
+    }
+  }, [orgSlug])
 
   const fetchSubscription = async () => {
     try {
-      const response = await fetch("/api/billing/subscription")
+      const response = await fetch(`/api/organizations/${orgSlug}/billing/subscription`)
       if (response.ok) {
         const data = await response.json()
         setSubscription(data)
+      } else if (response.status === 404) {
+        // Create a default free subscription
+        setSubscription({
+          id: "free",
+          plan: "FREE",
+          status: "ACTIVE",
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          usage: {
+            toolsUsed: 0,
+            toolsLimit: 1,
+            teamMembers: 1,
+            teamLimit: 3,
+          },
+          invoices: [],
+        })
       }
     } catch (error) {
       console.error("Failed to fetch subscription:", error)
@@ -62,7 +82,7 @@ export default function BillingPage() {
   const handleUpgrade = async (plan: string) => {
     setUpgrading(plan)
     try {
-      const response = await fetch("/api/billing/create-checkout", {
+      const response = await fetch(`/api/organizations/${orgSlug}/billing/create-checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
@@ -88,7 +108,7 @@ export default function BillingPage() {
 
   const handleManageSubscription = async () => {
     try {
-      const response = await fetch("/api/billing/portal", { method: "POST" })
+      const response = await fetch(`/api/organizations/${orgSlug}/billing/portal`, { method: "POST" })
       if (response.ok) {
         const { url } = await response.json()
         window.location.href = url
@@ -103,27 +123,6 @@ export default function BillingPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </div>
-    )
-  }
-
-  if (!subscription) {
-    return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">No Subscription Found</h1>
-          <p className="text-muted-foreground mb-4">Please contact support to set up your subscription.</p>
-        </div>
-      </div>
-    )
-  }
-
   const plans = [
     {
       name: "Free",
@@ -133,7 +132,7 @@ export default function BillingPage() {
       features: ["1 custom tool", "Basic templates", "Email support", "Community access"],
       toolLimit: 1,
       teamLimit: 3,
-      current: subscription.plan === "FREE",
+      current: subscription?.plan === "FREE",
       planKey: "FREE",
     },
     {
@@ -144,7 +143,7 @@ export default function BillingPage() {
       features: ["5 custom tools", "All templates", "Priority support", "Basic integrations", "Usage analytics"],
       toolLimit: 5,
       teamLimit: 10,
-      current: subscription.plan === "STARTER",
+      current: subscription?.plan === "STARTER",
       planKey: "STARTER",
     },
     {
@@ -162,7 +161,7 @@ export default function BillingPage() {
       ],
       toolLimit: 25,
       teamLimit: 50,
-      current: subscription.plan === "PROFESSIONAL",
+      current: subscription?.plan === "PROFESSIONAL",
       planKey: "PROFESSIONAL",
     },
     {
@@ -185,24 +184,50 @@ export default function BillingPage() {
     },
   ]
 
+  if (loading) {
+    return (
+      <div className="p-4 lg:p-6">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!subscription) {
+    return (
+      <div className="p-4 lg:p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4 text-foreground">No Subscription Found</h1>
+          <p className="text-muted-foreground mb-4">Please contact support to set up your subscription.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
+    <div className="p-4 lg:p-6 space-y-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Billing & Subscription</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold mb-2 text-foreground">Billing & Subscription</h1>
         <p className="text-muted-foreground">Manage your subscription, usage, and billing information</p>
       </div>
 
       {/* Current Plan & Usage */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <Card>
+        <Card className="config-card">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-foreground">
               Current Plan
-              <Badge variant={subscription.status === "ACTIVE" ? "default" : "secondary"}>{subscription.status}</Badge>
+              <Badge
+                variant={subscription.status === "ACTIVE" ? "default" : "secondary"}
+                className="bg-status-success text-white"
+              >
+                {subscription.status}
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-2">{subscription.plan}</div>
+            <div className="text-2xl font-bold mb-2 text-foreground">{subscription.plan}</div>
             <p className="text-muted-foreground mb-4">
               Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
             </p>
@@ -212,15 +237,15 @@ export default function BillingPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="config-card">
           <CardHeader>
-            <CardTitle>Tools Usage</CardTitle>
+            <CardTitle className="text-foreground">Tools Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-2">
+            <div className="text-2xl font-bold mb-2 text-foreground">
               {subscription.usage.toolsUsed}/{subscription.usage.toolsLimit}
             </div>
-            <div className="w-full bg-secondary rounded-full h-2 mb-4">
+            <div className="w-full bg-muted rounded-full h-2 mb-4">
               <div
                 className="bg-primary h-2 rounded-full"
                 style={{
@@ -234,15 +259,15 @@ export default function BillingPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="config-card">
           <CardHeader>
-            <CardTitle>Team Members</CardTitle>
+            <CardTitle className="text-foreground">Team Members</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-2">
+            <div className="text-2xl font-bold mb-2 text-foreground">
               {subscription.usage.teamMembers}/{subscription.usage.teamLimit}
             </div>
-            <div className="w-full bg-secondary rounded-full h-2 mb-4">
+            <div className="w-full bg-muted rounded-full h-2 mb-4">
               <div
                 className="bg-primary h-2 rounded-full"
                 style={{
@@ -259,13 +284,13 @@ export default function BillingPage() {
 
       {/* Usage Alert */}
       {subscription.usage.toolsUsed / subscription.usage.toolsLimit > 0.8 && (
-        <Card className="mb-8 border-orange-200 bg-orange-50">
+        <Card className="mb-8 border-status-warning bg-status-warning/10">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-orange-600" />
+              <AlertCircle className="h-5 w-5 text-status-warning" />
               <div>
-                <p className="font-medium text-orange-800">Approaching Tool Limit</p>
-                <p className="text-sm text-orange-700">
+                <p className="font-medium text-status-warning">Approaching Tool Limit</p>
+                <p className="text-sm text-status-warning/80">
                   You're using {subscription.usage.toolsUsed} of {subscription.usage.toolsLimit} tools. Consider
                   upgrading to avoid interruptions.
                 </p>
@@ -273,7 +298,7 @@ export default function BillingPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="ml-auto bg-transparent"
+                className="ml-auto border-status-warning text-status-warning hover:bg-status-warning/10 bg-transparent"
                 onClick={() => handleUpgrade("PROFESSIONAL")}
               >
                 Upgrade Plan
@@ -285,32 +310,34 @@ export default function BillingPage() {
 
       {/* Subscription Plans */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-6">Available Plans</h2>
+        <h2 className="text-2xl font-bold mb-6 text-foreground">Available Plans</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => (
-            <Card key={plan.name} className={`relative ${plan.current ? "border-primary shadow-lg" : ""}`}>
+            <Card key={plan.name} className={`relative config-card ${plan.current ? "border-primary shadow-lg" : ""}`}>
               {plan.current && (
-                <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2">Current Plan</Badge>
+                <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
+                  Current Plan
+                </Badge>
               )}
               <CardHeader>
-                <CardTitle className="text-xl">{plan.name}</CardTitle>
-                <div className="text-3xl font-bold">
+                <CardTitle className="text-xl text-foreground">{plan.name}</CardTitle>
+                <div className="text-3xl font-bold text-foreground">
                   {plan.price}
                   <span className="text-sm font-normal text-muted-foreground">/{plan.period}</span>
                 </div>
-                <CardDescription>{plan.description}</CardDescription>
+                <CardDescription className="text-muted-foreground">{plan.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 mb-6">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">{feature}</span>
+                      <Check className="h-4 w-4 text-status-success" />
+                      <span className="text-sm text-foreground">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Button
-                  className="w-full"
+                  className={`w-full ${plan.current ? "" : "config-button-primary"}`}
                   variant={plan.current ? "outline" : "default"}
                   disabled={plan.current || upgrading === plan.planKey}
                   onClick={() => (plan.name === "Enterprise" ? null : handleUpgrade(plan.planKey))}
@@ -331,11 +358,11 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Payment Method & Invoice*/}
+      {/* Payment Method & Invoices */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card>
+        <Card className="config-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <CreditCard className="h-5 w-5" />
               Payment Method
             </CardTitle>
@@ -350,17 +377,20 @@ export default function BillingPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="config-card">
           <CardHeader>
-            <CardTitle>Recent Invoices</CardTitle>
+            <CardTitle className="text-foreground">Recent Invoices</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {subscription.invoices.length > 0 ? (
                 subscription.invoices.map((invoice) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={invoice.id}
+                    className="flex items-center justify-between p-3 border border-border rounded-lg"
+                  >
                     <div>
-                      <p className="font-medium">${(invoice.amount / 100).toFixed(2)}</p>
+                      <p className="font-medium text-foreground">${(invoice.amount / 100).toFixed(2)}</p>
                       <p className="text-sm text-muted-foreground">
                         {new Date(invoice.createdAt).toLocaleDateString()}
                       </p>
@@ -371,7 +401,7 @@ export default function BillingPage() {
                           {invoice.status}
                         </Badge>
                         {invoice.pdfUrl && (
-                          <Button variant="ghost" size="sm" asChild>
+                          <Button variant="ghost" size="sm" asChild className="text-primary hover:text-foreground">
                             <a href={invoice.pdfUrl} target="_blank" rel="noopener noreferrer">
                               <Download className="h-4 w-4" />
                             </a>
