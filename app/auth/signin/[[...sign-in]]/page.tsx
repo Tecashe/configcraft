@@ -14,7 +14,7 @@ export default function SignInPage() {
             </span>
           </div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-3">Welcome back</h1>
-          <p className="text-slate-600 dark:text-slate-400 text-lg">Sign in to your ConfigCraft account</p>
+          <p className="text-slate-600 dark:text-slate-400 text-lg">Sign in to your account to continue</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8">
@@ -37,12 +37,14 @@ export default function SignInPage() {
                 footerActionLink: "text-blue-600 hover:text-blue-700 font-medium",
                 identityPreviewText: "text-slate-600 dark:text-slate-400",
                 identityPreviewEditButton: "text-blue-600 hover:text-blue-700",
+                formResendCodeLink: "text-blue-600 hover:text-blue-700",
               },
               layout: {
                 socialButtonsPlacement: "top",
                 socialButtonsVariant: "blockButton",
               },
             }}
+            redirectUrl="/dashboard"
           />
         </div>
 
@@ -53,7 +55,7 @@ export default function SignInPage() {
               href="/auth/signup"
               className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors duration-200"
             >
-              Sign up for free
+              Sign up
             </a>
           </p>
         </div>
