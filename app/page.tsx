@@ -1,645 +1,466 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { redirect } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
-import {
-  Zap,
-  ArrowRight,
-  CheckCircle,
-  Users,
-  Clock,
-  Shield,
-  Sparkles,
-  BarChart3,
-  Rocket,
-  Star,
-  Play,
-  Code,
-  Database,
-  Brain,
-  Target,
-  Globe,
-  MessageSquare,
-  FileText,
-  Layers,
-  Cpu,
-} from "lucide-react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
+  ArrowRight,
+  Code,
+  Zap,
+  Users,
+  Shield,
+  Star,
+  Sparkles,
+  Wrench,
+  BarChart3,
+  Globe,
+  Clock,
+  Target,
+  Lightbulb,
+  Rocket,
+} from "lucide-react"
 
-export default async function HomePage() {
+export default async function LandingPage() {
   const { userId } = await auth()
-
-  if (userId) {
-    // User is authenticated, redirect to dashboard (which will handle org routing)
-    redirect("/dashboard")
-  }
-
-  // User is not authenticated, show landing page
-  const features = [
-    {
-      icon: Brain,
-      title: "AI-Powered Generation",
-      description:
-        "Describe your business process in plain English and watch our AI create a fully functional tool in minutes",
-      color: "from-blue-500 to-purple-600",
-    },
-    {
-      icon: Code,
-      title: "No-Code Required",
-      description:
-        "Build sophisticated business applications without writing a single line of code or hiring developers",
-      color: "from-purple-500 to-pink-600",
-    },
-    {
-      icon: Users,
-      title: "Team Collaboration",
-      description: "Share tools with your team, set permissions, and collaborate in real-time with built-in commenting",
-      color: "from-green-500 to-blue-600",
-    },
-    {
-      icon: Shield,
-      title: "Enterprise Security",
-      description: "Bank-level security with SOC 2 compliance, end-to-end encryption, and role-based access control",
-      color: "from-red-500 to-orange-600",
-    },
-    {
-      icon: BarChart3,
-      title: "Advanced Analytics",
-      description: "Track usage, performance, and ROI with detailed analytics dashboards and custom reporting",
-      color: "from-indigo-500 to-purple-600",
-    },
-    {
-      icon: Rocket,
-      title: "Instant Deployment",
-      description: "Deploy your tools instantly with custom URLs, embed codes, and seamless integrations",
-      color: "from-orange-500 to-red-600",
-    },
-  ]
-
-  const testimonials = [
-    {
-      name: "Sarah Johnson",
-      role: "Operations Manager",
-      company: "TechFlow Inc",
-      content:
-        "ConfigCraft saved us months of development time. We built our entire customer onboarding system in just 2 hours. The AI understood exactly what we needed.",
-      rating: 5,
-      avatar: "/professional-woman-smiling.png",
-    },
-    {
-      name: "Mike Chen",
-      role: "CEO",
-      company: "GrowthLabs",
-      content:
-        "It's like having a developer who speaks business language. We've created 12 custom tools that would have cost us $200K+ to develop traditionally.",
-      rating: 5,
-      avatar: "/professional-man-glasses.png",
-    },
-    {
-      name: "Lisa Davis",
-      role: "Project Manager",
-      company: "DataSync Solutions",
-      content:
-        "Our team productivity increased by 40% after implementing ConfigCraft tools across our workflows. The ROI was immediate and substantial.",
-      rating: 5,
-      avatar: "/professional-woman-short-hair.png",
-    },
-  ]
-
-  const useCases = [
-    {
-      title: "Customer Onboarding",
-      description: "Streamline new customer setup with automated workflows and data collection",
-      icon: Users,
-      image: "/customer-onboarding-dashboard.png",
-      stats: "85% faster onboarding",
-    },
-    {
-      title: "Inventory Management",
-      description: "Track stock levels, manage suppliers, and automate reordering processes",
-      icon: Database,
-      image: "/inventory-management-system.png",
-      stats: "60% reduction in stockouts",
-    },
-    {
-      title: "Project Tracking",
-      description: "Monitor project progress with custom dashboards and automated reporting",
-      icon: Target,
-      image: "/project-management-dashboard.png",
-      stats: "45% improvement in delivery",
-    },
-    {
-      title: "Expense Management",
-      description: "Automate expense submission, approval workflows, and financial reporting",
-      icon: FileText,
-      image: "/expense-management-interface.png",
-      stats: "70% faster processing",
-    },
-  ]
-
-  const steps = [
-    {
-      number: "01",
-      title: "Describe Your Need",
-      description: "Tell our AI what business process you want to automate or improve",
-      icon: MessageSquare,
-      image: "/business-requirements-typing.png",
-    },
-    {
-      number: "02",
-      title: "AI Generates Your Tool",
-      description: "Watch as our AI creates a fully functional business tool tailored to your needs",
-      icon: Cpu,
-      image: "/ai-code-interface.png",
-    },
-    {
-      number: "03",
-      title: "Deploy & Scale",
-      description: "Launch your tool instantly and share it with your team or customers",
-      icon: Rocket,
-      image: "/business-tool-deployment-dashboard.png",
-    },
-  ]
-
-  const stats = [
-    { number: "10,000+", label: "Tools Created", icon: Layers },
-    { number: "500+", label: "Companies", icon: Users },
-    { number: "99.9%", label: "Uptime", icon: Shield },
-    { number: "2 min", label: "Avg. Build Time", icon: Clock },
-  ]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Navigation */}
+      <nav className="border-b border-slate-700 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <span className="text-white text-sm font-bold">C</span>
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 ConfigCraft
               </span>
             </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="#features" className="text-slate-300 hover:text-white transition-colors font-medium">
-                Features
-              </Link>
-              <Link href="#how-it-works" className="text-slate-300 hover:text-white transition-colors font-medium">
-                How it Works
-              </Link>
-              <Link href="#pricing" className="text-slate-300 hover:text-white transition-colors font-medium">
-                Pricing
-              </Link>
-              <Button
-                variant="outline"
-                asChild
-                className="border-slate-600 text-slate-300 hover:bg-slate-800 bg-transparent"
-              >
-                <Link href="/auth/signin">Sign In</Link>
-              </Button>
-              <Button
-                asChild
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-              >
-                <Link href="/auth/signup">Get Started Free</Link>
-              </Button>
-            </nav>
+            <div className="flex items-center space-x-4">
+              {userId ? (
+                <Button
+                  asChild
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                >
+                  <Link href="/dashboard">Go to Dashboard</Link>
+                </Button>
+              ) : (
+                <>
+                  <Button variant="ghost" asChild className="text-slate-300 hover:text-white">
+                    <Link href="/auth/signin">Sign In</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                  >
+                    <Link href="/auth/signup">Get Started</Link>
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10" />
-        <div className="container mx-auto text-center relative z-10">
-          <Badge className="mb-8 bg-slate-800 text-blue-400 border-blue-500/20 hover:bg-slate-700">
-            <Sparkles className="w-4 h-4 mr-2" />
-            AI-Powered Business Automation
-          </Badge>
-
-          <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight">
-            <span className="bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+      <section className="relative py-20 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <Badge className="mb-6 bg-blue-500/10 text-blue-400 border-blue-500/20">
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI-Powered Business Tools
+            </Badge>
+            <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6">
               Build Custom Business Tools
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              in Minutes, Not Months
-            </span>
-          </h1>
-
-          <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-            Transform your business processes with AI-generated tools. Just describe what you need in plain English, and
-            our AI builds a fully functional business application for you. No coding required, no lengthy development
-            cycles.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
-            <Button
-              size="lg"
-              asChild
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-lg px-8 py-4"
-            >
-              <Link href="/auth/signup">
-                Start Building Free
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-slate-600 text-slate-300 hover:bg-slate-800 text-lg px-8 py-4 bg-transparent"
-            >
-              <Play className="w-5 h-5 mr-2" />
-              Watch Demo
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-center space-x-8 text-sm text-slate-400">
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 mr-2 text-green-400" />
-              Free 14-day trial
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 mr-2 text-green-400" />
-              No credit card required
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 mr-2 text-green-400" />
-              Cancel anytime
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Hero Demo Image */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <Card className="max-w-6xl mx-auto bg-slate-800/50 border-slate-700 overflow-hidden">
-            <CardContent className="p-2">
-              <div className="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800">
-                <img
-                  src="/ai-dashboard-interface.png"
-                  alt="ConfigCraft AI Tool Generation Demo"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-800/30">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-                  <stat.icon className="w-8 h-8 text-white" />
-                </div>
-                <div className="text-4xl font-bold text-white mb-2">{stat.number}</div>
-                <div className="text-slate-400">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">How ConfigCraft Works</h2>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-              From idea to deployed business tool in three simple steps. Our AI handles all the complexity.
+              <span className="block bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                In Minutes, Not Months
+              </span>
+            </h1>
+            <p className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto">
+              Transform your business processes with AI-generated custom tools. Just describe what you need, and our AI
+              will build it for you - no coding required.
             </p>
-          </div>
-
-          <div className="space-y-20">
-            {steps.map((step, index) => (
-              <div
-                key={index}
-                className={`flex flex-col ${index % 2 === 1 ? "lg:flex-row-reverse" : "lg:flex-row"} items-center gap-12`}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                size="lg"
+                asChild
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-lg px-8 py-4"
               >
-                <div className="flex-1">
-                  <div className="flex items-center mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mr-4">
-                      <step.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <div className="text-6xl font-bold text-slate-700">{step.number}</div>
-                  </div>
-                  <h3 className="text-3xl font-bold text-white mb-4">{step.title}</h3>
-                  <p className="text-xl text-slate-300 leading-relaxed">{step.description}</p>
-                </div>
-                <div className="flex-1">
-                  <Card className="bg-slate-800/50 border-slate-700 overflow-hidden">
-                    <CardContent className="p-4">
-                      <img
-                        src={step.image || "/placeholder.svg"}
-                        alt={step.title}
-                        className="w-full h-64 object-cover rounded-lg"
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            ))}
+                <Link href={userId ? "/dashboard" : "/auth/signup"}>
+                  Start Building Now
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-slate-600 text-slate-300 hover:bg-slate-800 text-lg px-8 py-4 bg-transparent"
+              >
+                Watch Demo
+              </Button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-800/30">
-        <div className="container mx-auto">
+      {/* How It Works */}
+      <section className="py-20 bg-slate-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Everything You Need to Build Better</h2>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-              Powerful features that make creating custom business tools as easy as describing what you need
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">How It Works</h2>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+              Three simple steps to transform your business processes
             </p>
           </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Lightbulb className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">1. Describe Your Need</h3>
+              <p className="text-slate-300">
+                Tell our AI what kind of business tool you need in plain English. Be as detailed or as simple as you
+                want.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Code className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">2. AI Builds Your Tool</h3>
+              <p className="text-slate-300">
+                Our advanced AI analyzes your requirements and generates a fully functional business tool tailored to
+                your needs.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Rocket className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">3. Deploy & Use</h3>
+              <p className="text-slate-300">
+                Your custom tool is ready to use immediately. Share it with your team and start improving your workflow.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
+      {/* Features */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">Powerful Features</h2>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+              Everything you need to build and manage custom business tools
+            </p>
+          </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Card
-                key={index}
-                className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all duration-300 group"
-              >
-                <CardContent className="p-8">
-                  <div
-                    className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}
-                  >
-                    <feature.icon className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">{feature.title}</h3>
-                  <p className="text-slate-300 leading-relaxed">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <Zap className="w-8 h-8 text-blue-400 mb-2" />
+                <CardTitle className="text-white">Lightning Fast</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Generate fully functional tools in minutes, not weeks
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <Users className="w-8 h-8 text-purple-400 mb-2" />
+                <CardTitle className="text-white">Team Collaboration</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Share tools with your team and collaborate in real-time
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <Shield className="w-8 h-8 text-green-400 mb-2" />
+                <CardTitle className="text-white">Enterprise Security</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Bank-level security with SOC 2 compliance and data encryption
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <BarChart3 className="w-8 h-8 text-orange-400 mb-2" />
+                <CardTitle className="text-white">Analytics & Insights</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Track usage and performance with detailed analytics
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <Globe className="w-8 h-8 text-cyan-400 mb-2" />
+                <CardTitle className="text-white">Global Deployment</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Deploy your tools globally with our CDN infrastructure
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <Wrench className="w-8 h-8 text-pink-400 mb-2" />
+                <CardTitle className="text-white">Customizable</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Fine-tune and customize every aspect of your tools
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* Use Cases Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
+      {/* Use Cases */}
+      <section className="py-20 bg-slate-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Built for Every Business Need</h2>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-              From startups to enterprises, ConfigCraft adapts to your unique business processes
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">Built for Every Business</h2>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+              From startups to enterprises, ConfigCraft adapts to your needs
             </p>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {useCases.map((useCase, index) => (
-              <Card
-                key={index}
-                className="bg-slate-800/50 border-slate-700 overflow-hidden hover:bg-slate-800/70 transition-all duration-300 group"
-              >
-                <CardContent className="p-0">
-                  <div className="aspect-video overflow-hidden">
-                    <img
-                      src={useCase.image || "/placeholder.svg"}
-                      alt={useCase.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="p-8">
-                    <div className="flex items-center mb-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-4">
-                        <useCase.icon className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-white">{useCase.title}</h3>
-                        <div className="text-green-400 text-sm font-medium">{useCase.stats}</div>
-                      </div>
-                    </div>
-                    <p className="text-slate-300">{useCase.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+              <Target className="w-8 h-8 text-blue-400 mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2">Project Management</h3>
+              <p className="text-slate-300 text-sm">Custom dashboards, task trackers, and team coordination tools</p>
+            </div>
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+              <BarChart3 className="w-8 h-8 text-green-400 mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2">Data Analysis</h3>
+              <p className="text-slate-300 text-sm">Custom reporting tools, data visualizations, and KPI dashboards</p>
+            </div>
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+              <Users className="w-8 h-8 text-purple-400 mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2">HR & Operations</h3>
+              <p className="text-slate-300 text-sm">Employee onboarding, time tracking, and workflow automation</p>
+            </div>
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+              <Clock className="w-8 h-8 text-orange-400 mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2">Customer Service</h3>
+              <p className="text-slate-300 text-sm">Support ticket systems, customer portals, and feedback tools</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-800/30">
-        <div className="container mx-auto">
+      {/* Testimonials */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Trusted by Growing Businesses</h2>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">Loved by Teams Worldwide</h2>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
               See what our customers are saying about ConfigCraft
             </p>
           </div>
-
           <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card
-                key={index}
-                className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all duration-300"
-              >
-                <CardContent className="p-8">
-                  <div className="flex mb-6">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                    ))}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-slate-300 mb-4">
+                  "ConfigCraft transformed our workflow. What used to take our dev team weeks now takes minutes. The AI
+                  understands exactly what we need."
+                </p>
+                <div className="flex items-center">
+                  <img src="/professional-woman-smiling.png" alt="Sarah Chen" className="w-10 h-10 rounded-full mr-3" />
+                  <div>
+                    <p className="text-white font-semibold">Sarah Chen</p>
+                    <p className="text-slate-400 text-sm">CTO, TechFlow</p>
                   </div>
-                  <p className="text-slate-300 mb-6 leading-relaxed">"{testimonial.content}"</p>
-                  <div className="flex items-center">
-                    <img
-                      src={testimonial.avatar || "/placeholder.svg"}
-                      alt={testimonial.name}
-                      className="w-12 h-12 rounded-full mr-4"
-                    />
-                    <div>
-                      <p className="font-bold text-white">{testimonial.name}</p>
-                      <p className="text-slate-400 text-sm">
-                        {testimonial.role} at {testimonial.company}
-                      </p>
-                    </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-slate-300 mb-4">
+                  "The ROI has been incredible. We've built 15+ custom tools that would have cost us $100k+ to develop
+                  traditionally."
+                </p>
+                <div className="flex items-center">
+                  <img
+                    src="/professional-man-glasses.png"
+                    alt="Marcus Rodriguez"
+                    className="w-10 h-10 rounded-full mr-3"
+                  />
+                  <div>
+                    <p className="text-white font-semibold">Marcus Rodriguez</p>
+                    <p className="text-slate-400 text-sm">Operations Director, ScaleUp Inc</p>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-slate-300 mb-4">
+                  "Our team productivity increased by 40% after implementing ConfigCraft tools. The learning curve was
+                  practically zero."
+                </p>
+                <div className="flex items-center">
+                  <img
+                    src="/professional-woman-short-hair.png"
+                    alt="Emily Watson"
+                    className="w-10 h-10 rounded-full mr-3"
+                  />
+                  <div>
+                    <p className="text-white font-semibold">Emily Watson</p>
+                    <p className="text-slate-400 text-sm">Product Manager, InnovateLab</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <Card className="bg-gradient-to-r from-blue-600 to-purple-600 border-0 overflow-hidden">
-            <CardContent className="p-16 text-center relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-purple-600/90" />
-              <div className="relative z-10">
-                <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Ready to Transform Your Business?</h2>
-                <p className="text-xl text-blue-100 mb-10 max-w-3xl mx-auto">
-                  Join thousands of businesses already using ConfigCraft to streamline their operations and boost
-                  productivity
-                </p>
-                <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-10">
-                  <Button size="lg" asChild className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-4">
-                    <Link href="/auth/signup">
-                      Start Your Free Trial
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="border-white text-white hover:bg-white/10 text-lg px-8 py-4 bg-transparent"
-                  >
-                    Schedule a Demo
-                  </Button>
-                </div>
-                <div className="flex items-center justify-center space-x-8 text-blue-100">
-                  <div className="flex items-center">
-                    <Clock className="w-5 h-5 mr-2" />
-                    Setup in 5 minutes
-                  </div>
-                  <div className="flex items-center">
-                    <Shield className="w-5 h-5 mr-2" />
-                    Enterprise security
-                  </div>
-                  <div className="flex items-center">
-                    <Users className="w-5 h-5 mr-2" />
-                    24/7 support
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">Ready to Transform Your Business?</h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Join thousands of teams already building custom tools with ConfigCraft
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" asChild className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-4">
+              <Link href={userId ? "/dashboard" : "/auth/signup"}>
+                Start Free Trial
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Link>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white text-white hover:bg-white hover:text-blue-600 text-lg px-8 py-4 bg-transparent"
+            >
+              Schedule Demo
+            </Button>
+          </div>
+          <p className="text-blue-100 text-sm mt-4">No credit card required • 14-day free trial</p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-700 py-16 px-4 sm:px-6 lg:px-8 bg-slate-900">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-5 gap-8 mb-12">
-            <div className="md:col-span-2">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-white" />
+      <footer className="bg-slate-900 border-t border-slate-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">C</span>
                 </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                   ConfigCraft
                 </span>
               </div>
-              <p className="text-slate-400 mb-6 max-w-md">
-                AI-powered business tools that adapt to your unique needs. Transform your processes in minutes, not
-                months.
+              <p className="text-slate-400 text-sm">
+                Build custom business tools in minutes with AI. Transform your workflow today.
               </p>
-              <div className="flex space-x-4">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-slate-600 text-slate-400 hover:bg-slate-800 bg-transparent"
-                >
-                  <Globe className="w-4 h-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-slate-600 text-slate-400 hover:bg-slate-800 bg-transparent"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
-
             <div>
-              <h3 className="font-bold text-white mb-4">Product</h3>
-              <ul className="space-y-3">
+              <h3 className="text-white font-semibold mb-4">Product</h3>
+              <ul className="space-y-2 text-slate-400 text-sm">
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     Features
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     Templates
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     Integrations
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     API
                   </Link>
                 </li>
               </ul>
             </div>
-
             <div>
-              <h3 className="font-bold text-white mb-4">Company</h3>
-              <ul className="space-y-3">
+              <h3 className="text-white font-semibold mb-4">Company</h3>
+              <ul className="space-y-2 text-slate-400 text-sm">
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     About
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     Careers
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     Contact
                   </Link>
                 </li>
               </ul>
             </div>
-
             <div>
-              <h3 className="font-bold text-white mb-4">Support</h3>
-              <ul className="space-y-3">
+              <h3 className="text-white font-semibold mb-4">Support</h3>
+              <ul className="space-y-2 text-slate-400 text-sm">
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     Help Center
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
+                  <Link href="#" className="hover:text-white">
                     Documentation
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Status
+                  <Link href="#" className="hover:text-white">
+                    Community
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Privacy
+                  <Link href="#" className="hover:text-white">
+                    Status
                   </Link>
                 </li>
               </ul>
             </div>
           </div>
-
-          <div className="border-t border-slate-700 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-slate-400">© 2024 ConfigCraft. All rights reserved.</p>
-            <div className="flex items-center space-x-6 mt-4 md:mt-0">
-              <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
-                Terms
-              </Link>
-              <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+          <div className="border-t border-slate-700 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
+            <p className="text-slate-400 text-sm">© 2024 ConfigCraft. All rights reserved.</p>
+            <div className="flex items-center space-x-6 mt-4 sm:mt-0">
+              <Link href="#" className="text-slate-400 hover:text-white text-sm">
                 Privacy
               </Link>
-              <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
-                Cookies
+              <Link href="#" className="text-slate-400 hover:text-white text-sm">
+                Terms
+              </Link>
+              <Link href="#" className="text-slate-400 hover:text-white text-sm">
+                Security
               </Link>
             </div>
           </div>
