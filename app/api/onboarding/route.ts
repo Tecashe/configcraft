@@ -10,36 +10,71 @@
 //     }
 
 //     const body = await req.json()
+//     console.log("Onboarding request body:", body)
+
 //     const { companyName, companySize, industry, primaryUseCase, integrations, toolRequirements } = body
+
+//     // Validate required fields
+//     if (!companyName || typeof companyName !== "string" || !companyName.trim()) {
+//       return NextResponse.json({ error: "Company name is required" }, { status: 400 })
+//     }
+
+//     const cleanCompanyName = companyName.trim()
 
 //     // Create or update user in database
 //     const dbUser = await prisma.user.upsert({
 //       where: { clerkId: user.id },
 //       update: {
 //         email: user.emailAddresses[0]?.emailAddress || "",
-//         firstName: user.firstName,
-//         lastName: user.lastName,
-//         imageUrl: user.imageUrl,
+//         firstName: user.firstName || "",
+//         lastName: user.lastName || "",
+//         imageUrl: user.imageUrl || "",
 //       },
 //       create: {
 //         clerkId: user.id,
 //         email: user.emailAddresses[0]?.emailAddress || "",
-//         firstName: user.firstName,
-//         lastName: user.lastName,
-//         imageUrl: user.imageUrl,
+//         firstName: user.firstName || "",
+//         lastName: user.lastName || "",
+//         imageUrl: user.imageUrl || "",
 //       },
 //     })
 
-//     // Create organization (renamed from company)
+//     console.log("User created/updated:", dbUser.id)
+
+//     // Generate a safe slug from company name
+//     const baseSlug = cleanCompanyName
+//       .toLowerCase()
+//       .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+//       .replace(/\s+/g, "-") // Replace spaces with hyphens
+//       .replace(/-+/g, "-") // Replace multiple hyphens with single
+//       .replace(/^-+|-+$/g, "") // Remove leading/trailing hyphens
+//       .substring(0, 50) // Limit length
+
+//     // Fallback if slug is empty
+//     const slug = baseSlug || "organization"
+
+//     // Ensure slug is unique
+//     let uniqueSlug = slug
+//     let counter = 1
+//     while (await prisma.organization.findUnique({ where: { slug: uniqueSlug } })) {
+//       uniqueSlug = `${slug}-${counter}`
+//       counter++
+//     }
+
+//     console.log("Generated unique slug:", uniqueSlug)
+
+//     // Create organization
 //     const organization = await prisma.organization.create({
 //       data: {
-//         name: companyName,
-//         slug: companyName.toLowerCase().replace(/[^a-z0-9]/g, "-"),
-//         industry,
-//         size: companySize,
+//         name: cleanCompanyName,
+//         slug: uniqueSlug,
+//         industry: industry || null,
+//         size: companySize || null,
 //         ownerId: dbUser.id,
 //       },
 //     })
+
+//     console.log("Organization created:", organization.id)
 
 //     // Create organization membership
 //     await prisma.organizationMember.create({
@@ -50,6 +85,8 @@
 //         status: "ACTIVE",
 //       },
 //     })
+
+//     console.log("Organization membership created")
 
 //     // Create free subscription
 //     await prisma.subscription.create({
@@ -62,15 +99,60 @@
 //       },
 //     })
 
-//     return NextResponse.json({ success: true, organization })
+//     console.log("Subscription created")
+
+//     return NextResponse.json({
+//       success: true,
+//       organization: {
+//         id: organization.id,
+//         name: organization.name,
+//         slug: organization.slug,
+//       },
+//     })
 //   } catch (error) {
-//     console.error("Onboarding error:", error)
-//     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+//     console.error("Onboarding error details:", error)
+
+//     // More specific error handling
+//     if (error instanceof Error) {
+//       if (error.message.includes("Unique constraint")) {
+//         return NextResponse.json({ error: "Organization name already exists" }, { status: 409 })
+//       }
+//       if (error.message.includes("Foreign key constraint")) {
+//         return NextResponse.json({ error: "User validation failed" }, { status: 400 })
+//       }
+//     }
+
+//     return NextResponse.json(
+//       {
+//         error: "Failed to create organization. Please try again.",
+//         details: process.env.NODE_ENV === "development" ? error : undefined,
+//       },
+//       { status: 500 },
+//     )
 //   }
 // }
+
 import { type NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
+import type { OrganizationSize } from "@prisma/client"
+
+// Map form values to Prisma enum values
+const mapCompanySize = (size: string): OrganizationSize | null => {
+  switch (size) {
+    case "1-10":
+      return "SMALL"
+    case "11-50":
+      return "MEDIUM"
+    case "51-200":
+      return "LARGE"
+    case "201-1000":
+    case "1000+":
+      return "ENTERPRISE"
+    default:
+      return null
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -80,39 +162,48 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
+    console.log("Onboarding request body:", body)
+
     const { companyName, companySize, industry, primaryUseCase, integrations, toolRequirements } = body
 
     // Validate required fields
-    if (!companyName || typeof companyName !== "string") {
+    if (!companyName || typeof companyName !== "string" || !companyName.trim()) {
       return NextResponse.json({ error: "Company name is required" }, { status: 400 })
     }
+
+    const cleanCompanyName = companyName.trim()
 
     // Create or update user in database
     const dbUser = await prisma.user.upsert({
       where: { clerkId: user.id },
       update: {
         email: user.emailAddresses[0]?.emailAddress || "",
-        firstName: user.firstName,
-        lastName: user.lastName,
-        imageUrl: user.imageUrl,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        imageUrl: user.imageUrl || "",
       },
       create: {
         clerkId: user.id,
         email: user.emailAddresses[0]?.emailAddress || "",
-        firstName: user.firstName,
-        lastName: user.lastName,
-        imageUrl: user.imageUrl,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        imageUrl: user.imageUrl || "",
       },
     })
 
+    console.log("User created/updated:", dbUser.id)
+
     // Generate a safe slug from company name
-    const slug = companyName
+    const baseSlug = cleanCompanyName
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
       .replace(/\s+/g, "-") // Replace spaces with hyphens
       .replace(/-+/g, "-") // Replace multiple hyphens with single
-      .trim()
+      .replace(/^-+|-+$/g, "") // Remove leading/trailing hyphens
       .substring(0, 50) // Limit length
+
+    // Fallback if slug is empty
+    const slug = baseSlug || "organization"
 
     // Ensure slug is unique
     let uniqueSlug = slug
@@ -122,16 +213,23 @@ export async function POST(req: NextRequest) {
       counter++
     }
 
+    console.log("Generated unique slug:", uniqueSlug)
+
+    // Map company size to Prisma enum
+    const organizationSize = mapCompanySize(companySize)
+
     // Create organization
     const organization = await prisma.organization.create({
       data: {
-        name: companyName,
+        name: cleanCompanyName,
         slug: uniqueSlug,
         industry: industry || null,
-        size: companySize || null,
+        size: organizationSize || "SMALL", // Default to SMALL if no size provided
         ownerId: dbUser.id,
       },
     })
+
+    console.log("Organization created:", organization.id)
 
     // Create organization membership
     await prisma.organizationMember.create({
@@ -142,6 +240,8 @@ export async function POST(req: NextRequest) {
         status: "ACTIVE",
       },
     })
+
+    console.log("Organization membership created")
 
     // Create free subscription
     await prisma.subscription.create({
@@ -154,6 +254,8 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    console.log("Subscription created")
+
     return NextResponse.json({
       success: true,
       organization: {
@@ -163,7 +265,24 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Onboarding error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Onboarding error details:", error)
+
+    // More specific error handling
+    if (error instanceof Error) {
+      if (error.message.includes("Unique constraint")) {
+        return NextResponse.json({ error: "Organization name already exists" }, { status: 409 })
+      }
+      if (error.message.includes("Foreign key constraint")) {
+        return NextResponse.json({ error: "User validation failed" }, { status: 400 })
+      }
+    }
+
+    return NextResponse.json(
+      {
+        error: "Failed to create organization. Please try again.",
+        details: process.env.NODE_ENV === "development" ? error : undefined,
+      },
+      { status: 500 },
+    )
   }
 }

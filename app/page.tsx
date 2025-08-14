@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge"
 import {
   ArrowRight,
   CheckCircle,
-  Zap,
   Shield,
   Sparkles,
   Star,
@@ -15,10 +14,12 @@ import {
   Code,
   Palette,
   Database,
-  Globe,
   Users,
   Target,
   Clock,
+  Rocket,
+  Brain,
+  Settings,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -28,7 +29,7 @@ export default async function LandingPage() {
 
   const features = [
     {
-      icon: Zap,
+      icon: Brain,
       title: "AI-Powered Generation",
       description: "Describe your business need and watch as AI creates a fully functional tool in minutes.",
     },
@@ -48,7 +49,7 @@ export default async function LandingPage() {
       description: "Automatic database setup and management for all your business data needs.",
     },
     {
-      icon: Globe,
+      icon: Rocket,
       title: "Instant Deployment",
       description: "Your tools are instantly deployed and accessible from anywhere in the world.",
     },
@@ -136,20 +137,20 @@ export default async function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-zinc-950">
       {/* Navigation */}
-      <nav className="border-b border-slate-700 bg-slate-900/95 backdrop-blur-sm sticky top-0 z-50">
+      <nav className="border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700">
+              <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800">
                 <span className="text-white text-sm font-bold">C</span>
               </div>
               <span className="text-2xl font-bold text-white">ConfigCraft</span>
             </div>
             <div className="flex items-center space-x-4">
               {userId ? (
-                <Button asChild className="bg-slate-700 hover:bg-slate-600 text-white">
+                <Button asChild className="bg-zinc-800 hover:bg-zinc-700 text-white border-zinc-700">
                   <Link href="/dashboard">
                     Go to Dashboard
                     <ArrowRight className="ml-2 w-4 h-4" />
@@ -157,10 +158,10 @@ export default async function LandingPage() {
                 </Button>
               ) : (
                 <div className="flex items-center space-x-3">
-                  <Button variant="ghost" asChild className="text-slate-300 hover:text-white hover:bg-slate-800">
+                  <Button variant="ghost" asChild className="text-zinc-400 hover:text-white hover:bg-zinc-900">
                     <Link href="/auth/signin">Sign In</Link>
                   </Button>
-                  <Button asChild className="bg-slate-700 hover:bg-slate-600 text-white">
+                  <Button asChild className="bg-zinc-800 hover:bg-zinc-700 text-white border-zinc-700">
                     <Link href="/auth/signup">
                       Get Started Free
                       <ArrowRight className="ml-2 w-4 h-4" />
@@ -174,50 +175,80 @@ export default async function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-slate-800/20"></div>
+      <section className="relative py-24 lg:py-40 overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-zinc-950"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.02),transparent_50%)]"></div>
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center">
-            <Badge className="mb-6 bg-slate-800 text-slate-300 border-slate-600 hover:bg-slate-700">
-              <Sparkles className="w-4 h-4 mr-2" />
-              AI-Powered Business Tools
-            </Badge>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-              Build Custom Business Tools
-              <span className="block text-slate-400">In Minutes, Not Months</span>
-            </h1>
-            <p className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Transform your business processes with AI-generated tools. Simply describe what you need, and watch as
-              ConfigCraft creates fully functional applications tailored to your workflow.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button size="lg" asChild className="bg-slate-700 hover:bg-slate-600 text-white text-lg px-8 py-4">
-                <Link href={userId ? "/dashboard" : "/auth/signup"}>
-                  {userId ? "Go to Dashboard" : "Start Building Free"}
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-800 bg-transparent text-lg px-8 py-4"
-              >
-                <Play className="mr-2 w-5 h-5" />
-                Watch Demo
-              </Button>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <Badge className="mb-6 bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-800">
+                <Sparkles className="w-4 h-4 mr-2" />
+                AI-Powered Business Tools
+              </Badge>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+                Build Custom
+                <span className="block text-zinc-400">Business Tools</span>
+                <span className="block text-zinc-500 text-4xl md:text-5xl lg:text-6xl">In Minutes</span>
+              </h1>
+              <p className="text-xl text-zinc-300 mb-8 max-w-2xl leading-relaxed">
+                Transform your business processes with AI-generated tools. Simply describe what you need, and watch as
+                ConfigCraft creates fully functional applications tailored to your workflow.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 mb-12">
+                <Button
+                  size="lg"
+                  asChild
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white text-lg px-8 py-4 border-zinc-700"
+                >
+                  <Link href={userId ? "/dashboard" : "/auth/signup"}>
+                    {userId ? "Go to Dashboard" : "Start Building Free"}
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-900 bg-transparent text-lg px-8 py-4"
+                >
+                  <Play className="mr-2 w-5 h-5" />
+                  Watch Demo
+                </Button>
+              </div>
+              <div className="flex items-center space-x-8 text-zinc-500">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>No Credit Card</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Free Forever</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Deploy Instantly</span>
+                </div>
+              </div>
             </div>
-            <div className="mt-12 flex items-center justify-center space-x-8 text-slate-400">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-slate-500" />
-                <span>No Credit Card Required</span>
+            <div className="relative">
+              <div className="aspect-square bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl">
+                <Image
+                  src="/ai-dashboard-interface.png"
+                  alt="ConfigCraft AI Dashboard Interface"
+                  width={600}
+                  height={600}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-slate-500" />
-                <span>Free Forever Plan</span>
+              <div className="absolute -top-4 -right-4 w-32 h-32 bg-zinc-900 rounded-xl border border-zinc-800 p-4 shadow-xl">
+                <div className="w-full h-full bg-zinc-800 rounded-lg flex items-center justify-center">
+                  <Settings className="w-12 h-12 text-zinc-400" />
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-slate-500" />
-                <span>Deploy Instantly</span>
+              <div className="absolute -bottom-4 -left-4 w-40 h-24 bg-zinc-900 rounded-xl border border-zinc-800 p-4 shadow-xl">
+                <div className="text-zinc-400 text-sm mb-1">Build Time</div>
+                <div className="text-white text-2xl font-bold">2 min</div>
               </div>
             </div>
           </div>
@@ -225,34 +256,34 @@ export default async function LandingPage() {
       </section>
 
       {/* Tool Examples */}
-      <section className="py-20 bg-slate-800/30">
+      <section className="py-24 bg-zinc-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">See What You Can Build</h2>
-            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">See What You Can Build</h2>
+            <p className="text-xl text-zinc-400 max-w-3xl mx-auto">
               From simple forms to complex dashboards, ConfigCraft can build any business tool you need.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {toolExamples.map((tool, index) => (
               <Card
                 key={index}
-                className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all duration-300 group"
+                className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900/70 transition-all duration-500 group overflow-hidden"
               >
                 <CardContent className="p-0">
-                  <div className="aspect-video overflow-hidden rounded-t-lg">
+                  <div className="aspect-video overflow-hidden">
                     <Image
                       src={tool.image || "/placeholder.svg"}
                       alt={tool.title}
                       width={400}
                       height={225}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                   </div>
                   <div className="p-6">
-                    <Badge className="mb-3 bg-slate-700 text-slate-300 border-slate-600">{tool.category}</Badge>
-                    <h3 className="text-lg font-semibold text-white mb-2">{tool.title}</h3>
-                    <p className="text-slate-400 text-sm">{tool.description}</p>
+                    <Badge className="mb-4 bg-zinc-800 text-zinc-300 border-zinc-700">{tool.category}</Badge>
+                    <h3 className="text-lg font-semibold text-white mb-3">{tool.title}</h3>
+                    <p className="text-zinc-400 text-sm leading-relaxed">{tool.description}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -262,24 +293,25 @@ export default async function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20">
+      <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">How It Works</h2>
-            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-              Building custom business tools has never been easier. Here's how ConfigCraft works:
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">How It Works</h2>
+            <p className="text-xl text-zinc-400 max-w-3xl mx-auto">
+              Building custom business tools has never been easier. Here's how ConfigCraft transforms your ideas into
+              reality:
             </p>
           </div>
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-3 gap-12">
             {steps.map((step, index) => (
               <div key={index} className="relative">
                 <div className="text-center">
-                  <div className="w-20 h-20 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <span className="text-2xl font-bold text-white">{step.step}</span>
+                  <div className="w-24 h-24 bg-zinc-900 border-2 border-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+                    <span className="text-3xl font-bold text-white">{step.step}</span>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-4">{step.title}</h3>
-                  <p className="text-slate-300 mb-6">{step.description}</p>
-                  <div className="aspect-video bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
+                  <p className="text-zinc-400 mb-8 leading-relaxed">{step.description}</p>
+                  <div className="aspect-video bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 shadow-2xl">
                     <Image
                       src={step.image || "/placeholder.svg"}
                       alt={step.title}
@@ -290,8 +322,8 @@ export default async function LandingPage() {
                   </div>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className="hidden lg:block absolute top-10 -right-4 z-10">
-                    <ChevronRight className="w-8 h-8 text-slate-600" />
+                  <div className="hidden lg:block absolute top-12 -right-6 z-10">
+                    <ChevronRight className="w-8 h-8 text-zinc-700" />
                   </div>
                 )}
               </div>
@@ -301,23 +333,26 @@ export default async function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 bg-slate-800/30">
+      <section className="py-24 bg-zinc-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Powerful Features for Modern Businesses</h2>
-            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-              Everything you need to build, deploy, and manage custom business tools at scale.
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Powerful Features for Modern Businesses</h2>
+            <p className="text-xl text-zinc-400 max-w-3xl mx-auto">
+              Everything you need to build, deploy, and manage custom business tools at enterprise scale.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center mb-4">
-                    <feature.icon className="w-6 h-6 text-slate-300" />
+              <Card
+                key={index}
+                className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900/70 transition-all duration-300 group"
+              >
+                <CardContent className="p-8">
+                  <div className="w-16 h-16 bg-zinc-800 border border-zinc-700 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
+                    <feature.icon className="w-8 h-8 text-zinc-300" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-3">{feature.title}</h3>
-                  <p className="text-slate-300">{feature.description}</p>
+                  <h3 className="text-xl font-semibold text-white mb-4">{feature.title}</h3>
+                  <p className="text-zinc-400 leading-relaxed">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -326,76 +361,78 @@ export default async function LandingPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center">
-                <Target className="w-8 h-8 text-slate-300" />
+            <div className="text-center group">
+              <div className="w-20 h-20 mx-auto mb-6 bg-zinc-900 border border-zinc-800 rounded-3xl flex items-center justify-center group-hover:bg-zinc-800 transition-colors">
+                <Target className="w-10 h-10 text-zinc-300" />
               </div>
-              <div className="text-4xl font-bold text-white mb-2">10,000+</div>
-              <div className="text-slate-400">Tools Created</div>
+              <div className="text-5xl font-bold text-white mb-3">10,000+</div>
+              <div className="text-zinc-400 text-lg">Tools Created</div>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center">
-                <Users className="w-8 h-8 text-slate-300" />
+            <div className="text-center group">
+              <div className="w-20 h-20 mx-auto mb-6 bg-zinc-900 border border-zinc-800 rounded-3xl flex items-center justify-center group-hover:bg-zinc-800 transition-colors">
+                <Users className="w-10 h-10 text-zinc-300" />
               </div>
-              <div className="text-4xl font-bold text-white mb-2">500+</div>
-              <div className="text-slate-400">Companies</div>
+              <div className="text-5xl font-bold text-white mb-3">500+</div>
+              <div className="text-zinc-400 text-lg">Companies</div>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center">
-                <Shield className="w-8 h-8 text-slate-300" />
+            <div className="text-center group">
+              <div className="w-20 h-20 mx-auto mb-6 bg-zinc-900 border border-zinc-800 rounded-3xl flex items-center justify-center group-hover:bg-zinc-800 transition-colors">
+                <Shield className="w-10 h-10 text-zinc-300" />
               </div>
-              <div className="text-4xl font-bold text-white mb-2">99.9%</div>
-              <div className="text-slate-400">Uptime</div>
+              <div className="text-5xl font-bold text-white mb-3">99.9%</div>
+              <div className="text-zinc-400 text-lg">Uptime</div>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center">
-                <Clock className="w-8 h-8 text-slate-300" />
+            <div className="text-center group">
+              <div className="w-20 h-20 mx-auto mb-6 bg-zinc-900 border border-zinc-800 rounded-3xl flex items-center justify-center group-hover:bg-zinc-800 transition-colors">
+                <Clock className="w-10 h-10 text-zinc-300" />
               </div>
-              <div className="text-4xl font-bold text-white mb-2">2 min</div>
-              <div className="text-slate-400">Avg. Build Time</div>
+              <div className="text-5xl font-bold text-white mb-3">2 min</div>
+              <div className="text-zinc-400 text-lg">Avg. Build Time</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-slate-800/30">
+      <section className="py-24 bg-zinc-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Trusted by Growing Businesses</h2>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-              See what our customers are saying about ConfigCraft
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Trusted by Growing Businesses</h2>
+            <p className="text-xl text-zinc-400 max-w-3xl mx-auto">
+              See what our customers are saying about ConfigCraft and how it's transforming their operations
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
               <Card
                 key={index}
-                className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all duration-300"
+                className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900/70 transition-all duration-300 group"
               >
                 <CardContent className="p-8">
                   <div className="flex mb-6">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-slate-500 text-slate-500" />
+                      <Star key={i} className="w-6 h-6 fill-zinc-600 text-zinc-600" />
                     ))}
                   </div>
-                  <Quote className="w-8 h-8 text-slate-600 mb-4" />
-                  <p className="text-slate-300 mb-6 italic">"{testimonial.quote}"</p>
-                  <div className="flex items-center space-x-3">
-                    <Image
-                      src={testimonial.image || "/placeholder.svg"}
-                      alt={testimonial.name}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
+                  <Quote className="w-10 h-10 text-zinc-700 mb-6" />
+                  <p className="text-zinc-300 mb-8 italic text-lg leading-relaxed">"{testimonial.quote}"</p>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-zinc-800">
+                      <Image
+                        src={testimonial.image || "/placeholder.svg"}
+                        alt={testimonial.name}
+                        width={56}
+                        height={56}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <div>
-                      <p className="font-semibold text-white">{testimonial.name}</p>
-                      <p className="text-sm text-slate-400">{testimonial.role}</p>
-                      <p className="text-sm text-slate-500">{testimonial.company}</p>
+                      <p className="font-semibold text-white text-lg">{testimonial.name}</p>
+                      <p className="text-zinc-400">{testimonial.role}</p>
+                      <p className="text-zinc-500 text-sm">{testimonial.company}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -406,15 +443,19 @@ export default async function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-slate-800">
+      <section className="py-24 bg-zinc-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to Transform Your Business?</h2>
-          <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Ready to Transform Your Business?</h2>
+          <p className="text-xl text-zinc-300 mb-10 max-w-3xl mx-auto leading-relaxed">
             Join thousands of businesses already using ConfigCraft to build custom tools and streamline their
-            operations.
+            operations. Start building your first tool today.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button size="lg" asChild className="bg-slate-700 hover:bg-slate-600 text-white text-lg px-8 py-4">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
+            <Button
+              size="lg"
+              asChild
+              className="bg-zinc-800 hover:bg-zinc-700 text-white text-lg px-10 py-5 border-zinc-700"
+            >
               <Link href={userId ? "/dashboard" : "/auth/signup"}>
                 {userId ? "Go to Dashboard" : "Start Building Free"}
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -423,44 +464,44 @@ export default async function LandingPage() {
             <Button
               size="lg"
               variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent text-lg px-8 py-4"
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent text-lg px-10 py-5"
             >
               Schedule Demo
             </Button>
           </div>
-          <div className="mt-8 flex items-center justify-center space-x-8 text-slate-400">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5" />
-              <span>14-day free trial</span>
+          <div className="flex items-center justify-center space-x-12 text-zinc-400">
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="w-6 h-6" />
+              <span className="text-lg">14-day free trial</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5" />
-              <span>No setup fees</span>
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="w-6 h-6" />
+              <span className="text-lg">No setup fees</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5" />
-              <span>Cancel anytime</span>
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="w-6 h-6" />
+              <span className="text-lg">Cancel anytime</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-700 py-12">
+      <footer className="bg-zinc-950 border-t border-zinc-800 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-4 gap-12">
             <div className="col-span-1">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 bg-slate-800 border border-slate-700 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">C</span>
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">C</span>
                 </div>
-                <span className="text-lg font-bold text-white">ConfigCraft</span>
+                <span className="text-xl font-bold text-white">ConfigCraft</span>
               </div>
-              <p className="text-slate-400 text-sm">Build custom business tools with AI. No code required.</p>
+              <p className="text-zinc-400 leading-relaxed">Build custom business tools with AI. No code required.</p>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-4">Product</h4>
-              <ul className="space-y-2 text-sm text-slate-400">
+              <h4 className="font-semibold text-white mb-6 text-lg">Product</h4>
+              <ul className="space-y-3 text-zinc-400">
                 <li>
                   <Link href="#" className="hover:text-white transition-colors">
                     Features
@@ -484,8 +525,8 @@ export default async function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-4">Company</h4>
-              <ul className="space-y-2 text-sm text-slate-400">
+              <h4 className="font-semibold text-white mb-6 text-lg">Company</h4>
+              <ul className="space-y-3 text-zinc-400">
                 <li>
                   <Link href="#" className="hover:text-white transition-colors">
                     About
@@ -509,8 +550,8 @@ export default async function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-4">Support</h4>
-              <ul className="space-y-2 text-sm text-slate-400">
+              <h4 className="font-semibold text-white mb-6 text-lg">Support</h4>
+              <ul className="space-y-3 text-zinc-400">
                 <li>
                   <Link href="#" className="hover:text-white transition-colors">
                     Help Center
@@ -534,13 +575,13 @@ export default async function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-slate-400 text-sm">© 2024 ConfigCraft. All rights reserved.</p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+          <div className="border-t border-zinc-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-zinc-400">© 2024 ConfigCraft. All rights reserved.</p>
+            <div className="flex space-x-8 mt-4 md:mt-0">
+              <Link href="#" className="text-zinc-400 hover:text-white transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+              <Link href="#" className="text-zinc-400 hover:text-white transition-colors">
                 Terms of Service
               </Link>
             </div>
