@@ -32,7 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, Settings, User, Moon, Sun } from "lucide-react"
+import { LogOut, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
 interface UserButtonProps {
@@ -44,12 +44,14 @@ export function UserButton({ collapsed = false }: UserButtonProps) {
   const { signOut } = useClerk()
   const { theme, setTheme } = useTheme()
 
-  if (!user) return null
+  if (!user) {
+    return null
+  }
 
   const userInitials =
-    user.firstName && user.lastName
-      ? `${user.firstName[0]}${user.lastName[0]}`
-      : user.emailAddresses[0]?.emailAddress[0].toUpperCase() || "U"
+    `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase() ||
+    user.emailAddresses[0]?.emailAddress[0]?.toUpperCase() ||
+    "U"
 
   if (collapsed) {
     return (
@@ -65,24 +67,14 @@ export function UserButton({ collapsed = false }: UserButtonProps) {
         <DropdownMenuContent className="w-56" align="start" side="right">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">
-                {user.fullName || `${user.firstName} ${user.lastName}`.trim()}
-              </p>
+              <p className="text-sm font-medium leading-none">{user.fullName}</p>
               <p className="text-xs leading-none text-muted-foreground">{user.emailAddresses[0]?.emailAddress}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
             {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-            <span>Toggle theme</span>
+            <span>{theme === "dark" ? "Light" : "Dark"} mode</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut()}>
@@ -104,12 +96,8 @@ export function UserButton({ collapsed = false }: UserButtonProps) {
               <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
             </Avatar>
             <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-medium leading-none truncate">
-                {user.fullName || `${user.firstName} ${user.lastName}`.trim()}
-              </p>
-              <p className="text-xs leading-none text-muted-foreground truncate">
-                {user.emailAddresses[0]?.emailAddress}
-              </p>
+              <p className="text-sm font-medium truncate">{user.fullName}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.emailAddresses[0]?.emailAddress}</p>
             </div>
           </div>
         </Button>
@@ -117,24 +105,14 @@ export function UserButton({ collapsed = false }: UserButtonProps) {
       <DropdownMenuContent className="w-56" align="start">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {user.fullName || `${user.firstName} ${user.lastName}`.trim()}
-            </p>
+            <p className="text-sm font-medium leading-none">{user.fullName}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.emailAddresses[0]?.emailAddress}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <User className="mr-2 h-4 w-4" />
-          <span>Profile</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
-        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-          <span>Toggle theme</span>
+          <span>{theme === "dark" ? "Light" : "Dark"} mode</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => signOut()}>

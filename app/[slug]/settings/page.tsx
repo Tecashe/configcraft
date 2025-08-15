@@ -1225,6 +1225,8 @@ interface Organization {
   industry?: string | null
   size: "SMALL" | "MEDIUM" | "LARGE" | "ENTERPRISE"
   role: "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
+  memberCount: number
+  toolCount: number
 }
 
 interface Member {
@@ -1341,14 +1343,16 @@ export default function SettingsPage() {
       const orgResponse = await fetch(`/api/organizations/${orgSlug}`)
       if (orgResponse.ok) {
         const orgData = await orgResponse.json()
-        setOrganization(orgData.organization)
+        setOrganization(orgData)
         form.reset({
-          name: orgData.organization.name,
-          description: orgData.organization.description || "",
-          website: orgData.organization.website || "",
-          industry: orgData.organization.industry || "",
-          size: orgData.organization.size,
+          name: orgData.name,
+          description: orgData.description || "",
+          website: orgData.website || "",
+          industry: orgData.industry || "",
+          size: orgData.size,
         })
+      } else {
+        console.error("Failed to fetch organization:", orgResponse.status)
       }
 
       // Fetch members
@@ -1569,7 +1573,10 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground">Loading organization settings...</p>
+        </div>
       </div>
     )
   }
@@ -1577,10 +1584,13 @@ export default function SettingsPage() {
   if (!organization) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-semibold">Organization not found</h2>
-        <p className="text-muted-foreground mt-2">
-          The organization you're looking for doesn't exist or you don't have access to it.
-        </p>
+        <div className="max-w-md mx-auto">
+          <Settings className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold mb-2">Organization not found</h2>
+          <p className="text-muted-foreground">
+            The organization you're looking for doesn't exist or you don't have access to it.
+          </p>
+        </div>
       </div>
     )
   }
@@ -1590,25 +1600,25 @@ export default function SettingsPage() {
   const canManageApiKeys = ["OWNER", "ADMIN"].includes(organization.role)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
+    <div className="space-y-6 p-4 lg:p-6">
+      <div className="space-y-2">
+        <h1 className="text-2xl lg:text-3xl font-bold">Settings</h1>
         <p className="text-muted-foreground">Manage your organization settings and preferences.</p>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-none lg:flex">
           <TabsTrigger value="general" className="flex items-center space-x-2">
             <Settings className="h-4 w-4" />
-            <span>General</span>
+            <span className="hidden sm:inline">General</span>
           </TabsTrigger>
           <TabsTrigger value="members" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
-            <span>Members</span>
+            <span className="hidden sm:inline">Members</span>
           </TabsTrigger>
           <TabsTrigger value="api-keys" className="flex items-center space-x-2">
             <Key className="h-4 w-4" />
-            <span>API Keys</span>
+            <span className="hidden sm:inline">API Keys</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1810,25 +1820,25 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   {members.map((member) => (
                     <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <Avatar>
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <Avatar className="h-10 w-10 flex-shrink-0">
                           <AvatarImage src={member.user.imageUrl || undefined} />
                           <AvatarFallback>
                             {member.user.firstName?.[0]}
                             {member.user.lastName?.[0]}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="font-medium">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">
                             {member.user.firstName} {member.user.lastName}
                           </p>
-                          <p className="text-sm text-muted-foreground">{member.user.email}</p>
+                          <p className="text-sm text-muted-foreground truncate">{member.user.email}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
                         <Badge variant="secondary" className="flex items-center space-x-1">
                           {getRoleIcon(member.role)}
-                          <span>{member.role}</span>
+                          <span className="hidden sm:inline">{member.role}</span>
                         </Badge>
                         {canManageOrganization && member.role !== "OWNER" && member.user.id !== user?.id && (
                           <AlertDialog>
@@ -1874,16 +1884,16 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     {invitations.map((invitation) => (
                       <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{invitation.email}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{invitation.email}</p>
                           <p className="text-sm text-muted-foreground">
                             Invited {new Date(invitation.createdAt).toLocaleDateString()}
                           </p>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 flex-shrink-0">
                           <Badge variant="outline" className="flex items-center space-x-1">
                             {getRoleIcon(invitation.role)}
-                            <span>{invitation.role}</span>
+                            <span className="hidden sm:inline">{invitation.role}</span>
                           </Badge>
                           <Badge variant="secondary">Pending</Badge>
                         </div>
@@ -1907,17 +1917,18 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-4 sm:space-y-0 sm:space-x-4">
+                    <div className="flex-1 w-full">
                       <Label htmlFor="api-key-name">API Key Name</Label>
                       <Input
                         id="api-key-name"
                         placeholder="My API Key"
                         value={newApiKeyName}
                         onChange={(e) => setNewApiKeyName(e.target.value)}
+                        className="mt-1"
                       />
                     </div>
-                    <Button onClick={handleCreateApiKey} disabled={creatingApiKey}>
+                    <Button onClick={handleCreateApiKey} disabled={creatingApiKey} className="w-full sm:w-auto">
                       {creatingApiKey && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                       <Plus className="h-4 w-4 mr-2" />
                       Create Key
@@ -1928,18 +1939,24 @@ export default function SettingsPage() {
             )}
 
             {newApiKey && (
-              <Card className="border-green-200 bg-green-50">
+              <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
                 <CardHeader>
-                  <CardTitle className="text-green-800">API Key Created</CardTitle>
-                  <CardDescription className="text-green-700">
+                  <CardTitle className="text-green-800 dark:text-green-200">API Key Created</CardTitle>
+                  <CardDescription className="text-green-700 dark:text-green-300">
                     Your new API key has been created. Make sure to copy it now as you won't be able to see it again.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center space-x-2 p-3 bg-white border rounded-lg">
-                    <code className="flex-1 text-sm font-mono">{newApiKey}</code>
-                    <Button variant="outline" size="sm" onClick={() => copyToClipboard(newApiKey)}>
-                      <Copy className="h-4 w-4" />
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 p-3 bg-white dark:bg-green-900 border rounded-lg">
+                    <code className="flex-1 text-sm font-mono break-all">{newApiKey}</code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(newApiKey)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy
                     </Button>
                   </div>
                 </CardContent>
@@ -1962,9 +1979,9 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     {apiKeys.map((apiKey) => (
                       <div key={apiKey.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <p className="font-medium">{apiKey.name}</p>
-                          <p className="text-sm text-muted-foreground font-mono">{apiKey.keyPreview}</p>
+                          <p className="text-sm text-muted-foreground font-mono break-all">{apiKey.keyPreview}</p>
                           <p className="text-xs text-muted-foreground">
                             Created {new Date(apiKey.createdAt).toLocaleDateString()}
                             {apiKey.lastUsed && (
@@ -1975,7 +1992,7 @@ export default function SettingsPage() {
                         {canManageApiKeys && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" className="flex-shrink-0">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
