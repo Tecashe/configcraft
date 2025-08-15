@@ -25,11 +25,14 @@ model User {
   organizationMemberships OrganizationMember[]
   ownedOrganizations      Organization[]       @relation("OrganizationOwner")
   sentInvitations         OrganizationInvitation[]
+  createdApiKeys          ApiKey[]             @relation("ApiKeyCreator")
   
   // Direct relationships (for backward compatibility)
   tools        Tool[]
   usageRecords UsageRecord[]
   apiKeys      ApiKey[]
+  chatSessions ChatSession[]
+  chatMessages ChatMessage[]
 
   @@map("users")
 }
@@ -65,6 +68,9 @@ model Organization {
   usageRecords  UsageRecord[]
   apiKeys       ApiKey[]
   invitations   OrganizationInvitation[]
+  chatSessions  ChatSession[]
+  publishedTools PublishedTool[]
+  auditLogs     AuditLog[]  // Added this relationship
 
   @@map("organizations")
 }
@@ -112,6 +118,7 @@ model OrganizationInvitation {
   id        String                  @id @default(cuid())
   email     String
   role      OrganizationMemberRole  @default(MEMBER)
+  status    String                  @default("PENDING") // Added status field
   token     String                  @unique
   expiresAt DateTime
   createdAt DateTime                @default(now())
@@ -125,6 +132,99 @@ model OrganizationInvitation {
 
   @@unique([organizationId, email])
   @@map("organization_invitations")
+}
+
+// Chat Session model for managing v0 Platform API chats
+model ChatSession {
+  id          String           @id @default(cuid())
+  v0ChatId    String?          @unique // v0 Platform API chat ID
+  status      ChatSessionStatus @default(generating)
+  demoUrl     String?          // v0 demo URL for iframe preview
+  error       String?          // Error message if generation failed
+  
+  // Metadata
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relationships
+  toolId         String
+  tool           Tool         @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Related models
+  messages ChatMessage[]
+  files    ChatFile[]
+
+  @@map("chat_sessions")
+}
+
+enum ChatSessionStatus {
+  generating
+  completed
+  error
+}
+
+// Chat Messages for conversation history
+model ChatMessage {
+  id        String   @id @default(cuid())
+  role      String   // 'user' or 'assistant' or 'system'
+  content   String   @db.Text // Message content
+  createdAt DateTime @default(now())
+
+  // Relationships
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [clerkId], onDelete: SetNull)
+
+  @@map("chat_messages")
+}
+
+// Chat Files for storing generated code files
+model ChatFile {
+  id       String @id @default(cuid())
+  name     String // File name (e.g., 'page.tsx', 'styles.css')
+  content  String @db.Text // File content
+  type     String // File type (e.g., 'tsx', 'css', 'json')
+  size     Int    // File size in bytes
+  createdAt DateTime @default(now())
+
+  // Relationships
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([chatSessionId, name])
+  @@map("chat_files")
+}
+
+// Published Tool model for managing published/deployed tools
+model PublishedTool {
+  id           String              @id @default(cuid())
+  subdomain    String              @unique
+  customDomain String?             @unique
+  url          String              // Final public URL
+  status       PublishedToolStatus @default(deploying)
+  deploymentId String?             // External deployment ID (Vercel, etc.)
+  error        String?             // Deployment error message
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  // Relationships
+  toolId         String
+  tool           Tool         @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("published_tools")
+}
+
+enum PublishedToolStatus {
+  deploying
+  deployed
+  failed
 }
 
 // Tool model - the custom business tools created by users
@@ -142,20 +242,23 @@ model Tool {
   ui          Json? // Stores UI configuration and styling
   
   // V0 Integration fields
-  v0Code      String?    // Generated code from v0
+  v0Code      String?    @db.Text // Generated code from v0
   previewUrl  String?    // Preview URL from v0
   publishedUrl String?   // Published tool URL
   generatedAt DateTime?  // When v0 generation completed
   publishedAt DateTime?  // When tool was published
   
   // Requirements and generation
-  requirements     String?           // Original user requirements
-  v0Prompt         String?           // Processed prompt sent to v0
+  requirements     String?           @db.Text // Original user requirements
+  v0Prompt         String?           @db.Text // Processed prompt sent to v0
   generationStatus GenerationStatus  @default(pending)
-  generationError  String?           // Error message if generation failed
-  analysisData     String?           // AI analysis results
-  generatedCode    String?           // Generated code
+  generationError  String?           @db.Text // Error message if generation failed
+  analysisData     String?           @db.Text // AI analysis results
+  generatedCode    String?           @db.Text // Generated code
   v0GenerationId   String?           // v0 generation ID
+  
+  // Chat Session Integration
+  chatSessionId    String?           // Associated chat session ID
   
   // Metadata
   isPublic    Boolean  @default(false)
@@ -175,6 +278,9 @@ model Tool {
   usageRecords  UsageRecord[]
   integrations  ToolIntegration[]
   analytics     ToolAnalytics[]
+  chatSessions  ChatSession[]
+  publishedTools PublishedTool[]
+  auditLogs     AuditLog[]  // Added this relationship
 
   @@unique([organizationId, slug])
   @@map("tools")
@@ -206,7 +312,7 @@ model ToolVersion {
   config      Json?
   schema      Json?
   ui          Json?
-  v0Code      String?
+  v0Code      String?  @db.Text
   changelog   String?
   isActive    Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -432,6 +538,7 @@ enum UsageType {
   EXPORT_DATA
   MEMBER_INVITED
   TEMPLATE_USED
+  TOOL_GENERATION  // Added this to match the TypeScript error
 }
 
 // Tool analytics model
@@ -456,6 +563,8 @@ model ApiKey {
   id          String       @id @default(cuid())
   name        String
   key         String       @unique
+  keyHash     String       @unique // Added keyHash field
+  keyPreview  String       // Added keyPreview field
   permissions String[]     // Array of permissions
   status      ApiKeyStatus @default(ACTIVE)
   lastUsedAt  DateTime?
@@ -468,6 +577,8 @@ model ApiKey {
   user           User         @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation("ApiKeyCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@map("api_keys")
 }
@@ -489,6 +600,12 @@ model AuditLog {
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
+
+  // Added organization relationship to fix TypeScript error
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  toolId         String?
+  tool           Tool?         @relation(fields: [toolId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
 }

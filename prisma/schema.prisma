@@ -70,6 +70,7 @@ model Organization {
   invitations   OrganizationInvitation[]
   chatSessions  ChatSession[]
   publishedTools PublishedTool[]
+  auditLogs     AuditLog[]
 
   @@map("organizations")
 }
@@ -279,6 +280,7 @@ model Tool {
   analytics     ToolAnalytics[]
   chatSessions  ChatSession[]
   publishedTools PublishedTool[]
+  auditLogs     AuditLog[]
 
   @@unique([organizationId, slug])
   @@map("tools")
@@ -593,10 +595,16 @@ model AuditLog {
   resource  String   // tool, organization, user, etc.
   resourceId String
   userId    String?
+  organizationId String?
+  toolId    String?
   metadata  Json?
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
+
+  // Relationships
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  tool         Tool?         @relation(fields: [toolId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
 }

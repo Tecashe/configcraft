@@ -2,6 +2,7 @@
 // import { auth } from "@clerk/nextjs/server"
 // import { getOrganizationBySlug } from "@/lib/organization"
 // import { prisma } from "@/lib/prisma"
+// import { chatManager } from "@/lib/chat-management"
 
 // export async function GET(request: Request, { params }: { params: { slug: string; id: string } }) {
 //   try {
@@ -15,19 +16,23 @@
 //       return NextResponse.json({ error: "Organization not found" }, { status: 404 })
 //     }
 
+//     // Check if user has access
+//     const membership = await prisma.organizationMember.findFirst({
+//       where: {
+//         userId: userId,
+//         organizationId: organization.id,
+//         status: "ACTIVE",
+//       },
+//     })
+
+//     if (!membership) {
+//       return NextResponse.json({ error: "Access denied" }, { status: 403 })
+//     }
+
 //     const tool = await prisma.tool.findFirst({
 //       where: {
 //         id: params.id,
 //         organizationId: organization.id,
-//       },
-//       select: {
-//         id: true,
-//         name: true,
-//         status: true,
-//         generationStatus: true,
-//         generationError: true,
-//         previewUrl: true,
-//         publishedUrl: true,
 //       },
 //     })
 
@@ -35,17 +40,82 @@
 //       return NextResponse.json({ error: "Tool not found" }, { status: 404 })
 //     }
 
-//     return NextResponse.json(tool)
+//     // Get chat session if exists
+//     let chatSession = null
+//     if (tool.chatSessionId) {
+//       chatSession = await chatManager.getChatSession(tool.chatSessionId)
+//     }
+
+//     // Calculate progress using the chat manager
+//     const progress = chatManager.calculateProgress(tool.status, tool.generationStatus || undefined)
+
+//     // Determine current step based on generation status
+//     let currentStep = "analyzing"
+//     switch (tool.generationStatus) {
+//       case "pending":
+//         currentStep = "analyzing"
+//         break
+//       case "analyzing":
+//         currentStep = "analyzing"
+//         break
+//       case "designing":
+//         currentStep = "designing"
+//         break
+//       case "generating":
+//         currentStep = "generating"
+//         break
+//       case "finalizing":
+//         currentStep = "finalizing"
+//         break
+//       case "completed":
+//         currentStep = "completed"
+//         break
+//       case "error":
+//         currentStep = "error"
+//         break
+//       default:
+//         currentStep = "analyzing"
+//     }
+
+//     return NextResponse.json({
+//       id: tool.id,
+//       status: tool.status,
+//       generationStatus: tool.generationStatus,
+//       currentStep,
+//       previewUrl: tool.previewUrl,
+//       demoUrl: chatSession?.demoUrl,
+//       error: tool.generationError || chatSession?.error,
+//       progress,
+//       chatSession: chatSession
+//         ? {
+//             id: chatSession.id,
+//             status: chatSession.status,
+//             messages: chatSession.messages,
+//             files: chatSession.files,
+//             demoUrl: chatSession.demoUrl,
+//             progress: chatSession.progress,
+//           }
+//         : null,
+//       files: chatSession?.files || [],
+//       createdAt: tool.createdAt,
+//       updatedAt: tool.updatedAt,
+//     })
 //   } catch (error) {
 //     console.error("Failed to get tool status:", error)
-//     return NextResponse.json({ error: "Failed to get tool status" }, { status: 500 })
+//     return NextResponse.json(
+//       {
+//         error: "Failed to get tool status",
+//         details: error instanceof Error ? error.message : "Unknown error",
+//       },
+//       { status: 500 },
+//     )
 //   }
 // }
+
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { getOrganizationBySlug } from "@/lib/organization"
 import { prisma } from "@/lib/prisma"
-import { chatManager } from "@/lib/chat-management"
+import { ChatManager } from "@/lib/chat-management"
 
 export async function GET(request: Request, { params }: { params: { slug: string; id: string } }) {
   try {
@@ -54,22 +124,17 @@ export async function GET(request: Request, { params }: { params: { slug: string
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const organization = await getOrganizationBySlug(params.slug)
-    if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
-    }
-
-    // Check if user has access
-    const membership = await prisma.organizationMember.findFirst({
-      where: {
-        userId: userId,
-        organizationId: organization.id,
-        status: "ACTIVE",
+    const organization = await prisma.organization.findUnique({
+      where: { slug: params.slug },
+      include: {
+        members: {
+          where: { userId },
+        },
       },
     })
 
-    if (!membership) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    if (!organization || organization.members.length === 0) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
     }
 
     const tool = await prisma.tool.findFirst({
@@ -83,90 +148,74 @@ export async function GET(request: Request, { params }: { params: { slug: string
       return NextResponse.json({ error: "Tool not found" }, { status: 404 })
     }
 
-    // Get real-time status from chat session if available
+    // Get chat session if exists
+    let chatSession = null
     if (tool.chatSessionId) {
-      const chatSession = await chatManager.pollChatStatus(tool.chatSessionId)
+      chatSession = await ChatManager.getChatSession(tool.chatSessionId)
+    }
 
-      if (chatSession) {
-        // Update tool status based on chat session
-        let toolStatus = tool.status
-        let generationStatus = tool.generationStatus
+    // Calculate progress using the static method
+    const progress = ChatManager.calculateProgress(tool.status, tool.generationStatus || undefined)
 
-        switch (chatSession.status) {
-          case "generating":
-            toolStatus = "GENERATING"
-            generationStatus = "generating"
-            break
-          case "completed":
-            toolStatus = "GENERATED"
-            generationStatus = "completed"
-            break
-          case "error":
-            toolStatus = "ERROR"
-            generationStatus = "error"
-            break
-        }
-
-        // Update tool if status changed
-        if (toolStatus !== tool.status || generationStatus !== tool.generationStatus) {
-          await prisma.tool.update({
-            where: { id: tool.id },
-            data: {
-              status: toolStatus,
-              generationStatus,
-              previewUrl: chatSession.demoUrl,
-              generationError: chatSession.error,
-              generatedAt: chatSession.status === "completed" ? new Date() : tool.generatedAt,
-            },
-          })
-        }
-
-        return NextResponse.json({
-          id: tool.id,
-          status: toolStatus,
-          generationStatus,
-          previewUrl: chatSession.demoUrl,
-          error: chatSession.error,
-          progress: this.calculateProgress(generationStatus),
-          chatSession: {
-            id: chatSession.id,
-            messages: chatSession.messages,
-            files: chatSession.files,
-          },
-        })
-      }
+    // Determine current step based on generation status
+    let currentStep = "analyzing"
+    switch (tool.generationStatus) {
+      case "pending":
+        currentStep = "analyzing"
+        break
+      case "analyzing":
+        currentStep = "analyzing"
+        break
+      case "designing":
+        currentStep = "designing"
+        break
+      case "generating":
+        currentStep = "generating"
+        break
+      case "finalizing":
+        currentStep = "finalizing"
+        break
+      case "completed":
+        currentStep = "completed"
+        break
+      case "error":
+        currentStep = "error"
+        break
+      default:
+        currentStep = "analyzing"
     }
 
     return NextResponse.json({
       id: tool.id,
       status: tool.status,
       generationStatus: tool.generationStatus,
+      currentStep,
       previewUrl: tool.previewUrl,
-      error: tool.generationError,
-      progress: this.calculateProgress(tool.generationStatus),
+      demoUrl: chatSession?.demoUrl,
+      error: tool.generationError || chatSession?.error,
+      progress,
+      chatSession: chatSession
+        ? {
+            id: chatSession.id,
+            status: chatSession.status,
+            messages: chatSession.messages,
+            files: chatSession.files,
+            demoUrl: chatSession.demoUrl,
+            progress: ChatManager.calculateProgress(chatSession.status, undefined),
+          }
+        : null,
+      files: chatSession?.files || [],
+      createdAt: tool.createdAt,
+      updatedAt: tool.updatedAt,
     })
   } catch (error) {
     console.error("Failed to get tool status:", error)
-    return NextResponse.json({ error: "Failed to get tool status" }, { status: 500 })
-  }
-}
-
-// Helper function to calculate progress percentage
-function calculateProgress(status: string): number {
-  switch (status) {
-    case "analyzing":
-      return 10
-    case "designing":
-      return 30
-    case "generating":
-      return 60
-    case "finalizing":
-      return 90
-    case "completed":
-      return 100
-    case "error":
-      return 0
-    default:
-      return 0
+    return NextResponse.json(
+      {
+        error: "Failed to get tool status",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
