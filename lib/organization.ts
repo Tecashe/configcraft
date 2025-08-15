@@ -1,7 +1,9 @@
+
 // import { auth } from "@clerk/nextjs/server"
 // import { prisma } from "@/lib/prisma"
 // import crypto from "crypto"
 
+// // Types for our organization system
 // export interface Organization {
 //   id: string
 //   name: string
@@ -21,6 +23,17 @@
 //   updatedAt: string
 // }
 
+// export interface OrganizationMember {
+//   id: string
+//   role: string
+//   status: string
+//   joinedAt: Date
+//   userId: string
+//   organizationId: string
+//   organization: Organization
+// }
+
+// // Get current authenticated user
 // export async function getCurrentUser() {
 //   const { userId } = await auth()
 //   if (!userId) {
@@ -29,6 +42,7 @@
 //   return userId
 // }
 
+// // Ensure user exists in our database
 // export async function ensureUserExists(clerkId: string) {
 //   let user = await prisma.user.findUnique({
 //     where: { clerkId },
@@ -47,6 +61,12 @@
 //   return user
 // }
 
+// // Get current organization from slug
+// export async function getCurrentOrganization(slug: string): Promise<Organization | null> {
+//   return await getOrganizationBySlug(slug)
+// }
+
+// // Get all organizations for the current user
 // export async function getUserOrganizations(): Promise<Organization[]> {
 //   const userId = await getCurrentUser()
 
@@ -144,6 +164,7 @@
 //   return organizations
 // }
 
+// // Get organization by slug
 // export async function getOrganizationBySlug(slug: string): Promise<Organization | null> {
 //   const userId = await getCurrentUser()
 //   const user = await ensureUserExists(userId)
@@ -230,6 +251,7 @@
 //   }
 // }
 
+// // Switch to another organization
 // export async function switchOrganization(slug: string) {
 //   const organization = await getOrganizationBySlug(slug)
 //   if (!organization) {
@@ -238,6 +260,7 @@
 //   return organization
 // }
 
+// // Create a new organization
 // export async function createOrganization(data: {
 //   name: string
 //   slug: string
@@ -280,6 +303,7 @@
 //   return organization
 // }
 
+// // Ensure user has at least one organization
 // export async function ensureUserHasOrganization(): Promise<string> {
 //   const userId = await getCurrentUser()
 //   const user = await ensureUserExists(userId)
@@ -319,6 +343,7 @@
 //   return newOrg.slug
 // }
 
+// // Generate a slug from a name
 // export function generateSlug(name: string): string {
 //   return name
 //     .toLowerCase()
@@ -327,6 +352,7 @@
 //     .substring(0, 50) // Limit length
 // }
 
+// // Check if user has access to organization
 // export async function checkUserAccess(
 //   organizationSlug: string,
 //   requiredRole?: "OWNER" | "ADMIN" | "MEMBER" | "VIEWER",
@@ -358,6 +384,7 @@
 //   }
 // }
 
+// // Invite user to organization
 // export async function inviteUserToOrganization(
 //   organizationSlug: string,
 //   email: string,
@@ -406,6 +433,7 @@
 //   return invitation
 // }
 
+// // Accept invitation
 // export async function acceptInvitation(token: string) {
 //   const userId = await getCurrentUser()
 //   const user = await ensureUserExists(userId)
