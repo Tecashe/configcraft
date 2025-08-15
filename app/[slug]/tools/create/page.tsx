@@ -2302,6 +2302,8 @@
 
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -2632,26 +2634,31 @@ export default function CreateToolPage() {
   const params = useParams()
   const orgSlug = params?.slug as string
 
+  // Memoize scroll function
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [])
 
+  // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
 
+  // Memoize category selection handler
   const handleCategorySelect = useCallback((categoryId: string) => {
     setSelectedCategory(categoryId)
     setCurrentStep("details")
   }, [])
 
-  const handleExampleSelect = useCallback((example: any) => {
+  // Memoize example selection handler
+  const handleExampleSelect = useCallback((example: { title: string; description: string; prompt: string }) => {
     setToolName(example.title)
     setToolDescription(example.description)
     setRequirements(example.prompt)
     setActiveTab("requirements")
   }, [])
 
+  // Memoize validation function
   const validateForm = useCallback(() => {
     if (!selectedCategory) {
       toast({
@@ -2683,6 +2690,7 @@ export default function CreateToolPage() {
     return true
   }, [selectedCategory, toolName, requirements, toast])
 
+  // Memoize polling function
   const pollToolStatus = useCallback(
     async (toolId: string) => {
       try {
@@ -2742,6 +2750,7 @@ export default function CreateToolPage() {
     [orgSlug, toolName, toast],
   )
 
+  // Memoize generation handler
   const handleStartGeneration = useCallback(async () => {
     if (!validateForm()) return
 
@@ -2805,6 +2814,7 @@ export default function CreateToolPage() {
     }
   }, [validateForm, selectedCategory, toolName, toolDescription, requirements, orgSlug, pollToolStatus, toast])
 
+  // Memoize message send handler
   const handleSendMessage = useCallback(async () => {
     if (!currentMessage.trim() || !currentToolId) return
 
@@ -2850,8 +2860,51 @@ export default function CreateToolPage() {
     }
   }, [currentMessage, currentToolId, orgSlug, pollToolStatus])
 
+  // Memoize step navigation handlers
+  const goToCategory = useCallback(() => {
+    setCurrentStep("category")
+  }, [])
+
+  const goToDetails = useCallback(() => {
+    setCurrentStep("details")
+  }, [])
+
+  // Memoize input handlers
+  const handleToolNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setToolName(e.target.value)
+  }, [])
+
+  const handleToolDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setToolDescription(e.target.value)
+  }, [])
+
+  const handleRequirementsChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setRequirements(e.target.value)
+  }, [])
+
+  const handleCurrentMessageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentMessage(e.target.value)
+  }, [])
+
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        handleSendMessage()
+      }
+    },
+    [handleSendMessage],
+  )
+
+  const handleNavigateToTool = useCallback(() => {
+    if (currentToolId) {
+      router.push(`/${orgSlug}/tools/${currentToolId}`)
+    }
+  }, [currentToolId, orgSlug, router])
+
+  // Memoize computed values
   const selectedCategoryData = toolCategories.find((cat) => cat.id === selectedCategory)
   const categoryExamples = selectedCategory ? examplePrompts[selectedCategory as keyof typeof examplePrompts] : []
+  const isFormValid = validateForm()
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">
@@ -2932,12 +2985,7 @@ export default function CreateToolPage() {
         {currentStep === "details" && (
           <div className="space-y-8">
             <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCurrentStep("category")}
-                className="text-[#B0B0B0] hover:text-[#E0E0E0]"
-              >
+              <Button variant="ghost" size="sm" onClick={goToCategory} className="text-[#B0B0B0] hover:text-[#E0E0E0]">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Change Category
               </Button>
@@ -2992,7 +3040,7 @@ export default function CreateToolPage() {
                             <Input
                               placeholder="e.g., Sales Dashboard, Customer Survey"
                               value={toolName}
-                              onChange={(e) => setToolName(e.target.value)}
+                              onChange={handleToolNameChange}
                               className="bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] h-12"
                             />
                             <p className="text-xs text-[#B0B0B0] mt-1">
@@ -3007,7 +3055,7 @@ export default function CreateToolPage() {
                             <Textarea
                               placeholder="Brief description of what this tool does..."
                               value={toolDescription}
-                              onChange={(e) => setToolDescription(e.target.value)}
+                              onChange={handleToolDescriptionChange}
                               rows={3}
                               className="bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
                             />
@@ -3026,7 +3074,7 @@ export default function CreateToolPage() {
                           <Textarea
                             placeholder="Describe exactly what you want your tool to do. Be specific about features, data fields, user interactions, workflows, etc."
                             value={requirements}
-                            onChange={(e) => setRequirements(e.target.value)}
+                            onChange={handleRequirementsChange}
                             rows={12}
                             className="bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
                           />
@@ -3060,7 +3108,7 @@ export default function CreateToolPage() {
                     <div className="flex justify-between items-center pt-6 border-t border-[#444444]">
                       <Button
                         variant="outline"
-                        onClick={() => setCurrentStep("category")}
+                        onClick={goToCategory}
                         className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
                       >
                         <ArrowLeft className="h-4 w-4 mr-2" />
@@ -3069,7 +3117,7 @@ export default function CreateToolPage() {
                       <Button
                         onClick={handleStartGeneration}
                         className="bg-[#888888] hover:bg-[#666666] text-[#121212] px-8"
-                        disabled={!validateForm()}
+                        disabled={!isFormValid}
                       >
                         <Sparkles className="h-5 w-5 mr-2" />
                         Create Tool
@@ -3185,8 +3233,8 @@ export default function CreateToolPage() {
                       <Input
                         placeholder="Ask for changes or improvements..."
                         value={currentMessage}
-                        onChange={(e) => setCurrentMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                        onChange={handleCurrentMessageChange}
+                        onKeyPress={handleKeyPress}
                         className="bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
                         disabled={isGenerating}
                       />
@@ -3309,11 +3357,7 @@ export default function CreateToolPage() {
                             size="sm"
                             variant="outline"
                             className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
-                            onClick={() => {
-                              if (currentToolId) {
-                                router.push(`/${orgSlug}/tools/${currentToolId}`)
-                              }
-                            }}
+                            onClick={handleNavigateToTool}
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Button>
