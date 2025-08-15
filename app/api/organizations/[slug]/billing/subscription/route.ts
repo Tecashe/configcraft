@@ -3,6 +3,8 @@ import { auth } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
 import { getOrganizationBySlug } from "@/lib/organization"
 import { stripe, STRIPE_PLANS } from "@/lib/stripe"
+import type { SubscriptionStatus } from "@prisma/client"
+import type Stripe from "stripe"
 
 export async function GET(request: Request, { params }: { params: { slug: string } }) {
   try {
@@ -22,7 +24,6 @@ export async function GET(request: Request, { params }: { params: { slug: string
         userId: userId,
         organizationId: organization.id,
         status: "ACTIVE",
-        role: { in: ["OWNER", "ADMIN"] },
       },
     })
 
@@ -30,7 +31,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
-    const subscription = await prisma.subscription.findFirst({
+    let subscription = await prisma.subscription.findFirst({
       where: { organizationId: organization.id },
       orderBy: { createdAt: "desc" },
       include: {
@@ -43,7 +44,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
 
     if (!subscription) {
       // Create default free subscription
-      const newSubscription = await prisma.subscription.create({
+      subscription = await prisma.subscription.create({
         data: {
           organizationId: organization.id,
           plan: "FREE",
@@ -59,16 +60,6 @@ export async function GET(request: Request, { params }: { params: { slug: string
           invoices: true,
         },
       })
-
-      return NextResponse.json({
-        ...newSubscription,
-        usage: {
-          toolsUsed: 0,
-          toolsLimit: 1,
-          teamMembers: 1,
-          teamLimit: 3,
-        },
-      })
     }
 
     // Get current usage
@@ -80,6 +71,56 @@ export async function GET(request: Request, { params }: { params: { slug: string
         where: { organizationId: organization.id, status: "ACTIVE" },
       }),
     ])
+
+    // If subscription has Stripe subscription ID, sync with Stripe
+    if (subscription.stripeSubscriptionId) {
+      try {
+        const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId, {
+          expand: ["latest_invoice", "customer"],
+        }) as Stripe.Subscription
+
+        // Map Stripe status to our enum
+        const mapStripeStatus = (stripeStatus: Stripe.Subscription.Status): SubscriptionStatus => {
+          switch (stripeStatus) {
+            case "active":
+              return "ACTIVE"
+            case "canceled":
+              return "CANCELED"
+            case "past_due":
+              return "PAST_DUE"
+            case "unpaid":
+              return "UNPAID"
+            case "incomplete":
+              return "INCOMPLETE"
+            case "trialing":
+              return "TRIALING"
+            default:
+              return "ACTIVE"
+          }
+        }
+
+        const mappedStatus = mapStripeStatus(stripeSubscription.status)
+
+        // Update local subscription status if needed
+        if (mappedStatus !== subscription.status) {
+          subscription = await prisma.subscription.update({
+            where: { id: subscription.id },
+            data: {
+              status: mappedStatus,
+              currentPeriodEnd: new Date((stripeSubscription as any).current_period_end * 1000),
+            },
+            include: {
+              invoices: {
+                orderBy: { createdAt: "desc" },
+                take: 10,
+              },
+            },
+          })
+        }
+      } catch (stripeError) {
+        console.error("Stripe sync error:", stripeError)
+      }
+    }
 
     return NextResponse.json({
       ...subscription,
@@ -148,10 +189,12 @@ export async function PUT(request: Request, { params }: { params: { slug: string
       }
 
       try {
+        const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId) as Stripe.Subscription
+
         await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
           items: [
             {
-              id: subscription.stripeSubscriptionId,
+              id: stripeSubscription.items.data[0].id,
               price: planLimits.priceId,
             },
           ],
