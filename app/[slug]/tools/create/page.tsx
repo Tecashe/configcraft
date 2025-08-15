@@ -2302,7 +2302,7 @@
 
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -2362,7 +2362,7 @@ const toolCategories = [
     name: "Dashboard",
     icon: BarChart3,
     description: "Analytics and reporting tools",
-    color: "from-slate-600 to-slate-700",
+    color: "from-[#444444] to-[#333333]",
     examples: ["Sales Dashboard", "KPI Tracker", "Performance Monitor"],
   },
   {
@@ -2370,7 +2370,7 @@ const toolCategories = [
     name: "Forms",
     icon: FileText,
     description: "Data collection and surveys",
-    color: "from-slate-600 to-slate-700",
+    color: "from-[#444444] to-[#333333]",
     examples: ["Customer Survey", "Lead Capture", "Feedback Form"],
   },
   {
@@ -2378,7 +2378,7 @@ const toolCategories = [
     name: "Calculator",
     icon: Calculator,
     description: "Financial and business calculators",
-    color: "from-slate-600 to-slate-700",
+    color: "from-[#444444] to-[#333333]",
     examples: ["ROI Calculator", "Loan Calculator", "Tax Estimator"],
   },
   {
@@ -2386,7 +2386,7 @@ const toolCategories = [
     name: "CRM",
     icon: Users,
     description: "Customer relationship management",
-    color: "from-slate-600 to-slate-700",
+    color: "from-[#444444] to-[#333333]",
     examples: ["Contact Manager", "Lead Tracker", "Customer Portal"],
   },
   {
@@ -2394,7 +2394,7 @@ const toolCategories = [
     name: "Inventory",
     icon: Database,
     description: "Stock and asset management",
-    color: "from-slate-600 to-slate-700",
+    color: "from-[#444444] to-[#333333]",
     examples: ["Stock Tracker", "Asset Manager", "Warehouse System"],
   },
   {
@@ -2402,7 +2402,7 @@ const toolCategories = [
     name: "Scheduler",
     icon: Calendar,
     description: "Appointment and task scheduling",
-    color: "from-slate-600 to-slate-700",
+    color: "from-[#444444] to-[#333333]",
     examples: ["Appointment Booking", "Task Planner", "Resource Scheduler"],
   },
   {
@@ -2410,7 +2410,7 @@ const toolCategories = [
     name: "E-commerce",
     icon: ShoppingCart,
     description: "Online store and sales tools",
-    color: "from-slate-600 to-slate-700",
+    color: "from-[#444444] to-[#333333]",
     examples: ["Product Catalog", "Order Manager", "Customer Portal"],
   },
   {
@@ -2418,7 +2418,7 @@ const toolCategories = [
     name: "Settings",
     icon: Settings,
     description: "Configuration and admin panels",
-    color: "from-slate-600 to-slate-700",
+    color: "from-[#444444] to-[#333333]",
     examples: ["User Management", "System Config", "Admin Panel"],
   },
 ]
@@ -2632,45 +2632,27 @@ export default function CreateToolPage() {
   const params = useParams()
   const orgSlug = params?.slug as string
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, scrollToBottom])
 
-  const handleCategorySelect = (categoryId: string) => {
-    try {
-      setSelectedCategory(categoryId)
-      setCurrentStep("details")
-    } catch (error) {
-      console.error("Error selecting category:", error)
-      toast({
-        title: "Error",
-        description: "Failed to select category. Please try again.",
-        variant: "destructive",
-      })
-    }
-  }
+  const handleCategorySelect = useCallback((categoryId: string) => {
+    setSelectedCategory(categoryId)
+    setCurrentStep("details")
+  }, [])
 
-  const handleExampleSelect = (example: any) => {
-    try {
-      setToolName(example.title)
-      setToolDescription(example.description)
-      setRequirements(example.prompt)
-      setActiveTab("requirements")
-    } catch (error) {
-      console.error("Error selecting example:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load example. Please try again.",
-        variant: "destructive",
-      })
-    }
-  }
+  const handleExampleSelect = useCallback((example: any) => {
+    setToolName(example.title)
+    setToolDescription(example.description)
+    setRequirements(example.prompt)
+    setActiveTab("requirements")
+  }, [])
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     if (!selectedCategory) {
       toast({
         title: "Category Required",
@@ -2699,9 +2681,68 @@ export default function CreateToolPage() {
     }
 
     return true
-  }
+  }, [selectedCategory, toolName, requirements, toast])
 
-  const handleStartGeneration = async () => {
+  const pollToolStatus = useCallback(
+    async (toolId: string) => {
+      try {
+        const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}/status`)
+        if (!response.ok) return
+
+        const status: ToolStatus = await response.json()
+        setToolStatus(status)
+
+        if (status.status === "GENERATED" || status.status === "PUBLISHED") {
+          setIsGenerating(false)
+
+          const completionMessage: ChatMessage = {
+            id: Date.now().toString(),
+            role: "assistant",
+            content: `🎉 Excellent! Your tool "${toolName}" has been successfully created! You can now preview it and make any adjustments you need. The tool is fully functional and ready to use.`,
+            timestamp: new Date(),
+          }
+          setMessages((prev) => [...prev, completionMessage])
+
+          toast({
+            title: "Tool Created Successfully!",
+            description: "Your tool is ready to use. You can now preview and customize it.",
+          })
+          return
+        }
+
+        if (status.status === "ERROR") {
+          setIsGenerating(false)
+
+          const errorMessage: ChatMessage = {
+            id: Date.now().toString(),
+            role: "assistant",
+            content: `❌ I encountered an issue while creating your tool: ${
+              status.error || "Unknown error"
+            }. Don't worry, let's try again with some adjustments.`,
+            timestamp: new Date(),
+          }
+          setMessages((prev) => [...prev, errorMessage])
+
+          toast({
+            title: "Generation Failed",
+            description: status.error || "Unknown error occurred",
+            variant: "destructive",
+          })
+          return
+        }
+
+        // Continue polling if still generating
+        if (status.status === "GENERATING") {
+          setTimeout(() => pollToolStatus(toolId), 3000)
+        }
+      } catch (error) {
+        console.error("Status polling error:", error)
+      }
+    },
+    [orgSlug, toolName, toast],
+  )
+
+  const handleStartGeneration = useCallback(async () => {
     if (!validateForm()) return
 
     setCurrentStep("generating")
@@ -2762,65 +2803,9 @@ export default function CreateToolPage() {
       setIsGenerating(false)
       setCurrentStep("details")
     }
-  }
+  }, [validateForm, selectedCategory, toolName, toolDescription, requirements, orgSlug, pollToolStatus, toast])
 
-  const pollToolStatus = async (toolId: string) => {
-    try {
-      const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}/status`)
-      if (!response.ok) return
-
-      const status: ToolStatus = await response.json()
-      setToolStatus(status)
-
-      if (status.status === "GENERATED" || status.status === "PUBLISHED") {
-        setIsGenerating(false)
-
-        const completionMessage: ChatMessage = {
-          id: Date.now().toString(),
-          role: "assistant",
-          content: `🎉 Excellent! Your tool "${toolName}" has been successfully created! You can now preview it and make any adjustments you need. The tool is fully functional and ready to use.`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, completionMessage])
-
-        toast({
-          title: "Tool Created Successfully!",
-          description: "Your tool is ready to use. You can now preview and customize it.",
-        })
-        return
-      }
-
-      if (status.status === "ERROR") {
-        setIsGenerating(false)
-
-        const errorMessage: ChatMessage = {
-          id: Date.now().toString(),
-          role: "assistant",
-          content: `❌ I encountered an issue while creating your tool: ${
-            status.error || "Unknown error"
-          }. Don't worry, let's try again with some adjustments.`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, errorMessage])
-
-        toast({
-          title: "Generation Failed",
-          description: status.error || "Unknown error occurred",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Continue polling if still generating
-      if (status.status === "GENERATING") {
-        setTimeout(() => pollToolStatus(toolId), 3000)
-      }
-    } catch (error) {
-      console.error("Status polling error:", error)
-    }
-  }
-
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!currentMessage.trim() || !currentToolId) return
 
     const userMessage: ChatMessage = {
@@ -2863,31 +2848,31 @@ export default function CreateToolPage() {
       console.error("Message send error:", error)
       setIsGenerating(false)
     }
-  }
+  }, [currentMessage, currentToolId, orgSlug, pollToolStatus])
 
   const selectedCategoryData = toolCategories.find((cat) => cat.id === selectedCategory)
   const categoryExamples = selectedCategory ? examplePrompts[selectedCategory as keyof typeof examplePrompts] : []
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-[#121212] text-white">
       {/* Header */}
-      <div className="border-b border-slate-800 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-50">
+      <div className="border-b border-[#444444] bg-[#121212] sticky top-0 z-50">
         <div className="flex items-center justify-between h-16 px-6">
           <div className="flex items-center space-x-4">
             <Link href={`/${orgSlug}/tools`}>
-              <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white hover:bg-slate-800">
+              <Button variant="ghost" size="sm" className="text-[#B0B0B0] hover:text-[#E0E0E0] hover:bg-[#444444]">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Tools
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl font-semibold text-white">Create New Tool</h1>
-              <p className="text-sm text-slate-400">Build a custom business tool with AI</p>
+              <h1 className="text-xl font-semibold text-[#E0E0E0]">Create New Tool</h1>
+              <p className="text-sm text-[#B0B0B0]">Build a custom business tool with AI</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2 px-3 py-1.5 bg-slate-800/50 rounded-full border border-slate-700">
-            <Sparkles className="h-4 w-4 text-slate-400" />
-            <span className="text-sm font-medium text-slate-300">AI-Powered</span>
+          <div className="flex items-center space-x-2 px-3 py-1.5 bg-[#444444] rounded-full border border-[#444444]">
+            <Sparkles className="h-4 w-4 text-[#B0B0B0]" />
+            <span className="text-sm font-medium text-[#E0E0E0]">AI-Powered</span>
           </div>
         </div>
       </div>
@@ -2897,10 +2882,8 @@ export default function CreateToolPage() {
         {currentStep === "category" && (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-                What type of tool do you want to create?
-              </h2>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto">
+              <h2 className="text-3xl font-bold text-[#E0E0E0]">What type of tool do you want to create?</h2>
+              <p className="text-xl text-[#B0B0B0] max-w-3xl mx-auto">
                 Choose a category that best matches your business needs. Our AI will generate a custom tool tailored to
                 your specific requirements.
               </p>
@@ -2910,8 +2893,8 @@ export default function CreateToolPage() {
               {toolCategories.map((category) => (
                 <Card
                   key={category.id}
-                  className={`cursor-pointer transition-all duration-300 hover:scale-105 group border-slate-700 bg-slate-900/50 hover:bg-slate-800/50 ${
-                    selectedCategory === category.id ? "ring-2 ring-slate-500 bg-slate-700/30" : ""
+                  className={`cursor-pointer transition-all duration-300 hover:scale-105 group border-[#444444] bg-[#121212] hover:bg-[#444444] ${
+                    selectedCategory === category.id ? "ring-2 ring-[#888888] bg-[#444444]" : ""
                   }`}
                   onClick={() => handleCategorySelect(category.id)}
                 >
@@ -2923,14 +2906,14 @@ export default function CreateToolPage() {
                         <category.icon className="h-8 w-8" />
                       </div>
                       <div className="text-center space-y-2">
-                        <h3 className="font-semibold text-lg text-white">{category.name}</h3>
-                        <p className="text-sm text-slate-400 leading-relaxed">{category.description}</p>
+                        <h3 className="font-semibold text-lg text-[#E0E0E0]">{category.name}</h3>
+                        <p className="text-sm text-[#B0B0B0] leading-relaxed">{category.description}</p>
                         <div className="flex flex-wrap gap-1 justify-center">
                           {category.examples.map((example, idx) => (
                             <Badge
                               key={idx}
                               variant="secondary"
-                              className="text-xs bg-slate-800 text-slate-300 border-slate-600"
+                              className="text-xs bg-[#444444] text-[#B0B0B0] border-[#444444]"
                             >
                               {example}
                             </Badge>
@@ -2953,7 +2936,7 @@ export default function CreateToolPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setCurrentStep("category")}
-                className="text-slate-400 hover:text-white"
+                className="text-[#B0B0B0] hover:text-[#E0E0E0]"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Change Category
@@ -2965,8 +2948,10 @@ export default function CreateToolPage() {
                   </div>
                 )}
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Configure Your {selectedCategoryData?.name} Tool</h2>
-                  <p className="text-slate-400">Provide details so our AI can create exactly what you need</p>
+                  <h2 className="text-2xl font-bold text-[#E0E0E0]">
+                    Configure Your {selectedCategoryData?.name} Tool
+                  </h2>
+                  <p className="text-[#B0B0B0]">Provide details so our AI can create exactly what you need</p>
                 </div>
               </div>
             </div>
@@ -2974,25 +2959,25 @@ export default function CreateToolPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Main Form */}
               <div className="lg:col-span-2">
-                <Card className="bg-slate-900/50 border-slate-700">
+                <Card className="bg-[#121212] border-[#444444]">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center space-x-2">
-                      <FileText className="h-5 w-5 text-slate-400" />
+                    <CardTitle className="text-[#E0E0E0] flex items-center space-x-2">
+                      <FileText className="h-5 w-5 text-[#B0B0B0]" />
                       <span>Tool Configuration</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                      <TabsList className="grid w-full grid-cols-2 bg-slate-800">
+                      <TabsList className="grid w-full grid-cols-2 bg-[#444444]">
                         <TabsTrigger
                           value="basic"
-                          className="data-[state=active]:bg-slate-700 data-[state=active]:text-white"
+                          className="data-[state=active]:bg-[#888888] data-[state=active]:text-[#121212]"
                         >
                           Basic Info
                         </TabsTrigger>
                         <TabsTrigger
                           value="requirements"
-                          className="data-[state=active]:bg-slate-700 data-[state=active]:text-white"
+                          className="data-[state=active]:bg-[#888888] data-[state=active]:text-[#121212]"
                         >
                           Requirements
                         </TabsTrigger>
@@ -3001,32 +2986,32 @@ export default function CreateToolPage() {
                       <TabsContent value="basic" className="space-y-6">
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                            <label className="block text-sm font-medium text-[#E0E0E0] mb-2">
                               Tool Name <span className="text-red-400">*</span>
                             </label>
                             <Input
                               placeholder="e.g., Sales Dashboard, Customer Survey"
                               value={toolName}
                               onChange={(e) => setToolName(e.target.value)}
-                              className="bg-slate-800 border-slate-600 text-white placeholder-slate-400 h-12"
+                              className="bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] h-12"
                             />
-                            <p className="text-xs text-slate-500 mt-1">
+                            <p className="text-xs text-[#B0B0B0] mt-1">
                               Choose a clear, descriptive name for your tool
                             </p>
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Short Description <span className="text-slate-500">(Optional)</span>
+                            <label className="block text-sm font-medium text-[#E0E0E0] mb-2">
+                              Short Description <span className="text-[#B0B0B0]">(Optional)</span>
                             </label>
                             <Textarea
                               placeholder="Brief description of what this tool does..."
                               value={toolDescription}
                               onChange={(e) => setToolDescription(e.target.value)}
                               rows={3}
-                              className="bg-slate-800 border-slate-600 text-white placeholder-slate-400"
+                              className="bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
                             />
-                            <p className="text-xs text-slate-500 mt-1">
+                            <p className="text-xs text-[#B0B0B0] mt-1">
                               A brief summary that will help users understand the tool's purpose
                             </p>
                           </div>
@@ -3035,7 +3020,7 @@ export default function CreateToolPage() {
 
                       <TabsContent value="requirements" className="space-y-6">
                         <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                          <label className="block text-sm font-medium text-[#E0E0E0] mb-2">
                             Detailed Requirements <span className="text-red-400">*</span>
                           </label>
                           <Textarea
@@ -3043,25 +3028,25 @@ export default function CreateToolPage() {
                             value={requirements}
                             onChange={(e) => setRequirements(e.target.value)}
                             rows={12}
-                            className="bg-slate-800 border-slate-600 text-white placeholder-slate-400"
+                            className="bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
                           />
                           <div className="flex items-center justify-between mt-2">
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[#B0B0B0]">
                               {requirements.length} characters (minimum 20 required)
                             </p>
                             <div className="flex items-center space-x-2">
                               <Lightbulb className="h-4 w-4 text-yellow-400" />
-                              <span className="text-xs text-slate-400">More detail = better results</span>
+                              <span className="text-xs text-[#B0B0B0]">More detail = better results</span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                          <h4 className="font-medium text-white mb-2 flex items-center space-x-2">
-                            <Target className="h-4 w-4 text-slate-400" />
+                        <div className="bg-[#444444] rounded-lg p-4 border border-[#444444]">
+                          <h4 className="font-medium text-[#E0E0E0] mb-2 flex items-center space-x-2">
+                            <Target className="h-4 w-4 text-[#B0B0B0]" />
                             <span>Tips for Great Requirements</span>
                           </h4>
-                          <ul className="text-sm text-slate-300 space-y-1">
+                          <ul className="text-sm text-[#B0B0B0] space-y-1">
                             <li>• Specify what data you need to collect or display</li>
                             <li>• Describe user roles and permissions</li>
                             <li>• Mention any calculations or business logic</li>
@@ -3072,18 +3057,18 @@ export default function CreateToolPage() {
                       </TabsContent>
                     </Tabs>
 
-                    <div className="flex justify-between items-center pt-6 border-t border-slate-700">
+                    <div className="flex justify-between items-center pt-6 border-t border-[#444444]">
                       <Button
                         variant="outline"
                         onClick={() => setCurrentStep("category")}
-                        className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                        className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
                       >
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         Back
                       </Button>
                       <Button
                         onClick={handleStartGeneration}
-                        className="bg-slate-700 hover:bg-slate-600 text-white px-8"
+                        className="bg-[#888888] hover:bg-[#666666] text-[#121212] px-8"
                         disabled={!validateForm()}
                       >
                         <Sparkles className="h-5 w-5 mr-2" />
@@ -3096,9 +3081,9 @@ export default function CreateToolPage() {
 
               {/* Examples Sidebar */}
               <div className="space-y-6">
-                <Card className="bg-slate-900/50 border-slate-700">
+                <Card className="bg-[#121212] border-[#444444]">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center space-x-2">
+                    <CardTitle className="text-[#E0E0E0] flex items-center space-x-2">
                       <Star className="h-5 w-5 text-yellow-400" />
                       <span>Popular Examples</span>
                     </CardTitle>
@@ -3107,33 +3092,33 @@ export default function CreateToolPage() {
                     {categoryExamples.map((example, index) => (
                       <div
                         key={index}
-                        className="p-4 rounded-lg bg-slate-800/50 border border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors group"
+                        className="p-4 rounded-lg bg-[#444444] border border-[#444444] cursor-pointer hover:bg-[#666666] transition-colors group"
                         onClick={() => handleExampleSelect(example)}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h4 className="font-medium text-white group-hover:text-slate-300 transition-colors">
+                            <h4 className="font-medium text-[#E0E0E0] group-hover:text-[#E0E0E0] transition-colors">
                               {example.title}
                             </h4>
-                            <p className="text-sm text-slate-400 mt-1">{example.description}</p>
+                            <p className="text-sm text-[#B0B0B0] mt-1">{example.description}</p>
                           </div>
-                          <ChevronRight className="h-4 w-4 text-slate-500 group-hover:text-slate-400 transition-colors" />
+                          <ChevronRight className="h-4 w-4 text-[#B0B0B0] group-hover:text-[#E0E0E0] transition-colors" />
                         </div>
                       </div>
                     ))}
                   </CardContent>
                 </Card>
 
-                <Card className="bg-slate-800/30 border-slate-700">
+                <Card className="bg-[#444444] border-[#444444]">
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-3 mb-4">
-                      <Clock className="h-5 w-5 text-slate-400" />
-                      <span className="font-medium text-white">Generation Time</span>
+                      <Clock className="h-5 w-5 text-[#B0B0B0]" />
+                      <span className="font-medium text-[#E0E0E0]">Generation Time</span>
                     </div>
-                    <p className="text-sm text-slate-300 mb-4">
+                    <p className="text-sm text-[#B0B0B0] mb-4">
                       Most tools are generated in 2-5 minutes. Complex tools with many features may take longer.
                     </p>
-                    <div className="flex items-center space-x-2 text-xs text-slate-400">
+                    <div className="flex items-center space-x-2 text-xs text-[#B0B0B0]">
                       <Zap className="h-3 w-3" />
                       <span>Powered by advanced AI</span>
                     </div>
@@ -3150,12 +3135,12 @@ export default function CreateToolPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Chat Interface */}
               <div className="lg:col-span-2">
-                <Card className="bg-slate-900/50 border-slate-700 h-[700px] flex flex-col">
-                  <CardHeader className="border-b border-slate-700">
-                    <CardTitle className="text-white flex items-center space-x-2">
-                      <Bot className="h-5 w-5 text-slate-400" />
+                <Card className="bg-[#121212] border-[#444444] h-[700px] flex flex-col">
+                  <CardHeader className="border-b border-[#444444]">
+                    <CardTitle className="text-[#E0E0E0] flex items-center space-x-2">
+                      <Bot className="h-5 w-5 text-[#B0B0B0]" />
                       <span>AI Assistant</span>
-                      {isGenerating && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
+                      {isGenerating && <Loader2 className="h-4 w-4 animate-spin text-[#B0B0B0]" />}
                     </CardTitle>
                   </CardHeader>
 
@@ -3169,25 +3154,25 @@ export default function CreateToolPage() {
                         }`}
                       >
                         <div
-                          className={`p-3 rounded-full ${message.role === "user" ? "bg-slate-700" : "bg-slate-800"}`}
+                          className={`p-3 rounded-full ${message.role === "user" ? "bg-[#888888]" : "bg-[#444444]"}`}
                         >
                           {message.role === "user" ? (
-                            <User className="h-4 w-4 text-white" />
+                            <User className="h-4 w-4 text-[#121212]" />
                           ) : (
-                            <Bot className="h-4 w-4 text-slate-300" />
+                            <Bot className="h-4 w-4 text-[#E0E0E0]" />
                           )}
                         </div>
                         <div className={`flex-1 max-w-[85%] ${message.role === "user" ? "text-right" : ""}`}>
                           <div
                             className={`p-4 rounded-2xl ${
                               message.role === "user"
-                                ? "bg-slate-700 text-white"
-                                : "bg-slate-800 text-slate-100 border border-slate-700"
+                                ? "bg-[#888888] text-[#121212]"
+                                : "bg-[#444444] text-[#E0E0E0] border border-[#444444]"
                             }`}
                           >
                             <p className="text-sm leading-relaxed">{message.content}</p>
                           </div>
-                          <p className="text-xs text-slate-500 mt-2 px-2">{message.timestamp.toLocaleTimeString()}</p>
+                          <p className="text-xs text-[#B0B0B0] mt-2 px-2">{message.timestamp.toLocaleTimeString()}</p>
                         </div>
                       </div>
                     ))}
@@ -3195,25 +3180,25 @@ export default function CreateToolPage() {
                   </div>
 
                   {/* Input */}
-                  <div className="border-t border-slate-700 p-4">
+                  <div className="border-t border-[#444444] p-4">
                     <div className="flex space-x-3">
                       <Input
                         placeholder="Ask for changes or improvements..."
                         value={currentMessage}
                         onChange={(e) => setCurrentMessage(e.target.value)}
                         onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                        className="bg-slate-800 border-slate-600 text-white placeholder-slate-400"
+                        className="bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
                         disabled={isGenerating}
                       />
                       <Button
                         onClick={handleSendMessage}
                         disabled={!currentMessage.trim() || isGenerating}
-                        className="bg-slate-700 hover:bg-slate-600 px-6"
+                        className="bg-[#888888] hover:bg-[#666666] text-[#121212] px-6"
                       >
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs text-[#B0B0B0] mt-2">
                       You can request changes, add features, or ask questions about your tool
                     </p>
                   </div>
@@ -3223,37 +3208,37 @@ export default function CreateToolPage() {
               {/* Status Panel */}
               <div className="space-y-6">
                 {/* Tool Info */}
-                <Card className="bg-slate-900/50 border-slate-700">
+                <Card className="bg-[#121212] border-[#444444]">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center space-x-2">
-                      <FileText className="h-5 w-5 text-slate-400" />
+                    <CardTitle className="text-[#E0E0E0] flex items-center space-x-2">
+                      <FileText className="h-5 w-5 text-[#B0B0B0]" />
                       <span>Tool Information</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <p className="text-sm text-slate-400">Name</p>
-                      <p className="text-white font-medium">{toolName}</p>
+                      <p className="text-sm text-[#B0B0B0]">Name</p>
+                      <p className="text-[#E0E0E0] font-medium">{toolName}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-400">Category</p>
+                      <p className="text-sm text-[#B0B0B0]">Category</p>
                       <Badge className={`bg-gradient-to-r ${selectedCategoryData?.color} text-white border-0`}>
                         {selectedCategoryData?.name}
                       </Badge>
                     </div>
                     {toolDescription && (
                       <div>
-                        <p className="text-sm text-slate-400">Description</p>
-                        <p className="text-slate-300 text-sm">{toolDescription}</p>
+                        <p className="text-sm text-[#B0B0B0]">Description</p>
+                        <p className="text-[#E0E0E0] text-sm">{toolDescription}</p>
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
                 {/* Progress */}
-                <Card className="bg-slate-900/50 border-slate-700">
+                <Card className="bg-[#121212] border-[#444444]">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center space-x-2">
+                    <CardTitle className="text-[#E0E0E0] flex items-center space-x-2">
                       <Zap className="h-5 w-5 text-yellow-400" />
                       <span>Generation Progress</span>
                     </CardTitle>
@@ -3262,8 +3247,8 @@ export default function CreateToolPage() {
                     {toolStatus && (
                       <div>
                         <div className="flex justify-between text-sm mb-3">
-                          <span className="text-slate-400">Overall Progress</span>
-                          <span className="text-white font-medium">{toolStatus.progress}%</span>
+                          <span className="text-[#B0B0B0]">Overall Progress</span>
+                          <span className="text-[#E0E0E0] font-medium">{toolStatus.progress}%</span>
                         </div>
                         <Progress value={toolStatus.progress} className="h-3" />
                       </div>
@@ -3284,8 +3269,8 @@ export default function CreateToolPage() {
                                   : isCompleted
                                     ? "bg-green-500/20 text-green-400"
                                     : isActive
-                                      ? "bg-slate-600/50 text-slate-300"
-                                      : "bg-slate-700 text-slate-500"
+                                      ? "bg-[#888888] text-[#121212]"
+                                      : "bg-[#444444] text-[#B0B0B0]"
                               }`}
                             >
                               {isError && index === 0 ? (
@@ -3299,8 +3284,8 @@ export default function CreateToolPage() {
                               )}
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-white">{step.title}</p>
-                              <p className="text-xs text-slate-400">{step.description}</p>
+                              <p className="text-sm font-medium text-[#E0E0E0]">{step.title}</p>
+                              <p className="text-xs text-[#B0B0B0]">{step.description}</p>
                             </div>
                           </div>
                         )
@@ -3308,7 +3293,7 @@ export default function CreateToolPage() {
                     </div>
 
                     {toolStatus?.demoUrl && (
-                      <div className="space-y-3 pt-4 border-t border-slate-700">
+                      <div className="space-y-3 pt-4 border-t border-[#444444]">
                         <p className="text-sm font-medium text-green-400 flex items-center space-x-2">
                           <CheckCircle className="h-4 w-4" />
                           <span>Preview Available</span>
@@ -3323,7 +3308,7 @@ export default function CreateToolPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
+                            className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] bg-transparent"
                             onClick={() => {
                               if (currentToolId) {
                                 router.push(`/${orgSlug}/tools/${currentToolId}`)
@@ -3339,13 +3324,13 @@ export default function CreateToolPage() {
                 </Card>
 
                 {/* Tips */}
-                <Card className="bg-slate-800/30 border-slate-700">
+                <Card className="bg-[#444444] border-[#444444]">
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-3 mb-4">
                       <Lightbulb className="h-5 w-5 text-yellow-400" />
-                      <span className="font-medium text-white">Pro Tips</span>
+                      <span className="font-medium text-[#E0E0E0]">Pro Tips</span>
                     </div>
-                    <ul className="text-sm text-slate-300 space-y-2">
+                    <ul className="text-sm text-[#B0B0B0] space-y-2">
                       <li>• You can request changes at any time</li>
                       <li>• Be specific about what you want modified</li>
                       <li>• The AI learns from your feedback</li>

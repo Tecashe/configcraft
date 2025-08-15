@@ -303,7 +303,6 @@
 //   )
 // }
 
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -441,13 +440,13 @@ export default function ToolsPage() {
       case "PUBLISHED":
         return <CheckCircle className="h-4 w-4 text-green-400" />
       case "GENERATING":
-        return <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
+        return <Loader2 className="h-4 w-4 text-[#888888] animate-spin" />
       case "ERROR":
         return <AlertTriangle className="h-4 w-4 text-red-400" />
       case "GENERATED":
         return <Eye className="h-4 w-4 text-emerald-400" />
       default:
-        return <Clock className="h-4 w-4 text-slate-400" />
+        return <Clock className="h-4 w-4 text-[#B0B0B0]" />
     }
   }
 
@@ -456,13 +455,13 @@ export default function ToolsPage() {
       case "PUBLISHED":
         return "bg-green-500/10 text-green-400 border-green-500/20"
       case "GENERATING":
-        return "bg-blue-500/10 text-blue-400 border-blue-500/20"
+        return "bg-[#888888]/10 text-[#888888] border-[#888888]/20"
       case "GENERATED":
         return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
       case "ERROR":
         return "bg-red-500/10 text-red-400 border-red-500/20"
       default:
-        return "bg-slate-500/10 text-slate-400 border-slate-500/20"
+        return "bg-[#444444]/10 text-[#B0B0B0] border-[#444444]/20"
     }
   }
 
@@ -488,23 +487,23 @@ export default function ToolsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] bg-slate-900">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+      <div className="flex items-center justify-center min-h-[400px] bg-[#121212]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#888888]" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen bg-[#121212] text-white">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Tools</h1>
-            <p className="text-slate-400">
+            <h1 className="text-3xl font-bold text-[#E0E0E0]">Tools</h1>
+            <p className="text-[#B0B0B0]">
               Create and manage your custom business tools
               {subscription && (
-                <span className="ml-2 text-slate-300">
+                <span className="ml-2 text-[#E0E0E0]">
                   ({subscription.toolsUsed}/{subscription.toolsLimit} used)
                 </span>
               )}
@@ -518,7 +517,7 @@ export default function ToolsPage() {
               </div>
             )}
             <Link href={canCreateTool ? `/${orgSlug}/tools/create` : `/${orgSlug}/billing`}>
-              <Button disabled={!canCreateTool} className="bg-blue-600 hover:bg-blue-700 text-white border-0">
+              <Button disabled={!canCreateTool} className="bg-[#888888] hover:bg-[#666666] text-[#121212] border-0">
                 <Plus className="h-4 w-4 mr-2" />
                 {canCreateTool ? "Create Tool" : "Upgrade Plan"}
               </Button>
@@ -556,47 +555,47 @@ export default function ToolsPage() {
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#B0B0B0]" />
             <Input
               placeholder="Search tools..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-slate-800 border-slate-700 text-white placeholder-slate-400"
+              className="pl-10 bg-[#444444] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0]"
             />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
+              <Button variant="outline" className="bg-[#444444] border-[#444444] text-[#B0B0B0] hover:bg-[#666666]">
                 <Filter className="h-4 w-4 mr-2" />
                 Status: {statusFilter === "all" ? "All" : statusFilter}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-slate-800 border-slate-700">
-              <DropdownMenuItem onClick={() => setStatusFilter("all")} className="text-slate-300 hover:bg-slate-700">
+            <DropdownMenuContent className="bg-[#444444] border-[#444444]">
+              <DropdownMenuItem onClick={() => setStatusFilter("all")} className="text-[#E0E0E0] hover:bg-[#666666]">
                 All ({toolsByStatus.all})
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("draft")} className="text-slate-300 hover:bg-slate-700">
+              <DropdownMenuItem onClick={() => setStatusFilter("draft")} className="text-[#E0E0E0] hover:bg-[#666666]">
                 Draft ({toolsByStatus.draft})
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setStatusFilter("generating")}
-                className="text-slate-300 hover:bg-slate-700"
+                className="text-[#E0E0E0] hover:bg-[#666666]"
               >
                 Generating ({toolsByStatus.generating})
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setStatusFilter("generated")}
-                className="text-slate-300 hover:bg-slate-700"
+                className="text-[#E0E0E0] hover:bg-[#666666]"
               >
                 Generated ({toolsByStatus.generated})
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setStatusFilter("published")}
-                className="text-slate-300 hover:bg-slate-700"
+                className="text-[#E0E0E0] hover:bg-[#666666]"
               >
                 Published ({toolsByStatus.published})
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("error")} className="text-slate-300 hover:bg-slate-700">
+              <DropdownMenuItem onClick={() => setStatusFilter("error")} className="text-[#E0E0E0] hover:bg-[#666666]">
                 Error ({toolsByStatus.error})
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -607,32 +606,32 @@ export default function ToolsPage() {
         {filteredTools.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTools.map((tool) => (
-              <Card key={tool.id} className="bg-slate-800 border-slate-700 hover:bg-slate-750 transition-colors">
+              <Card key={tool.id} className="bg-[#121212] border-[#444444] hover:bg-[#444444] transition-colors">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(tool.status, tool.generationStatus)}
-                      <CardTitle className="text-lg text-white">{tool.name}</CardTitle>
+                      <CardTitle className="text-lg text-[#E0E0E0]">{tool.name}</CardTitle>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-slate-400 hover:text-white hover:bg-slate-700"
+                          className="text-[#B0B0B0] hover:text-[#E0E0E0] hover:bg-[#666666]"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
-                        <DropdownMenuItem asChild className="text-slate-300 hover:bg-slate-700">
+                      <DropdownMenuContent align="end" className="bg-[#444444] border-[#444444]">
+                        <DropdownMenuItem asChild className="text-[#E0E0E0] hover:bg-[#666666]">
                           <Link href={`/${orgSlug}/tools/${tool.id}`}>
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
                         {tool.publishedUrl && (
-                          <DropdownMenuItem asChild className="text-slate-300 hover:bg-slate-700">
+                          <DropdownMenuItem asChild className="text-[#E0E0E0] hover:bg-[#666666]">
                             <a href={tool.publishedUrl} target="_blank" rel="noopener noreferrer">
                               <Globe className="h-4 w-4 mr-2" />
                               Open Tool
@@ -657,20 +656,20 @@ export default function ToolsPage() {
                   <div className="flex items-center space-x-2">
                     <Badge className={`text-xs ${getStatusColor(tool.status)}`}>{tool.status}</Badge>
                     {tool.category && (
-                      <Badge variant="outline" className="text-xs border-slate-600 text-slate-400">
+                      <Badge variant="outline" className="text-xs border-[#444444] text-[#B0B0B0]">
                         {tool.category}
                       </Badge>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="mb-4 line-clamp-2 text-slate-400">
+                  <CardDescription className="mb-4 line-clamp-2 text-[#B0B0B0]">
                     {tool.description || "No description provided"}
                   </CardDescription>
-                  <div className="flex items-center justify-between text-sm text-slate-500">
+                  <div className="flex items-center justify-between text-sm text-[#B0B0B0]">
                     <span>Created {new Date(tool.createdAt).toLocaleDateString()}</span>
                     {tool.status === "GENERATING" && (
-                      <span className="text-blue-400 capitalize">{tool.generationStatus}</span>
+                      <span className="text-[#888888] capitalize">{tool.generationStatus}</span>
                     )}
                   </div>
                   {tool.generationError && (
@@ -681,7 +680,7 @@ export default function ToolsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full bg-transparent border-slate-600 text-slate-300 hover:bg-slate-700"
+                        className="w-full bg-transparent border-[#444444] text-[#B0B0B0] hover:bg-[#666666]"
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         View
@@ -692,7 +691,7 @@ export default function ToolsPage() {
                         variant="outline"
                         size="sm"
                         asChild
-                        className="border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
+                        className="border-[#444444] text-[#B0B0B0] hover:bg-[#666666] bg-transparent"
                       >
                         <a href={tool.publishedUrl} target="_blank" rel="noopener noreferrer">
                           <Globe className="h-4 w-4" />
@@ -705,22 +704,22 @@ export default function ToolsPage() {
             ))}
           </div>
         ) : (
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-[#121212] border-[#444444]">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mb-4">
-                <Sparkles className="h-8 w-8 text-slate-400" />
+              <div className="w-16 h-16 bg-[#444444] rounded-full flex items-center justify-center mb-4">
+                <Sparkles className="h-8 w-8 text-[#B0B0B0]" />
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">
+              <h3 className="text-lg font-medium text-[#E0E0E0] mb-2">
                 {searchQuery || statusFilter !== "all" ? "No tools found" : "No tools yet"}
               </h3>
-              <p className="text-slate-400 text-center mb-6 max-w-md">
+              <p className="text-[#B0B0B0] text-center mb-6 max-w-md">
                 {searchQuery || statusFilter !== "all"
                   ? "Try adjusting your search or filter criteria."
                   : "Create your first custom business tool with AI assistance."}
               </p>
               {!searchQuery && statusFilter === "all" && (
                 <Link href={canCreateTool ? `/${orgSlug}/tools/create` : `/${orgSlug}/billing`}>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212]">
                     <Plus className="h-4 w-4 mr-2" />
                     {canCreateTool ? "Create Your First Tool" : "Upgrade to Create Tools"}
                   </Button>
