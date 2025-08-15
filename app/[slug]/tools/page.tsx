@@ -307,732 +307,428 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  ArrowLeft,
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
   Eye,
   Globe,
-  Code,
-  Settings,
   Trash2,
-  Loader2,
+  AlertTriangle,
   CheckCircle,
-  AlertCircle,
-  ExternalLink,
-  Copy,
-  Download,
-  MessageSquare,
-  RefreshCw,
+  Clock,
+  Loader2,
+  Lock,
+  Sparkles,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
 
 interface Tool {
   id: string
   name: string
-  description: string
-  category: string
+  description?: string
+  category?: string
   status: string
   generationStatus: string
-  generationError?: string
-  previewUrl?: string
-  publishedUrl?: string
   createdAt: string
   updatedAt: string
-  generatedCode?: string
-  requirements: string
-  chatSessionId?: string
-}
-
-interface ChatSession {
-  id: string
-  messages: Array<{
-    id: string
-    role: "user" | "assistant" | "system"
-    content: string
-    timestamp: Date
-  }>
-  files: Array<{
-    id: string
-    name: string
-    content: string
-    type: string
-    size: number
-  }>
-  status: "generating" | "completed" | "error"
-  demoUrl?: string
-  error?: string
-}
-
-interface ToolStatus {
-  id: string
-  status: string
-  generationStatus: string
   previewUrl?: string
-  error?: string
-  progress: number
-  chatSession?: ChatSession
+  publishedUrl?: string
+  generationError?: string
 }
 
-export default function ToolPage() {
-  const [tool, setTool] = useState<Tool | null>(null)
-  const [toolStatus, setToolStatus] = useState<ToolStatus | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isPublishing, setIsPublishing] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [showPublishDialog, setShowPublishDialog] = useState(false)
-  const [publishConfig, setPublishConfig] = useState({
-    subdomain: "",
-    customDomain: "",
-  })
-  const [isPolling, setIsPolling] = useState(false)
+interface Subscription {
+  plan: string
+  toolsLimit: number
+  toolsUsed: number
+}
+
+export default function ToolsPage() {
+  const [tools, setTools] = useState<Tool[]>([])
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const { toast } = useToast()
-  const router = useRouter()
   const params = useParams()
   const orgSlug = params?.slug as string
-  const toolId = params?.id as string
 
   useEffect(() => {
-    fetchTool()
-  }, [toolId, orgSlug])
-
-  useEffect(() => {
-    // Start polling if tool is generating
-    if (tool && (tool.status === "GENERATING" || tool.generationStatus === "generating")) {
-      startPolling()
-    } else {
-      stopPolling()
+    if (orgSlug) {
+      fetchTools()
+      fetchSubscription()
     }
+  }, [orgSlug])
 
-    return () => stopPolling()
-  }, [tool])
-
-  const fetchTool = async () => {
+  const fetchTools = async () => {
     try {
-      const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch tool")
-      }
-      const toolData = await response.json()
-      setTool(toolData)
-
-      // Set initial subdomain suggestion
-      if (toolData.name && !publishConfig.subdomain) {
-        const suggestedSubdomain = toolData.name
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, "")
-          .replace(/\s+/g, "-")
-          .replace(/-+/g, "-")
-          .trim()
-        setPublishConfig((prev) => ({ ...prev, subdomain: suggestedSubdomain }))
+      const response = await fetch(`/api/organizations/${orgSlug}/tools`)
+      if (response.ok) {
+        const toolsData = await response.json()
+        setTools(toolsData)
       }
     } catch (error) {
-      console.error("Error fetching tool:", error)
+      console.error("Failed to fetch tools:", error)
       toast({
         title: "Error",
-        description: "Failed to load tool details.",
+        description: "Failed to load tools",
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const startPolling = () => {
-    if (isPolling) return
-
-    setIsPolling(true)
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}/status`)
-        if (response.ok) {
-          const status: ToolStatus = await response.json()
-          setToolStatus(status)
-
-          // Update tool if status changed
-          if (tool && (status.status !== tool.status || status.generationStatus !== tool.generationStatus)) {
-            setTool((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    status: status.status,
-                    generationStatus: status.generationStatus,
-                    previewUrl: status.previewUrl,
-                    generationError: status.error,
-                  }
-                : null,
-            )
-          }
-
-          // Stop polling if completed or error
-          if (status.generationStatus === "completed" || status.generationStatus === "error") {
-            stopPolling()
-          }
-        }
-      } catch (error) {
-        console.error("Polling error:", error)
-      }
-    }, 2000)
-
-    // Store interval ID for cleanup
-    ;(window as any).pollInterval = pollInterval
-  }
-
-  const stopPolling = () => {
-    setIsPolling(false)
-    if ((window as any).pollInterval) {
-      clearInterval((window as any).pollInterval)
-      ;(window as any).pollInterval = null
-    }
-  }
-
-  const handlePublish = async () => {
-    if (!tool || !publishConfig.subdomain) return
-
-    setIsPublishing(true)
+  const fetchSubscription = async () => {
     try {
-      const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}/publish`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(publishConfig),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to publish tool")
+      const response = await fetch(`/api/organizations/${orgSlug}/billing/subscription`)
+      if (response.ok) {
+        const subData = await response.json()
+        setSubscription({
+          plan: subData.plan,
+          toolsLimit: subData.toolsLimit || subData.usage?.toolsLimit || 1,
+          toolsUsed: subData.usage?.toolsUsed || tools.length,
+        })
       }
-
-      const result = await response.json()
-      setTool((prev) => (prev ? { ...prev, status: "PUBLISHED", publishedUrl: result.url } : null))
-      setShowPublishDialog(false)
-
-      toast({
-        title: "Tool Published!",
-        description: `Your tool is now live at ${result.url}`,
-      })
     } catch (error) {
-      console.error("Error publishing tool:", error)
-      toast({
-        title: "Publish Failed",
-        description: error instanceof Error ? error.message : "Failed to publish the tool. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsPublishing(false)
+      console.error("Failed to fetch subscription:", error)
     }
   }
 
-  const handleDelete = async () => {
-    if (!tool || !confirm("Are you sure you want to delete this tool? This action cannot be undone.")) return
+  const handleDeleteTool = async (toolId: string) => {
+    if (!confirm("Are you sure you want to delete this tool? This action cannot be undone.")) {
+      return
+    }
 
-    setIsDeleting(true)
+    setDeleting(toolId)
     try {
       const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}`, {
         method: "DELETE",
       })
 
-      if (!response.ok) {
+      if (response.ok) {
+        setTools(tools.filter((tool) => tool.id !== toolId))
+        toast({
+          title: "Tool Deleted",
+          description: "The tool has been permanently deleted.",
+        })
+      } else {
         throw new Error("Failed to delete tool")
       }
-
-      toast({
-        title: "Tool Deleted",
-        description: "The tool has been permanently deleted.",
-      })
-
-      router.push(`/${orgSlug}/tools`)
     } catch (error) {
-      console.error("Error deleting tool:", error)
       toast({
         title: "Delete Failed",
         description: "Failed to delete the tool. Please try again.",
         variant: "destructive",
       })
     } finally {
-      setIsDeleting(false)
+      setDeleting(null)
     }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast({
-      title: "Copied!",
-      description: "URL copied to clipboard.",
-    })
-  }
-
-  const downloadCode = () => {
-    if (!toolStatus?.chatSession?.files) return
-
-    const files = toolStatus.chatSession.files
-    const zip = files.map((file) => `// ${file.name}\n${file.content}`).join("\n\n// ===== NEXT FILE =====\n\n")
-
-    const blob = new Blob([zip], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `${tool?.name || "tool"}-code.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const getStatusIcon = (status: string, generationStatus: string) => {
+    switch (status) {
+      case "PUBLISHED":
+        return <CheckCircle className="h-4 w-4 text-green-400" />
+      case "GENERATING":
+        return <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
+      case "ERROR":
+        return <AlertTriangle className="h-4 w-4 text-red-400" />
+      case "GENERATED":
+        return <Eye className="h-4 w-4 text-emerald-400" />
+      default:
+        return <Clock className="h-4 w-4 text-slate-400" />
+    }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "GENERATED":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
       case "PUBLISHED":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+        return "bg-green-500/10 text-green-400 border-green-500/20"
       case "GENERATING":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        return "bg-blue-500/10 text-blue-400 border-blue-500/20"
+      case "GENERATED":
+        return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
       case "ERROR":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+        return "bg-red-500/10 text-red-400 border-red-500/20"
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+        return "bg-slate-500/10 text-slate-400 border-slate-500/20"
     }
   }
 
-  const getGenerationStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case "error":
-        return <AlertCircle className="h-4 w-4 text-red-500" />
-      case "analyzing":
-      case "designing":
-      case "generating":
-      case "finalizing":
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-      default:
-        return <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
-    }
+  const filteredTools = tools.filter((tool) => {
+    const matchesSearch =
+      tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (tool.description && tool.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    const matchesStatus = statusFilter === "all" || tool.status.toLowerCase() === statusFilter.toLowerCase()
+    return matchesSearch && matchesStatus
+  })
+
+  const toolsByStatus = {
+    all: tools.length,
+    draft: tools.filter((t) => t.status === "DRAFT").length,
+    generating: tools.filter((t) => t.status === "GENERATING").length,
+    generated: tools.filter((t) => t.status === "GENERATED").length,
+    published: tools.filter((t) => t.status === "PUBLISHED").length,
+    error: tools.filter((t) => t.status === "ERROR").length,
   }
 
-  if (isLoading) {
+  const canCreateTool = !subscription || subscription.toolsUsed < subscription.toolsLimit
+  const isNearLimit = subscription && subscription.toolsUsed / subscription.toolsLimit > 0.8
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-[400px] bg-slate-900">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
       </div>
     )
-  }
-
-  if (!tool) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-2">Tool Not Found</h2>
-          <p className="text-muted-foreground mb-4">The tool you're looking for doesn't exist.</p>
-          <Link href={`/${orgSlug}/tools`}>
-            <Button>Back to Tools</Button>
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  const currentStatus = toolStatus || {
-    id: tool.id,
-    status: tool.status,
-    generationStatus: tool.generationStatus,
-    previewUrl: tool.previewUrl,
-    error: tool.generationError,
-    progress: tool.status === "GENERATED" ? 100 : 0,
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b bg-card">
-        <div className="flex items-center justify-between h-16 px-6">
-          <div className="flex items-center space-x-4">
-            <Link href={`/${orgSlug}/tools`}>
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Tools
+    <div className="min-h-screen bg-slate-900 text-white">
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Tools</h1>
+            <p className="text-slate-400">
+              Create and manage your custom business tools
+              {subscription && (
+                <span className="ml-2 text-slate-300">
+                  ({subscription.toolsUsed}/{subscription.toolsLimit} used)
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            {!canCreateTool && (
+              <div className="flex items-center space-x-2 text-sm text-orange-400">
+                <Lock className="h-4 w-4" />
+                <span>Tool limit reached</span>
+              </div>
+            )}
+            <Link href={canCreateTool ? `/${orgSlug}/tools/create` : `/${orgSlug}/billing`}>
+              <Button disabled={!canCreateTool} className="bg-blue-600 hover:bg-blue-700 text-white border-0">
+                <Plus className="h-4 w-4 mr-2" />
+                {canCreateTool ? "Create Tool" : "Upgrade Plan"}
               </Button>
             </Link>
-            <div>
-              <h1 className="text-xl font-semibold">{tool.name}</h1>
-              <p className="text-sm text-muted-foreground">{tool.description}</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Badge className={getStatusColor(currentStatus.status)}>{currentStatus.status}</Badge>
-            {currentStatus.generationStatus && (
-              <div className="flex items-center space-x-1">
-                {getGenerationStatusIcon(currentStatus.generationStatus)}
-                <span className="text-sm text-muted-foreground capitalize">{currentStatus.generationStatus}</span>
-              </div>
-            )}
-            {isPolling && (
-              <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                <RefreshCw className="h-3 w-3 animate-spin" />
-                <span>Live</span>
-              </div>
-            )}
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Tabs defaultValue="preview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-                <TabsTrigger value="code">Code</TabsTrigger>
-                <TabsTrigger value="chat">Chat</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
-              </TabsList>
+        {/* Usage Warning */}
+        {isNearLimit && canCreateTool && (
+          <Card className="border-orange-500/20 bg-orange-500/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-orange-400" />
+                <div className="flex-1">
+                  <p className="font-medium text-orange-300">Approaching Tool Limit</p>
+                  <p className="text-sm text-orange-400">
+                    You're using {subscription?.toolsUsed} of {subscription?.toolsLimit} tools. Consider upgrading to
+                    create more tools.
+                  </p>
+                </div>
+                <Link href={`/${orgSlug}/billing`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-transparent border-orange-500/20 text-orange-300 hover:bg-orange-500/10"
+                  >
+                    Upgrade Plan
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-              <TabsContent value="preview" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Eye className="h-5 w-5" />
-                      <span>Live Preview</span>
-                    </CardTitle>
-                    <CardDescription>Interactive preview of your generated tool</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {currentStatus.status === "GENERATING" ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Generation Progress</span>
-                          <span>{currentStatus.progress}%</span>
-                        </div>
-                        <Progress value={currentStatus.progress} className="h-2" />
-                        <div className="flex items-center justify-center h-64 bg-muted rounded-lg">
-                          <div className="text-center">
-                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                            <p className="text-sm text-muted-foreground capitalize">
-                              {currentStatus.generationStatus}...
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : currentStatus.status === "ERROR" ? (
-                      <div className="flex items-center justify-center h-64 bg-red-50 dark:bg-red-950 rounded-lg">
-                        <div className="text-center">
-                          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-                          <p className="text-sm text-red-600 dark:text-red-400">Generation failed</p>
-                          {currentStatus.error && (
-                            <p className="text-xs text-red-500 mt-2 max-w-md">{currentStatus.error}</p>
-                          )}
-                        </div>
-                      </div>
-                    ) : currentStatus.previewUrl ? (
-                      <div className="space-y-4">
-                        <div className="aspect-video bg-muted rounded-lg overflow-hidden border">
-                          <iframe
-                            src={currentStatus.previewUrl}
-                            className="w-full h-full border-0"
-                            title="Tool Preview"
-                            sandbox="allow-scripts allow-same-origin allow-forms"
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={currentStatus.previewUrl} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Open in New Tab
-                            </a>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyToClipboard(currentStatus.previewUrl!)}
-                          >
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copy URL
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-64 bg-muted rounded-lg">
-                        <p className="text-sm text-muted-foreground">No preview available</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="code" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Code className="h-5 w-5" />
-                      <span>Generated Files</span>
-                    </CardTitle>
-                    <CardDescription>View and download the generated code files</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {toolStatus?.chatSession?.files && toolStatus.chatSession.files.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm text-muted-foreground">
-                            {toolStatus.chatSession.files.length} files generated
-                          </p>
-                          <Button variant="outline" size="sm" onClick={downloadCode}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download All
-                          </Button>
-                        </div>
-
-                        <div className="space-y-3">
-                          {toolStatus.chatSession.files.map((file, index) => (
-                            <Card key={file.id} className="bg-muted/50">
-                              <CardHeader className="pb-2">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-2">
-                                    <Code className="h-4 w-4" />
-                                    <span className="font-mono text-sm">{file.name}</span>
-                                    <Badge variant="secondary" className="text-xs">
-                                      {file.type}
-                                    </Badge>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {(file.size / 1024).toFixed(1)} KB
-                                  </span>
-                                </div>
-                              </CardHeader>
-                              <CardContent className="pt-0">
-                                <div className="bg-background rounded border p-3 max-h-48 overflow-auto">
-                                  <pre className="text-xs">
-                                    <code>{file.content}</code>
-                                  </pre>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-32 bg-muted rounded-lg">
-                        <p className="text-sm text-muted-foreground">No code files available yet</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="chat" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <MessageSquare className="h-5 w-5" />
-                      <span>Generation Chat</span>
-                    </CardTitle>
-                    <CardDescription>View the AI conversation that generated your tool</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {toolStatus?.chatSession?.messages && toolStatus.chatSession.messages.length > 0 ? (
-                      <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {toolStatus.chatSession.messages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={`p-3 rounded-lg ${
-                              message.role === "user" ? "bg-primary/10 ml-8" : "bg-muted mr-8"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium capitalize">
-                                {message.role === "user" ? "You" : "AI Assistant"}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(message.timestamp).toLocaleTimeString()}
-                              </span>
-                            </div>
-                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-32 bg-muted rounded-lg">
-                        <p className="text-sm text-muted-foreground">No chat messages available</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="settings" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Settings className="h-5 w-5" />
-                      <span>Tool Settings</span>
-                    </CardTitle>
-                    <CardDescription>Manage your tool configuration and metadata</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Requirements</h4>
-                      <div className="bg-muted rounded-lg p-4">
-                        <p className="text-sm whitespace-pre-wrap">{tool.requirements}</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="font-medium mb-2">Category</h4>
-                        <Badge variant="secondary">{tool.category}</Badge>
-                      </div>
-                      <div>
-                        <h4 className="font-medium mb-2">Created</h4>
-                        <p className="text-sm text-muted-foreground">{new Date(tool.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search tools..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-slate-800 border-slate-700 text-white placeholder-slate-400"
+            />
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
+                <Filter className="h-4 w-4 mr-2" />
+                Status: {statusFilter === "all" ? "All" : statusFilter}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-slate-800 border-slate-700">
+              <DropdownMenuItem onClick={() => setStatusFilter("all")} className="text-slate-300 hover:bg-slate-700">
+                All ({toolsByStatus.all})
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("draft")} className="text-slate-300 hover:bg-slate-700">
+                Draft ({toolsByStatus.draft})
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setStatusFilter("generating")}
+                className="text-slate-300 hover:bg-slate-700"
+              >
+                Generating ({toolsByStatus.generating})
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setStatusFilter("generated")}
+                className="text-slate-300 hover:bg-slate-700"
+              >
+                Generated ({toolsByStatus.generated})
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setStatusFilter("published")}
+                className="text-slate-300 hover:bg-slate-700"
+              >
+                Published ({toolsByStatus.published})
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter("error")} className="text-slate-300 hover:bg-slate-700">
+                Error ({toolsByStatus.error})
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-                <CardDescription>Manage your tool</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {currentStatus.status === "GENERATED" && !tool.publishedUrl && (
-                  <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
-                    <DialogTrigger asChild>
-                      <Button className="w-full">
-                        <Globe className="h-4 w-4 mr-2" />
-                        Publish Tool
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Publish Your Tool</DialogTitle>
-                        <DialogDescription>
-                          Make your tool publicly accessible with a custom subdomain.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="subdomain">Subdomain *</Label>
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              id="subdomain"
-                              value={publishConfig.subdomain}
-                              onChange={(e) => setPublishConfig((prev) => ({ ...prev, subdomain: e.target.value }))}
-                              placeholder="my-tool"
-                            />
-                            <span className="text-sm text-muted-foreground">.configcraft.app</span>
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="customDomain">Custom Domain (Optional)</Label>
-                          <Input
-                            id="customDomain"
-                            value={publishConfig.customDomain}
-                            onChange={(e) => setPublishConfig((prev) => ({ ...prev, customDomain: e.target.value }))}
-                            placeholder="tool.yourdomain.com"
-                          />
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button onClick={handlePublish} disabled={isPublishing || !publishConfig.subdomain}>
-                            {isPublishing ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
+        {/* Tools Grid */}
+        {filteredTools.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTools.map((tool) => (
+              <Card key={tool.id} className="bg-slate-800 border-slate-700 hover:bg-slate-750 transition-colors">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(tool.status, tool.generationStatus)}
+                      <CardTitle className="text-lg text-white">{tool.name}</CardTitle>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-slate-400 hover:text-white hover:bg-slate-700"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
+                        <DropdownMenuItem asChild className="text-slate-300 hover:bg-slate-700">
+                          <Link href={`/${orgSlug}/tools/${tool.id}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        {tool.publishedUrl && (
+                          <DropdownMenuItem asChild className="text-slate-300 hover:bg-slate-700">
+                            <a href={tool.publishedUrl} target="_blank" rel="noopener noreferrer">
                               <Globe className="h-4 w-4 mr-2" />
-                            )}
-                            Publish
-                          </Button>
-                          <Button variant="outline" onClick={() => setShowPublishDialog(false)}>
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-
-                {tool.publishedUrl && (
-                  <div className="space-y-2">
-                    <Button variant="outline" className="w-full bg-transparent" asChild>
-                      <a href={tool.publishedUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        View Published Tool
-                      </a>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(tool.publishedUrl!)}
-                      className="w-full"
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Public URL
-                    </Button>
+                              Open Tool
+                            </a>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteTool(tool.id)}
+                          className="text-red-400 hover:bg-red-500/10"
+                          disabled={deleting === tool.id}
+                        >
+                          {deleting === tool.id ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 mr-2" />
+                          )}
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                )}
-
-                <Button variant="destructive" onClick={handleDelete} disabled={isDeleting} className="w-full">
-                  {isDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                  Delete Tool
-                </Button>
-              </CardContent>
-            </Card>
-
-            {tool.publishedUrl && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Public Access</CardTitle>
-                  <CardDescription>Your tool is live and accessible</CardDescription>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={`text-xs ${getStatusColor(tool.status)}`}>{tool.status}</Badge>
+                    {tool.category && (
+                      <Badge variant="outline" className="text-xs border-slate-600 text-slate-400">
+                        {tool.category}
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-sm">
-                      <Globe className="h-4 w-4 text-green-500" />
-                      <span className="text-green-600 dark:text-green-400">Published</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground break-all">{tool.publishedUrl}</p>
+                  <CardDescription className="mb-4 line-clamp-2 text-slate-400">
+                    {tool.description || "No description provided"}
+                  </CardDescription>
+                  <div className="flex items-center justify-between text-sm text-slate-500">
+                    <span>Created {new Date(tool.createdAt).toLocaleDateString()}</span>
+                    {tool.status === "GENERATING" && (
+                      <span className="text-blue-400 capitalize">{tool.generationStatus}</span>
+                    )}
+                  </div>
+                  {tool.generationError && (
+                    <div className="mt-2 p-2 bg-red-500/10 rounded text-xs text-red-400">{tool.generationError}</div>
+                  )}
+                  <div className="flex items-center space-x-2 mt-4">
+                    <Link href={`/${orgSlug}/tools/${tool.id}`} className="flex-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full bg-transparent border-slate-600 text-slate-300 hover:bg-slate-700"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                    </Link>
+                    {tool.publishedUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
+                      >
+                        <a href={tool.publishedUrl} target="_blank" rel="noopener noreferrer">
+                          <Globe className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            {currentStatus.status === "GENERATING" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Generation Progress</CardTitle>
-                  <CardDescription>AI is creating your tool</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Progress</span>
-                      <span>{currentStatus.progress}%</span>
-                    </div>
-                    <Progress value={currentStatus.progress} className="h-2" />
-                    <p className="text-sm text-muted-foreground capitalize">{currentStatus.generationStatus}...</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            ))}
           </div>
-        </div>
+        ) : (
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mb-4">
+                <Sparkles className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-medium text-white mb-2">
+                {searchQuery || statusFilter !== "all" ? "No tools found" : "No tools yet"}
+              </h3>
+              <p className="text-slate-400 text-center mb-6 max-w-md">
+                {searchQuery || statusFilter !== "all"
+                  ? "Try adjusting your search or filter criteria."
+                  : "Create your first custom business tool with AI assistance."}
+              </p>
+              {!searchQuery && statusFilter === "all" && (
+                <Link href={canCreateTool ? `/${orgSlug}/tools/create` : `/${orgSlug}/billing`}>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {canCreateTool ? "Create Your First Tool" : "Upgrade to Create Tools"}
+                  </Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

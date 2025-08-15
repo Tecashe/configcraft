@@ -71,6 +71,7 @@
     "svix": "^1.71.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "v0-sdk": "^0.7.1",
     "vaul": "^0.9.6",
     "ws": "latest",
     "zod": "^3.24.1"
