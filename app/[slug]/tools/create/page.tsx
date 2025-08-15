@@ -2300,11 +2300,13 @@
 //   )
 // }
 
+
+
 "use client"
 
 import type React from "react"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -2358,7 +2360,22 @@ interface ToolStatus {
   chatId?: string
 }
 
-const toolCategories = [
+interface ToolCategory {
+  id: string
+  name: string
+  icon: any
+  description: string
+  color: string
+  examples: string[]
+}
+
+interface ExamplePrompt {
+  title: string
+  description: string
+  prompt: string
+}
+
+const TOOL_CATEGORIES: ToolCategory[] = [
   {
     id: "dashboard",
     name: "Dashboard",
@@ -2425,7 +2442,7 @@ const toolCategories = [
   },
 ]
 
-const examplePrompts = {
+const EXAMPLE_PROMPTS: Record<string, ExamplePrompt[]> = {
   dashboard: [
     {
       title: "Sales Performance Dashboard",
@@ -2588,7 +2605,7 @@ const examplePrompts = {
   ],
 }
 
-const generationSteps = [
+const GENERATION_STEPS = [
   {
     id: "analyzing",
     title: "Analyzing Requirements",
@@ -2616,81 +2633,85 @@ const generationSteps = [
 ]
 
 export default function CreateToolPage() {
+  // Core state
   const [currentStep, setCurrentStep] = useState<"category" | "details" | "generating">("category")
   const [selectedCategory, setSelectedCategory] = useState("")
   const [toolName, setToolName] = useState("")
   const [toolDescription, setToolDescription] = useState("")
   const [requirements, setRequirements] = useState("")
+  const [activeTab, setActiveTab] = useState("basic")
+
+  // Generation state
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [currentMessage, setCurrentMessage] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [toolStatus, setToolStatus] = useState<ToolStatus | null>(null)
   const [currentToolId, setCurrentToolId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("basic")
 
+  // Refs and hooks
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const router = useRouter()
   const params = useParams()
   const orgSlug = params?.slug as string
 
-  // Memoize scroll function
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [])
+  // Memoized computed values
+  const selectedCategoryData = useMemo(() => {
+    return TOOL_CATEGORIES.find((cat) => cat.id === selectedCategory)
+  }, [selectedCategory])
 
-  // Scroll to bottom when messages change
+  const categoryExamples = useMemo(() => {
+    return selectedCategory ? EXAMPLE_PROMPTS[selectedCategory] || [] : []
+  }, [selectedCategory])
+
+  const isFormValid = useMemo(() => {
+    return selectedCategory && toolName.trim() && requirements.trim() && requirements.length >= 20
+  }, [selectedCategory, toolName, requirements])
+
+  // Scroll to bottom effect
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, scrollToBottom])
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [messages])
 
-  // Memoize category selection handler
+  // Event handlers - all memoized with useCallback
   const handleCategorySelect = useCallback((categoryId: string) => {
     setSelectedCategory(categoryId)
     setCurrentStep("details")
   }, [])
 
-  // Memoize example selection handler
-  const handleExampleSelect = useCallback((example: { title: string; description: string; prompt: string }) => {
+  const handleExampleSelect = useCallback((example: ExamplePrompt) => {
     setToolName(example.title)
     setToolDescription(example.description)
     setRequirements(example.prompt)
     setActiveTab("requirements")
   }, [])
 
-  // Memoize validation function
-  const validateForm = useCallback(() => {
-    if (!selectedCategory) {
-      toast({
-        title: "Category Required",
-        description: "Please select a tool category to continue.",
-        variant: "destructive",
-      })
-      return false
-    }
+  const handleToolNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setToolName(e.target.value)
+  }, [])
 
-    if (!toolName.trim()) {
-      toast({
-        title: "Tool Name Required",
-        description: "Please enter a name for your tool.",
-        variant: "destructive",
-      })
-      return false
-    }
+  const handleToolDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setToolDescription(e.target.value)
+  }, [])
 
-    if (!requirements.trim() || requirements.length < 20) {
-      toast({
-        title: "Requirements Too Short",
-        description: "Please provide detailed requirements (at least 20 characters).",
-        variant: "destructive",
-      })
-      return false
-    }
+  const handleRequirementsChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setRequirements(e.target.value)
+  }, [])
 
-    return true
-  }, [selectedCategory, toolName, requirements, toast])
+  const handleCurrentMessageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentMessage(e.target.value)
+  }, [])
 
-  // Memoize polling function
+  const goToCategory = useCallback(() => {
+    setCurrentStep("category")
+  }, [])
+
+  const goToDetails = useCallback(() => {
+    setCurrentStep("details")
+  }, [])
+
   const pollToolStatus = useCallback(
     async (toolId: string) => {
       try {
@@ -2750,9 +2771,15 @@ export default function CreateToolPage() {
     [orgSlug, toolName, toast],
   )
 
-  // Memoize generation handler
   const handleStartGeneration = useCallback(async () => {
-    if (!validateForm()) return
+    if (!isFormValid) {
+      toast({
+        title: "Form Incomplete",
+        description: "Please fill in all required fields before creating your tool.",
+        variant: "destructive",
+      })
+      return
+    }
 
     setCurrentStep("generating")
     setIsGenerating(true)
@@ -2812,9 +2839,8 @@ export default function CreateToolPage() {
       setIsGenerating(false)
       setCurrentStep("details")
     }
-  }, [validateForm, selectedCategory, toolName, toolDescription, requirements, orgSlug, pollToolStatus, toast])
+  }, [isFormValid, selectedCategory, toolName, toolDescription, requirements, orgSlug, pollToolStatus, toast])
 
-  // Memoize message send handler
   const handleSendMessage = useCallback(async () => {
     if (!currentMessage.trim() || !currentToolId) return
 
@@ -2860,32 +2886,6 @@ export default function CreateToolPage() {
     }
   }, [currentMessage, currentToolId, orgSlug, pollToolStatus])
 
-  // Memoize step navigation handlers
-  const goToCategory = useCallback(() => {
-    setCurrentStep("category")
-  }, [])
-
-  const goToDetails = useCallback(() => {
-    setCurrentStep("details")
-  }, [])
-
-  // Memoize input handlers
-  const handleToolNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setToolName(e.target.value)
-  }, [])
-
-  const handleToolDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setToolDescription(e.target.value)
-  }, [])
-
-  const handleRequirementsChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setRequirements(e.target.value)
-  }, [])
-
-  const handleCurrentMessageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrentMessage(e.target.value)
-  }, [])
-
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
@@ -2900,11 +2900,6 @@ export default function CreateToolPage() {
       router.push(`/${orgSlug}/tools/${currentToolId}`)
     }
   }, [currentToolId, orgSlug, router])
-
-  // Memoize computed values
-  const selectedCategoryData = toolCategories.find((cat) => cat.id === selectedCategory)
-  const categoryExamples = selectedCategory ? examplePrompts[selectedCategory as keyof typeof examplePrompts] : []
-  const isFormValid = validateForm()
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">
@@ -2943,40 +2938,43 @@ export default function CreateToolPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {toolCategories.map((category) => (
-                <Card
-                  key={category.id}
-                  className={`cursor-pointer transition-all duration-300 hover:scale-105 group border-[#444444] bg-[#121212] hover:bg-[#444444] ${
-                    selectedCategory === category.id ? "ring-2 ring-[#888888] bg-[#444444]" : ""
-                  }`}
-                  onClick={() => handleCategorySelect(category.id)}
-                >
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div
-                        className={`p-4 rounded-2xl bg-gradient-to-r ${category.color} text-white w-fit mx-auto transition-transform group-hover:scale-110`}
-                      >
-                        <category.icon className="h-8 w-8" />
-                      </div>
-                      <div className="text-center space-y-2">
-                        <h3 className="font-semibold text-lg text-[#E0E0E0]">{category.name}</h3>
-                        <p className="text-sm text-[#B0B0B0] leading-relaxed">{category.description}</p>
-                        <div className="flex flex-wrap gap-1 justify-center">
-                          {category.examples.map((example, idx) => (
-                            <Badge
-                              key={idx}
-                              variant="secondary"
-                              className="text-xs bg-[#444444] text-[#B0B0B0] border-[#444444]"
-                            >
-                              {example}
-                            </Badge>
-                          ))}
+              {TOOL_CATEGORIES.map((category) => {
+                const IconComponent = category.icon
+                return (
+                  <Card
+                    key={category.id}
+                    className={`cursor-pointer transition-all duration-300 hover:scale-105 group border-[#444444] bg-[#121212] hover:bg-[#444444] ${
+                      selectedCategory === category.id ? "ring-2 ring-[#888888] bg-[#444444]" : ""
+                    }`}
+                    onClick={() => handleCategorySelect(category.id)}
+                  >
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        <div
+                          className={`p-4 rounded-2xl bg-gradient-to-r ${category.color} text-white w-fit mx-auto transition-transform group-hover:scale-110`}
+                        >
+                          <IconComponent className="h-8 w-8" />
+                        </div>
+                        <div className="text-center space-y-2">
+                          <h3 className="font-semibold text-lg text-[#E0E0E0]">{category.name}</h3>
+                          <p className="text-sm text-[#B0B0B0] leading-relaxed">{category.description}</p>
+                          <div className="flex flex-wrap gap-1 justify-center">
+                            {category.examples.map((example, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="secondary"
+                                className="text-xs bg-[#444444] text-[#B0B0B0] border-[#444444]"
+                              >
+                                {example}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           </div>
         )}
@@ -3303,10 +3301,11 @@ export default function CreateToolPage() {
                     )}
 
                     <div className="space-y-4">
-                      {generationSteps.map((step, index) => {
+                      {GENERATION_STEPS.map((step, index) => {
                         const isActive = toolStatus?.status === "GENERATING" && index === 1
                         const isCompleted = toolStatus?.progress && toolStatus.progress > (index + 1) * 25
                         const isError = toolStatus?.status === "ERROR"
+                        const StepIcon = step.icon
 
                         return (
                           <div key={step.id} className="flex items-center space-x-3">
@@ -3328,7 +3327,7 @@ export default function CreateToolPage() {
                               ) : isActive ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <step.icon className="h-4 w-4" />
+                                <StepIcon className="h-4 w-4" />
                               )}
                             </div>
                             <div className="flex-1">
