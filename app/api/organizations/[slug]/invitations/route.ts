@@ -216,33 +216,36 @@
 // }
 
 import { type NextRequest, NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
+import { currentUser } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import crypto from "crypto"
 
 const inviteSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("Please enter a valid email address"),
   role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
 })
 
 export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
+    const user = await currentUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { slug } = params
     const body = await request.json()
-    const { email, role } = inviteSchema.parse(body)
+    const validatedData = inviteSchema.parse(body)
 
-    // Get the organization and check permissions
+    // Get organization and check permissions
     const organization = await prisma.organization.findUnique({
       where: { slug },
       include: {
         members: {
-          where: { userId },
+          where: {
+            userId: user.id,
+            status: "ACTIVE",
+          },
         },
       },
     })
@@ -251,7 +254,6 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       return NextResponse.json({ error: "Organization not found" }, { status: 404 })
     }
 
-    // Check if user has permission to invite (must be owner or admin)
     const userMembership = organization.members[0]
     if (!userMembership || !["OWNER", "ADMIN"].includes(userMembership.role)) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
@@ -261,99 +263,92 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     const existingMember = await prisma.organizationMember.findFirst({
       where: {
         organizationId: organization.id,
-        user: { email },
+        user: { email: validatedData.email },
       },
     })
 
     if (existingMember) {
-      return NextResponse.json({ error: "User is already a member of this organization" }, { status: 400 })
+      return NextResponse.json({ error: "User is already a member" }, { status: 400 })
     }
 
     // Check if there's already a pending invitation
     const existingInvitation = await prisma.organizationInvitation.findFirst({
       where: {
         organizationId: organization.id,
-        email,
-        expiresAt: { gt: new Date() },
+        email: validatedData.email,
+        status: "PENDING",
       },
     })
 
     if (existingInvitation) {
-      return NextResponse.json({ error: "Invitation already sent to this email" }, { status: 400 })
+      return NextResponse.json({ error: "Invitation already sent" }, { status: 400 })
     }
 
-    // Create invitation
-    const token = crypto.randomUUID()
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-
-    // Get the inviting user
+    // Get the inviting user from database
     const invitingUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
+      where: { clerkId: user.id },
     })
 
     if (!invitingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    // Create invitation
+    const token = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+
     const invitation = await prisma.organizationInvitation.create({
       data: {
-        email,
-        role,
+        email: validatedData.email,
+        role: validatedData.role,
         token,
         expiresAt,
         organizationId: organization.id,
         invitedById: invitingUser.id,
+        status: "PENDING",
       },
     })
 
-    // TODO: Send invitation email here
-    console.log(`Invitation created for ${email} to join ${organization.name}`)
-
     return NextResponse.json({
-      id: invitation.id,
-      email: invitation.email,
-      role: invitation.role,
-      createdAt: invitation.createdAt,
+      success: true,
+      invitation: {
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        status: invitation.status,
+        createdAt: invitation.createdAt,
+        expiresAt: invitation.expiresAt,
+      },
     })
   } catch (error) {
     console.error("Error creating invitation:", error)
+
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Invalid request data", details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Invalid input", details: error.errors }, { status: 400 })
     }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+
+    return NextResponse.json({ error: "Failed to create invitation" }, { status: 500 })
   }
 }
 
 export async function GET(request: NextRequest, { params }: { params: { slug: string } }) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
+    const user = await currentUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { slug } = params
 
-    // Get the organization and check permissions
+    // Get organization and check permissions
     const organization = await prisma.organization.findUnique({
       where: { slug },
       include: {
         members: {
-          where: { userId },
-        },
-        invitations: {
           where: {
-            expiresAt: { gt: new Date() },
+            userId: user.id,
+            status: "ACTIVE",
           },
-          include: {
-            invitedBy: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: { createdAt: "desc" },
         },
       },
     })
@@ -362,15 +357,34 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
       return NextResponse.json({ error: "Organization not found" }, { status: 404 })
     }
 
-    // Check if user has permission to view invitations
     const userMembership = organization.members[0]
-    if (!userMembership || !["OWNER", "ADMIN"].includes(userMembership.role)) {
-      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
+    if (!userMembership) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
-    return NextResponse.json(organization.invitations)
+    // Get invitations
+    const invitations = await prisma.organizationInvitation.findMany({
+      where: {
+        organizationId: organization.id,
+        status: "PENDING",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    })
+
+    return NextResponse.json({
+      invitations: invitations.map((invitation) => ({
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        status: invitation.status,
+        createdAt: invitation.createdAt,
+        expiresAt: invitation.expiresAt,
+      })),
+    })
   } catch (error) {
     console.error("Error fetching invitations:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to fetch invitations" }, { status: 500 })
   }
 }

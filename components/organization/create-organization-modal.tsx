@@ -360,28 +360,40 @@
 
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Building2, ArrowRight, ArrowLeft, Check, Loader2, AlertCircle } from "lucide-react"
+import { Loader2, Check, X, Building2, Users, Globe, Briefcase } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
+
+const createOrganizationSchema = z.object({
+  name: z.string().min(1, "Organization name is required").max(100),
+  description: z.string().optional(),
+  industry: z.string().optional(),
+  size: z.enum(["SMALL", "MEDIUM", "LARGE", "ENTERPRISE"]).default("SMALL"),
+  website: z.string().url().optional().or(z.literal("")),
+})
+
+type CreateOrganizationForm = z.infer<typeof createOrganizationSchema>
 
 interface CreateOrganizationModalProps {
   children?: React.ReactNode
@@ -390,50 +402,78 @@ interface CreateOrganizationModalProps {
   onSuccess?: (organization: any) => void
 }
 
-const industries = [
+const steps = [
+  {
+    id: "basic",
+    title: "Basic Information",
+    description: "Tell us about your organization",
+    icon: Building2,
+  },
+  {
+    id: "details",
+    title: "Organization Details",
+    description: "Additional information about your organization",
+    icon: Briefcase,
+  },
+  {
+    id: "review",
+    title: "Review & Create",
+    description: "Review your information and create the organization",
+    icon: Check,
+  },
+]
+
+const industryOptions = [
   "Technology",
   "Healthcare",
   "Finance",
   "Education",
-  "Retail",
   "Manufacturing",
-  "Real Estate",
-  "Marketing",
+  "Retail",
   "Consulting",
   "Non-profit",
   "Government",
   "Other",
 ]
 
-const companySizes = [
-  { value: "SMALL", label: "1-10 employees" },
-  { value: "MEDIUM", label: "11-50 employees" },
-  { value: "LARGE", label: "51-200 employees" },
-  { value: "ENTERPRISE", label: "200+ employees" },
+const sizeOptions = [
+  { value: "SMALL", label: "Small (1-10 people)", description: "Perfect for startups and small teams" },
+  { value: "MEDIUM", label: "Medium (11-50 people)", description: "Growing companies and departments" },
+  { value: "LARGE", label: "Large (51-200 people)", description: "Established companies" },
+  { value: "ENTERPRISE", label: "Enterprise (200+ people)", description: "Large organizations" },
 ]
 
-export function CreateOrganizationModal({ children, open, onOpenChange, onSuccess }: CreateOrganizationModalProps) {
+export function CreateOrganizationModal({
+  children,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  onSuccess,
+}: CreateOrganizationModalProps) {
+  const [currentStep, setCurrentStep] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
-  const [currentStep, setCurrentStep] = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [slugChecking, setSlugChecking] = useState(false)
-  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null)
-  const [formData, setFormData] = useState({
-    name: "",
-    slug: "",
-    description: "",
-    industry: "",
-    size: "SMALL",
-    website: "",
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const { toast } = useToast()
+  const [isCreating, setIsCreating] = useState(false)
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle")
+  const [generatedSlug, setGeneratedSlug] = useState("")
   const router = useRouter()
+  const { toast } = useToast()
 
-  const isControlled = open !== undefined && onOpenChange !== undefined
-  const modalOpen = isControlled ? open : isOpen
-  const setModalOpen = isControlled ? onOpenChange : setIsOpen
+  const open = controlledOpen ?? isOpen
+  const onOpenChange = controlledOnOpenChange ?? setIsOpen
 
+  const form = useForm<CreateOrganizationForm>({
+    resolver: zodResolver(createOrganizationSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      industry: "",
+      size: "SMALL",
+      website: "",
+    },
+  })
+
+  const watchedName = form.watch("name")
+
+  // Generate slug from name
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -442,90 +482,66 @@ export function CreateOrganizationModal({ children, open, onOpenChange, onSucces
       .substring(0, 50)
   }
 
+  // Check slug availability
   const checkSlugAvailability = async (slug: string) => {
-    if (!slug || slug.length < 3) {
-      setSlugAvailable(null)
-      return
-    }
+    if (!slug) return
 
-    setSlugChecking(true)
+    setSlugStatus("checking")
     try {
       const response = await fetch(`/api/organizations/check-slug?slug=${encodeURIComponent(slug)}`)
       const data = await response.json()
-      setSlugAvailable(data.available)
+      setSlugStatus(data.available ? "available" : "taken")
     } catch (error) {
       console.error("Error checking slug:", error)
-      setSlugAvailable(null)
-    } finally {
-      setSlugChecking(false)
+      setSlugStatus("idle")
     }
   }
 
-  const handleNameChange = (name: string) => {
-    setFormData((prev) => ({ ...prev, name }))
-    if (name && !formData.slug) {
-      const newSlug = generateSlug(name)
-      setFormData((prev) => ({ ...prev, slug: newSlug }))
-      checkSlugAvailability(newSlug)
+  // Update slug when name changes
+  React.useEffect(() => {
+    if (watchedName) {
+      const slug = generateSlug(watchedName)
+      setGeneratedSlug(slug)
+      checkSlugAvailability(slug)
+    } else {
+      setGeneratedSlug("")
+      setSlugStatus("idle")
+    }
+  }, [watchedName])
+
+  const nextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1)
     }
   }
 
-  const handleSlugChange = (slug: string) => {
-    const cleanSlug = generateSlug(slug)
-    setFormData((prev) => ({ ...prev, slug: cleanSlug }))
-    checkSlugAvailability(cleanSlug)
-  }
-
-  const validateStep = (step: number) => {
-    const newErrors: Record<string, string> = {}
-
-    if (step === 1) {
-      if (!formData.name.trim()) {
-        newErrors.name = "Organization name is required"
-      }
-      if (!formData.slug.trim()) {
-        newErrors.slug = "Organization URL is required"
-      } else if (formData.slug.length < 3) {
-        newErrors.slug = "URL must be at least 3 characters"
-      } else if (slugAvailable === false) {
-        newErrors.slug = "This URL is already taken"
-      }
-    }
-
-    if (step === 2) {
-      if (!formData.industry) {
-        newErrors.industry = "Please select an industry"
-      }
-      if (!formData.size) {
-        newErrors.size = "Please select organization size"
-      }
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, 3))
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1)
     }
   }
 
-  const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1))
-  }
+  const onSubmit = async (data: CreateOrganizationForm) => {
+    if (slugStatus !== "available") {
+      toast({
+        title: "Invalid organization name",
+        description: "Please choose a different organization name.",
+        variant: "destructive",
+      })
+      return
+    }
 
-  const handleSubmit = async () => {
-    if (!validateStep(2)) return
-
-    setLoading(true)
+    setIsCreating(true)
     try {
       const response = await fetch("/api/organizations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...data,
+          slug: generatedSlug,
+        }),
       })
 
       if (!response.ok) {
@@ -533,200 +549,234 @@ export function CreateOrganizationModal({ children, open, onOpenChange, onSucces
         throw new Error(error.error || "Failed to create organization")
       }
 
-      const organization = await response.json()
+      const result = await response.json()
 
       toast({
-        title: "Organization created",
-        description: `${organization.name} has been created successfully.`,
+        title: "Organization created!",
+        description: `${data.name} has been created successfully.`,
       })
 
-      // Reset form
-      setFormData({
-        name: "",
-        slug: "",
-        description: "",
-        industry: "",
-        size: "SMALL",
-        website: "",
-      })
-      setCurrentStep(1)
-      setErrors({})
-      setSlugAvailable(null)
+      // Reset form and close modal
+      form.reset()
+      setCurrentStep(0)
+      onOpenChange(false)
+      onSuccess?.(result.organization)
 
-      // Close modal
-      setModalOpen?.(false)
-
-      // Call success callback
-      onSuccess?.(organization)
-
-      // Redirect to new organization
-      router.push(`/${organization.slug}/dashboard`)
+      // Redirect to the new organization
+      router.push(`/${generatedSlug}/dashboard`)
     } catch (error) {
       console.error("Error creating organization:", error)
       toast({
-        title: "Creation failed",
+        title: "Error",
         description: error instanceof Error ? error.message : "Failed to create organization",
         variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      setIsCreating(false)
     }
   }
 
-  const progress = (currentStep / 3) * 100
-
-  const renderStep = () => {
+  const renderStepContent = () => {
     switch (currentStep) {
+      case 0:
+        return (
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Acme Inc." {...field} />
+                  </FormControl>
+                  <FormDescription>This will be the display name for your organization.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {generatedSlug && (
+              <div className="space-y-2">
+                <FormLabel>Organization URL</FormLabel>
+                <div className="flex items-center space-x-2 p-3 bg-muted rounded-md">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">configcraft.com/</span>
+                  <span className="font-medium">{generatedSlug}</span>
+                  {slugStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {slugStatus === "available" && (
+                    <Badge variant="secondary" className="text-green-600">
+                      <Check className="h-3 w-3 mr-1" />
+                      Available
+                    </Badge>
+                  )}
+                  {slugStatus === "taken" && (
+                    <Badge variant="destructive">
+                      <X className="h-3 w-3 mr-1" />
+                      Taken
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This URL will be automatically generated from your organization name.
+                </p>
+              </div>
+            )}
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Tell us about your organization..." className="resize-none" {...field} />
+                  </FormControl>
+                  <FormDescription>A brief description of your organization (optional).</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )
+
       case 1:
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Organization Name *</Label>
-              <Input
-                id="name"
-                placeholder="Enter your organization name"
-                value={formData.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                className={errors.name ? "border-destructive" : ""}
-              />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="slug">Organization URL *</Label>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-muted-foreground">configcraft.com/</span>
-                <div className="flex-1 relative">
-                  <Input
-                    id="slug"
-                    placeholder="your-organization"
-                    value={formData.slug}
-                    onChange={(e) => handleSlugChange(e.target.value)}
-                    className={errors.slug ? "border-destructive" : slugAvailable === true ? "border-green-500" : ""}
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {slugChecking && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                    {!slugChecking && slugAvailable === true && <Check className="h-4 w-4 text-green-500" />}
-                    {!slugChecking && slugAvailable === false && <AlertCircle className="h-4 w-4 text-destructive" />}
-                  </div>
-                </div>
-              </div>
-              {errors.slug && <p className="text-sm text-destructive">{errors.slug}</p>}
-              {!errors.slug && slugAvailable === true && (
-                <p className="text-sm text-green-600">✓ This URL is available</p>
+            <FormField
+              control={form.control}
+              name="industry"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Industry</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your industry" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {industryOptions.map((industry) => (
+                        <SelectItem key={industry} value={industry}>
+                          {industry}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>This helps us provide relevant features and templates.</FormDescription>
+                  <FormMessage />
+                </FormItem>
               )}
-              {!errors.slug && slugAvailable === false && (
-                <p className="text-sm text-destructive">✗ This URL is already taken</p>
-              )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                placeholder="Brief description of your organization"
-                value={formData.description}
-                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                rows={3}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="size"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization Size *</FormLabel>
+                  <FormControl>
+                    <div className="grid grid-cols-1 gap-3">
+                      {sizeOptions.map((option) => (
+                        <div
+                          key={option.value}
+                          className={cn(
+                            "flex items-start space-x-3 p-3 border rounded-lg cursor-pointer transition-colors",
+                            field.value === option.value
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:bg-muted/50",
+                          )}
+                          onClick={() => field.onChange(option.value)}
+                        >
+                          <div className="flex items-center space-x-2 flex-1">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium text-sm">{option.label}</p>
+                              <p className="text-xs text-muted-foreground">{option.description}</p>
+                            </div>
+                          </div>
+                          <div
+                            className={cn(
+                              "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                              field.value === option.value ? "border-primary bg-primary" : "border-muted-foreground",
+                            )}
+                          >
+                            {field.value === option.value && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="website"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Website</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://example.com" {...field} />
+                  </FormControl>
+                  <FormDescription>Your organization's website (optional).</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         )
 
       case 2:
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="industry">Industry *</Label>
-              <Select
-                value={formData.industry}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, industry: value }))}
-              >
-                <SelectTrigger className={errors.industry ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Select your industry" />
-                </SelectTrigger>
-                <SelectContent>
-                  {industries.map((industry) => (
-                    <SelectItem key={industry} value={industry}>
-                      {industry}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.industry && <p className="text-sm text-destructive">{errors.industry}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="size">Organization Size *</Label>
-              <Select
-                value={formData.size}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, size: value }))}
-              >
-                <SelectTrigger className={errors.size ? "border-destructive" : ""}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {companySizes.map((size) => (
-                    <SelectItem key={size.value} value={size.value}>
-                      {size.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.size && <p className="text-sm text-destructive">{errors.size}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="website">Website (Optional)</Label>
-              <Input
-                id="website"
-                type="url"
-                placeholder="https://yourcompany.com"
-                value={formData.website}
-                onChange={(e) => setFormData((prev) => ({ ...prev, website: e.target.value }))}
-              />
-            </div>
-          </div>
-        )
-
-      case 3:
+        const formData = form.getValues()
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building2 className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Review Your Organization</h3>
-              <p className="text-muted-foreground">Please review the details before creating your organization.</p>
+              <h3 className="text-lg font-semibold">Review Your Organization</h3>
+              <p className="text-sm text-muted-foreground">
+                Please review the information below before creating your organization.
+              </p>
             </div>
 
             <div className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="font-medium">Name:</span>
-                <span>{formData.name}</span>
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div>
+                  <p className="font-medium">{formData.name}</p>
+                  <p className="text-sm text-muted-foreground">configcraft.com/{generatedSlug}</p>
+                </div>
+                <Badge variant="secondary" className="text-green-600">
+                  <Check className="h-3 w-3 mr-1" />
+                  Available
+                </Badge>
               </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="font-medium">URL:</span>
-                <span className="text-sm">configcraft.com/{formData.slug}</span>
-              </div>
+
               {formData.description && (
-                <div className="flex justify-between items-start py-2 border-b">
-                  <span className="font-medium">Description:</span>
-                  <span className="text-right max-w-xs">{formData.description}</span>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Description</p>
+                  <p className="text-sm">{formData.description}</p>
                 </div>
               )}
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="font-medium">Industry:</span>
-                <Badge variant="secondary">{formData.industry}</Badge>
+
+              <div className="grid grid-cols-2 gap-4">
+                {formData.industry && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Industry</p>
+                    <p className="text-sm">{formData.industry}</p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Size</p>
+                  <p className="text-sm">{sizeOptions.find((opt) => opt.value === formData.size)?.label}</p>
+                </div>
               </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="font-medium">Size:</span>
-                <Badge variant="outline">{companySizes.find((s) => s.value === formData.size)?.label}</Badge>
-              </div>
+
               {formData.website && (
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="font-medium">Website:</span>
-                  <span className="text-sm">{formData.website}</span>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Website</p>
+                  <p className="text-sm">{formData.website}</p>
                 </div>
               )}
             </div>
@@ -738,80 +788,76 @@ export function CreateOrganizationModal({ children, open, onOpenChange, onSucces
     }
   }
 
-  const content = (
-    <DialogContent className="sm:max-w-[500px]">
-      <DialogHeader>
-        <DialogTitle className="flex items-center space-x-2">
-          <Building2 className="w-5 h-5" />
-          <span>Create Organization</span>
-        </DialogTitle>
-        <DialogDescription>
-          Step {currentStep} of 3: {currentStep === 1 ? "Basic Information" : currentStep === 2 ? "Details" : "Review"}
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Progress</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-        </div>
-
-        {renderStep()}
-      </div>
-
-      <DialogFooter className="flex justify-between">
-        <div className="flex space-x-2">
-          {currentStep > 1 && (
-            <Button variant="outline" onClick={handlePrevious} disabled={loading}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-          )}
-        </div>
-        <div className="flex space-x-2">
-          {currentStep < 3 ? (
-            <Button
-              onClick={handleNext}
-              disabled={loading || (currentStep === 1 && (slugChecking || slugAvailable === false))}
-            >
-              Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Create Organization
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </DialogFooter>
-    </DialogContent>
-  )
-
-  if (children) {
-    return (
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogTrigger asChild>{children}</DialogTrigger>
-        {content}
-      </Dialog>
-    )
-  }
-
   return (
-    <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-      {content}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Create Organization</DialogTitle>
+          <DialogDescription>Set up a new organization to collaborate with your team.</DialogDescription>
+        </DialogHeader>
+
+        {/* Progress Steps */}
+        <div className="flex items-center justify-between mb-6">
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              <div
+                className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors",
+                  index <= currentStep
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-muted-foreground text-muted-foreground",
+                )}
+              >
+                {index < currentStep ? <Check className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
+              </div>
+              {index < steps.length - 1 && (
+                <div
+                  className={cn("w-16 h-0.5 mx-2 transition-colors", index < currentStep ? "bg-primary" : "bg-muted")}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="min-h-[300px]">
+              <div className="mb-4">
+                <h3 className="font-semibold">{steps[currentStep].title}</h3>
+                <p className="text-sm text-muted-foreground">{steps[currentStep].description}</p>
+              </div>
+              {renderStepContent()}
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <Button type="button" variant="outline" onClick={prevStep} disabled={currentStep === 0}>
+                Previous
+              </Button>
+
+              <div className="flex items-center space-x-2">
+                {currentStep < steps.length - 1 ? (
+                  <Button
+                    type="button"
+                    onClick={nextStep}
+                    disabled={
+                      (currentStep === 0 && (!watchedName || slugStatus !== "available")) ||
+                      (currentStep === 1 && !form.getValues("size"))
+                    }
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={isCreating || slugStatus !== "available"}>
+                    {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Create Organization
+                  </Button>
+                )}
+              </div>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
     </Dialog>
   )
 }

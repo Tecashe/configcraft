@@ -117,8 +117,12 @@ import {
   CheckCircle,
   Clock,
   Loader2,
+  ArrowUpRight,
+  Activity,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 interface DashboardData {
   organization: {
@@ -223,22 +227,22 @@ export default function DashboardPage() {
       case "GENERATED":
         return <Eye className="h-4 w-4 text-primary" />
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4 text-muted-foreground" />
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PUBLISHED":
-        return "bg-green-100 text-green-800"
+        return "bg-green-500/10 text-green-500 border-green-500/20"
       case "GENERATING":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20"
       case "GENERATED":
-        return "bg-primary/10 text-primary"
+        return "bg-primary/10 text-primary border-primary/20"
       case "ERROR":
-        return "bg-red-100 text-red-800"
+        return "bg-red-500/10 text-red-500 border-red-500/20"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-muted-foreground"
     }
   }
 
@@ -251,20 +255,25 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Dashboard</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={fetchDashboardData}>Try Again</Button>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+          <div>
+            <h2 className="text-xl font-semibold mb-2">Error Loading Dashboard</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={fetchDashboardData}>Try Again</Button>
+          </div>
         </div>
       </div>
     )
@@ -272,10 +281,10 @@ export default function DashboardPage() {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Data Available</h2>
-          <p className="text-gray-600">Unable to load dashboard data.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold">No Data Available</h2>
+          <p className="text-muted-foreground">Unable to load dashboard data.</p>
         </div>
       </div>
     )
@@ -284,18 +293,19 @@ export default function DashboardPage() {
   const isNearLimit = data.stats.tools.usagePercentage > 80
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Welcome back!</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back!</h1>
           <p className="text-muted-foreground">Here's what's happening with {data.organization.name} today.</p>
         </div>
         <div className="flex items-center space-x-3">
           <Link href={`/${orgSlug}/tools/create`}>
-            <Button>
+            <Button className="focus-ring">
               <Plus className="h-4 w-4 mr-2" />
-              Create Tool
+              <span className="hidden sm:inline">Create Tool</span>
+              <span className="sm:hidden">Create</span>
             </Button>
           </Link>
         </div>
@@ -303,13 +313,13 @@ export default function DashboardPage() {
 
       {/* Usage Alert */}
       {isNearLimit && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-              <div className="flex-1">
-                <p className="font-medium text-orange-800">Approaching Tool Limit</p>
-                <p className="text-sm text-orange-700">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-orange-800 dark:text-orange-200">Approaching Tool Limit</p>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
                   You're using {data.stats.tools.total} of {data.stats.tools.limit} tools.{" "}
                   {data.subscription?.plan === "FREE"
                     ? "Upgrade to create more tools."
@@ -317,7 +327,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <Link href={`/${orgSlug}/billing`}>
-                <Button variant="outline" size="sm" className="bg-transparent">
+                <Button variant="outline" size="sm" className="bg-transparent focus-ring">
                   {data.subscription?.plan === "FREE" ? "Upgrade Plan" : "View Billing"}
                 </Button>
               </Link>
@@ -327,8 +337,8 @@ export default function DashboardPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tools</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -347,7 +357,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Team Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -363,7 +373,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Integrations</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
@@ -372,14 +382,14 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">{data.stats.integrations.total}</div>
             <p className="text-xs text-muted-foreground mt-2">Connected services</p>
             <Link href={`/${orgSlug}/integrations`}>
-              <Button variant="outline" size="sm" className="mt-2 w-full bg-transparent">
+              <Button variant="outline" size="sm" className="mt-2 w-full bg-transparent focus-ring">
                 Manage
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Published Tools</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -397,37 +407,42 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Tools and Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Recent Tools
+              <span>Recent Tools</span>
               <Link href={`/${orgSlug}/tools`}>
-                <Button variant="outline" size="sm" className="bg-transparent">
-                  View All
+                <Button variant="outline" size="sm" className="bg-transparent focus-ring">
+                  <span className="hidden sm:inline">View All</span>
+                  <ArrowUpRight className="h-4 w-4 sm:ml-1" />
                 </Button>
               </Link>
             </CardTitle>
             <CardDescription>Your latest tool creations</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {data.recentTools.length > 0 ? (
                 data.recentTools.map((tool) => (
-                  <div key={tool.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
+                  <div
+                    key={tool.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
                       {getStatusIcon(tool.status)}
-                      <div>
-                        <p className="font-medium text-sm">{tool.name}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{tool.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {tool.category} • {new Date(tool.createdAt).toLocaleDateString()}
+                          {tool.category && `${tool.category} • `}
+                          {new Date(tool.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={`text-xs ${getStatusColor(tool.status)}`}>{tool.status}</Badge>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <Badge className={cn("text-xs border", getStatusColor(tool.status))}>{tool.status}</Badge>
                       <Link href={`/${orgSlug}/tools/${tool.id}`}>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" className="focus-ring">
                           <Eye className="h-4 w-4" />
                         </Button>
                       </Link>
@@ -435,11 +450,14 @@ export default function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8">
-                  <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-sm text-muted-foreground mb-4">No tools created yet</p>
+                <div className="text-center py-8 space-y-4">
+                  <Sparkles className="h-12 w-12 text-muted-foreground mx-auto" />
+                  <div>
+                    <p className="text-sm font-medium mb-1">No tools created yet</p>
+                    <p className="text-xs text-muted-foreground mb-4">Create your first tool to get started</p>
+                  </div>
                   <Link href={`/${orgSlug}/tools/create`}>
-                    <Button size="sm">
+                    <Button size="sm" className="focus-ring">
                       <Plus className="h-4 w-4 mr-2" />
                       Create Your First Tool
                     </Button>
@@ -450,7 +468,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Latest actions in your organization</CardDescription>
@@ -460,7 +478,7 @@ export default function DashboardPage() {
               {data.recentActivity.length > 0 ? (
                 data.recentActivity.slice(0, 5).map((activity) => (
                   <div key={activity.id} className="flex items-center space-x-3 text-sm">
-                    <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
                       {activity.user?.imageUrl ? (
                         <img
                           src={activity.user.imageUrl || "/placeholder.svg"}
@@ -468,10 +486,10 @@ export default function DashboardPage() {
                           className="w-6 h-6 rounded-full"
                         />
                       ) : (
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <Activity className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <p className="text-foreground">
                         {activity.user?.firstName || "Someone"} {formatActivityType(activity.type).toLowerCase()}
                         {activity.tool && ` "${activity.tool.name}"`}
@@ -481,9 +499,12 @@ export default function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8">
-                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-sm text-muted-foreground">No recent activity</p>
+                <div className="text-center py-8 space-y-4">
+                  <Clock className="h-12 w-12 text-muted-foreground mx-auto" />
+                  <div>
+                    <p className="text-sm font-medium">No recent activity</p>
+                    <p className="text-xs text-muted-foreground">Activity will appear here as you use the platform</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -492,29 +513,38 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <Card>
+      <Card className="hover:shadow-md transition-shadow">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>Common tasks to get you started</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Link href={`/${orgSlug}/tools/create`}>
-              <Button variant="outline" className="w-full h-20 flex flex-col space-y-2 bg-transparent">
+              <Button
+                variant="outline"
+                className="w-full h-20 flex flex-col space-y-2 bg-transparent hover:bg-accent focus-ring"
+              >
                 <Plus className="h-6 w-6" />
-                <span>Create New Tool</span>
+                <span className="text-sm">Create New Tool</span>
               </Button>
             </Link>
             <Link href={`/${orgSlug}/integrations`}>
-              <Button variant="outline" className="w-full h-20 flex flex-col space-y-2 bg-transparent">
+              <Button
+                variant="outline"
+                className="w-full h-20 flex flex-col space-y-2 bg-transparent hover:bg-accent focus-ring"
+              >
                 <Zap className="h-6 w-6" />
-                <span>Add Integration</span>
+                <span className="text-sm">Add Integration</span>
               </Button>
             </Link>
             <Link href={`/${orgSlug}/settings`}>
-              <Button variant="outline" className="w-full h-20 flex flex-col space-y-2 bg-transparent">
+              <Button
+                variant="outline"
+                className="w-full h-20 flex flex-col space-y-2 bg-transparent hover:bg-accent focus-ring sm:col-span-2 lg:col-span-1"
+              >
                 <Settings className="h-6 w-6" />
-                <span>Organization Settings</span>
+                <span className="text-sm">Organization Settings</span>
               </Button>
             </Link>
           </div>

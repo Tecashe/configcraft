@@ -25,7 +25,6 @@ model User {
   organizationMemberships OrganizationMember[]
   ownedOrganizations      Organization[]       @relation("OrganizationOwner")
   sentInvitations         OrganizationInvitation[]
-  createdApiKeys          ApiKey[]             @relation("ApiKeyCreator")
   
   // Direct relationships (for backward compatibility)
   tools        Tool[]
@@ -113,7 +112,6 @@ model OrganizationInvitation {
   id        String                  @id @default(cuid())
   email     String
   role      OrganizationMemberRole  @default(MEMBER)
-  status    String                  @default("PENDING") // Added status field
   token     String                  @unique
   expiresAt DateTime
   createdAt DateTime                @default(now())
@@ -458,8 +456,6 @@ model ApiKey {
   id          String       @id @default(cuid())
   name        String
   key         String       @unique
-  keyHash     String       @unique // Added keyHash field
-  keyPreview  String       // Added keyPreview field
   permissions String[]     // Array of permissions
   status      ApiKeyStatus @default(ACTIVE)
   lastUsedAt  DateTime?
@@ -472,8 +468,6 @@ model ApiKey {
   user           User         @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdById    String
-  createdBy      User         @relation("ApiKeyCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@map("api_keys")
 }
