@@ -70,7 +70,7 @@ model Organization {
   invitations   OrganizationInvitation[]
   chatSessions  ChatSession[]
   publishedTools PublishedTool[]
-  auditLogs     AuditLog[]  // Added this relationship
+  auditLogs     AuditLog[]
 
   @@map("organizations")
 }
@@ -280,7 +280,7 @@ model Tool {
   analytics     ToolAnalytics[]
   chatSessions  ChatSession[]
   publishedTools PublishedTool[]
-  auditLogs     AuditLog[]  // Added this relationship
+  auditLogs     AuditLog[]
 
   @@unique([organizationId, slug])
   @@map("tools")
@@ -538,7 +538,6 @@ enum UsageType {
   EXPORT_DATA
   MEMBER_INVITED
   TEMPLATE_USED
-  TOOL_GENERATION  // Added this to match the TypeScript error
 }
 
 // Tool analytics model
@@ -596,16 +595,16 @@ model AuditLog {
   resource  String   // tool, organization, user, etc.
   resourceId String
   userId    String?
+  organizationId String?
+  toolId    String?
   metadata  Json?
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
 
-  // Added organization relationship to fix TypeScript error
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  toolId         String?
-  tool           Tool?         @relation(fields: [toolId], references: [id], onDelete: SetNull)
+  // Relationships
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  tool         Tool?         @relation(fields: [toolId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
 }

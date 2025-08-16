@@ -1,193 +1,151 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { requireCompany } from "@/lib/auth"
+import { auth } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
-import { v0Api, processRequirements } from "@/lib/v0-api"
-import { aiRequirementsService } from "@/lib/openai"
-import { STRIPE_PLANS } from "@/lib/stripe"
+import { z } from "zod"
 
-export async function POST(req: NextRequest) {
+const generateToolSchema = z.object({
+  name: z.string().min(1, "Tool name is required"),
+  description: z.string().min(1, "Description is required"),
+  requirements: z.string().min(10, "Requirements must be at least 10 characters"),
+  category: z.string().optional(),
+})
+
+export async function POST(request: NextRequest) {
   try {
-    const { user, company } = await requireCompany()
-    const body = await req.json()
-    const { name, description, requirements, category } = body
-
-    if (!name || !requirements || requirements.length < 20) {
-      return NextResponse.json(
-        {
-          error: "Tool name and requirements (minimum 20 characters) are required",
-        },
-        { status: 400 },
-      )
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check subscription limits
-    const subscription = await prisma.subscription.findFirst({
-      where: { companyId: company.id },
-      orderBy: { createdAt: "desc" },
-    })
+    const body = await request.json()
+    const validatedData = generateToolSchema.parse(body)
 
-    if (!subscription) {
-      return NextResponse.json({ error: "No subscription found" }, { status: 400 })
-    }
-
-    const planLimits = STRIPE_PLANS[subscription.plan as keyof typeof STRIPE_PLANS]
-    const currentToolCount = await prisma.tool.count({
-      where: { companyId: company.id, status: { not: "ARCHIVED" } },
-    })
-
-    if (currentToolCount >= planLimits.toolLimit) {
-      return NextResponse.json(
-        { error: `Tool limit reached. Upgrade your plan to create more tools.` },
-        { status: 403 },
-      )
-    }
-
-    // Use AI to analyze requirements
-    console.log("Analyzing requirements with AI...")
-    const analysis = await aiRequirementsService.analyzeRequirements(requirements)
-
-    // Create tool record first - properly serialize the config data
-    const tool = await prisma.tool.create({
-      data: {
-        name,
-        description,
-        requirements,
-        category: analysis.toolType || category || "Custom",
-        slug: name.toLowerCase().replace(/[^a-z0-9]/g, "-"),
-        creatorId: user.id,
-        companyId: company.id,
-        status: "GENERATING",
-        generationStatus: "generating",
-        config: {
-          generated: false,
-          toolType: analysis.toolType,
-          complexity: analysis.complexity,
-          estimatedHours: analysis.estimatedHours,
-          dataFields: analysis.dataFields,
-          userRoles: analysis.userRoles,
-          workflows: analysis.workflows,
-          integrations: analysis.integrations,
-          followUpQuestions: analysis.followUpQuestions,
-        },
-        schema: {
-          type: "generated",
-          fields: analysis.dataFields.map((field) => ({
-            name: field,
-            type: "string",
-            required: true,
-          })),
-          roles: analysis.userRoles,
-        },
-        ui: {
-          theme: "dark",
-          generated: false,
+    // Get user's organization
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      include: {
+        organizationMemberships: {
+          include: {
+            organization: {
+              include: {
+                subscriptions: true,
+              },
+            },
+          },
+          where: {
+            status: "ACTIVE",
+          },
         },
       },
     })
 
-    // Process requirements into v0 prompt
-    const v0Prompt = processRequirements(requirements, name)
+    if (!user || !user.organizationMemberships.length) {
+      return NextResponse.json({ error: "No organization found" }, { status: 404 })
+    }
 
-    // Update tool with processed prompt
-    await prisma.tool.update({
-      where: { id: tool.id },
-      data: { v0Prompt },
+    const organization = user.organizationMemberships[0].organization
+    const subscription = organization.subscriptions[0]
+
+    // Check subscription limits
+    if (!subscription || subscription.status !== "ACTIVE") {
+      // Check free tier limits
+      const toolCount = await prisma.tool.count({
+        where: { organizationId: organization.id },
+      })
+
+      if (toolCount >= 3) {
+        return NextResponse.json(
+          {
+            error: "Free tier limit reached. Please upgrade to create more tools.",
+          },
+          { status: 403 },
+        )
+      }
+    }
+
+    // Generate a unique slug
+    const baseSlug = validatedData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+    let slug = baseSlug
+    let counter = 1
+
+    while (await prisma.tool.findFirst({ where: { organizationId: organization.id, slug } })) {
+      slug = `${baseSlug}-${counter}`
+      counter++
+    }
+
+    // Create the tool with initial status
+    const tool = await prisma.tool.create({
+      data: {
+        name: validatedData.name,
+        description: validatedData.description,
+        slug,
+        status: "GENERATING",
+        category: validatedData.category || "General",
+        requirements: validatedData.requirements,
+        generationStatus: "analyzing",
+        config: {},
+        schema: {},
+        ui: {},
+        createdById: user.id,
+        organizationId: organization.id,
+      },
     })
-
-    // Start v0 generation (async)
-    generateToolAsync(tool.id, v0Prompt, user.id, company.id)
 
     // Track usage
     await prisma.usageRecord.create({
       data: {
         type: "TOOL_CREATED",
         userId: user.id,
-        companyId: company.id,
+        organizationId: organization.id,
         toolId: tool.id,
         metadata: {
-          generatedFromDescription: true,
-          aiGenerated: true,
-          originalRequirements: requirements,
-          category: analysis.toolType || category || "Custom",
-          complexity: analysis.complexity,
-          estimatedHours: analysis.estimatedHours,
+          category: validatedData.category,
+          complexity: "medium",
+          estimatedHours: 2,
+        },
+      },
+    })
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        action: "TOOL_GENERATION_STARTED",
+        resource: "tool",
+        resourceId: tool.id,
+        userId: user.id,
+        organizationId: organization.id,
+        toolId: tool.id,
+        metadata: {
+          toolName: tool.name,
+          category: tool.category,
         },
       },
     })
 
     return NextResponse.json({
+      success: true,
       toolId: tool.id,
-      status: "generating",
-      message: "Tool generation started successfully",
-      analysis: {
-        toolType: analysis.toolType,
-        complexity: analysis.complexity,
-        estimatedHours: analysis.estimatedHours,
-        followUpQuestions: analysis.followUpQuestions,
-      },
+      message: "Tool generation started",
     })
   } catch (error) {
-    console.error("Tool generation error:", error)
+    console.error("Error generating tool:", error)
 
-    if (error instanceof Error) {
-      if (error.message.includes("V0 API")) {
-        return NextResponse.json(
-          {
-            error: "AI service temporarily unavailable. Please try again.",
-          },
-          { status: 503 },
-        )
-      }
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: "Validation error",
+          details: error.errors,
+        },
+        { status: 400 },
+      )
     }
 
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
-  }
-}
-
-// Async function to handle v0 generation
-async function generateToolAsync(toolId: string, prompt: string, userId: string, companyId: string) {
-  try {
-    console.log(`Starting v0 generation for tool ${toolId}`)
-
-    // Call v0 API
-    const result = await v0Api.generateTool(prompt)
-
-    // Update tool with generated code
-    await prisma.tool.update({
-      where: { id: toolId },
-      data: {
-        status: "GENERATED",
-        generationStatus: "generated",
-        v0Code: result.code,
-        previewUrl: result.preview_url,
-        generatedAt: new Date(),
-        config: {
-          generated: true,
-          v0GenerationId: result.id,
-        },
-        schema: {
-          type: "v0Generated",
-          generatedAt: new Date().toISOString(),
-        },
-        ui: {
-          theme: "dark",
-          generated: true,
-        },
+    return NextResponse.json(
+      {
+        error: "Failed to generate tool",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-    })
-
-    console.log(`Tool ${toolId} generated successfully`)
-  } catch (error) {
-    console.error(`Tool generation failed for ${toolId}:`, error)
-
-    // Update tool with error status
-    await prisma.tool.update({
-      where: { id: toolId },
-      data: {
-        status: "ERROR",
-        generationStatus: "error",
-        generationError: error instanceof Error ? error.message : "Unknown error",
-      },
-    })
+      { status: 500 },
+    )
   }
 }

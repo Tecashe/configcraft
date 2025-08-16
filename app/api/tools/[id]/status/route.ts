@@ -1,16 +1,41 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { requireCompany } from "@/lib/auth"
+import { auth } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { user, company } = await requireCompany()
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const toolId = params.id
+
+    // Get user's organization
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      include: {
+        organizationMemberships: {
+          include: {
+            organization: true,
+          },
+          where: {
+            status: "ACTIVE",
+          },
+        },
+      },
+    })
+
+    if (!user || !user.organizationMemberships.length) {
+      return NextResponse.json({ error: "No organization found" }, { status: 404 })
+    }
+
+    const organizationId = user.organizationMemberships[0].organization.id
 
     const tool = await prisma.tool.findFirst({
       where: {
         id: toolId,
-        companyId: company.id,
+        organizationId,
       },
       select: {
         id: true,

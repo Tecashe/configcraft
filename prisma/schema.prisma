@@ -49,6 +49,9 @@ model Organization {
   size        OrganizationSize @default(SMALL)
   domain      String?
   
+  // Stripe integration
+  stripeCustomerId String?
+  
   // Settings
   customBranding Boolean @default(false)
   brandColors    Json?   // Store custom brand colors
@@ -118,7 +121,7 @@ model OrganizationInvitation {
   id        String                  @id @default(cuid())
   email     String
   role      OrganizationMemberRole  @default(MEMBER)
-  status    String                  @default("PENDING") // Added status field
+  status    String                  @default("PENDING")
   token     String                  @unique
   expiresAt DateTime
   createdAt DateTime                @default(now())
@@ -439,7 +442,7 @@ model Subscription {
   plan                   SubscriptionPlan
   status                 SubscriptionStatus @default(ACTIVE)
   stripeCustomerId       String?
-  stripeSubscriptionId   String?
+  stripeSubscriptionId   String?            @unique
   stripePriceId          String?
   currentPeriodStart     DateTime
   currentPeriodEnd       DateTime
@@ -562,8 +565,8 @@ model ApiKey {
   id          String       @id @default(cuid())
   name        String
   key         String       @unique
-  keyHash     String       @unique // Added keyHash field
-  keyPreview  String       // Added keyPreview field
+  keyHash     String       @unique
+  keyPreview  String
   permissions String[]     // Array of permissions
   status      ApiKeyStatus @default(ACTIVE)
   lastUsedAt  DateTime?

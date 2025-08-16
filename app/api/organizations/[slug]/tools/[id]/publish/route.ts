@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server"
 import { getOrganizationBySlug } from "@/lib/organization"
 import { prisma } from "@/lib/prisma"
 import { publishingSystem } from "@/lib/publishing-system"
-import { chatManager } from "@/lib/chat-management"
+import { ChatManager } from "@/lib/chat-management" // Import the class instead of instance
 
 export async function POST(request: Request, { params }: { params: { slug: string; id: string } }) {
   try {
@@ -23,7 +23,6 @@ export async function POST(request: Request, { params }: { params: { slug: strin
         userId: userId,
         organizationId: organization.id,
         status: "ACTIVE",
-        role: { in: ["OWNER", "ADMIN", "MEMBER"] },
       },
     })
 
@@ -56,68 +55,47 @@ export async function POST(request: Request, { params }: { params: { slug: strin
     // Check subdomain availability
     const isAvailable = await publishingSystem.checkSubdomainAvailability(subdomain)
     if (!isAvailable) {
-      return NextResponse.json({ error: "Subdomain is already taken" }, { status: 409 })
+      return NextResponse.json({ error: "Subdomain is already taken" }, { status: 400 })
     }
 
-    // Get generated files from chat session
-    if (!tool.chatSessionId) {
-      return NextResponse.json({ error: "No chat session found for this tool" }, { status: 400 })
+    // Get chat session files
+    let files: any[] = []
+    if (tool.chatSessionId) {
+      // Fix: Use static method on the class instead of instance method
+      const chatSession = await ChatManager.getChatSession(tool.chatSessionId)
+      if (chatSession) {
+        files = chatSession.files
+      }
     }
 
-    const chatSession = await chatManager.getChatSession(tool.chatSessionId)
-    if (!chatSession || chatSession.files.length === 0) {
-      return NextResponse.json({ error: "No generated files found" }, { status: 400 })
+    if (files.length === 0) {
+      return NextResponse.json({ error: "No generated files found to publish" }, { status: 400 })
     }
 
     // Publish the tool
     const publishedTool = await publishingSystem.publishTool(
       tool.id,
-      chatSession.files,
+      files,
       {
         subdomain,
         customDomain,
         environment: {
           NODE_ENV: "production",
-          NEXT_PUBLIC_TOOL_NAME: tool.name,
+          NEXT_PUBLIC_ORG_ID: organization.id,
         },
       },
       organization.id,
     )
 
-    // Update tool with published URL
-    await prisma.tool.update({
-      where: { id: tool.id },
-      data: {
-        status: "PUBLISHED",
-        publishedUrl: publishedTool.url,
-        publishedAt: new Date(),
-      },
-    })
-
-    // Track usage
-    await prisma.usageRecord.create({
-      data: {
-        type: "TOOL_PUBLISHED",
-        userId: userId,
-        organizationId: organization.id,
-        toolId: tool.id,
-        metadata: {
-          subdomain,
-          customDomain,
-          url: publishedTool.url,
-        },
-      },
-    })
-
     return NextResponse.json({
       success: true,
-      publishedTool,
       url: publishedTool.url,
+      status: publishedTool.status,
     })
   } catch (error) {
     console.error("Failed to publish tool:", error)
     return NextResponse.json(
-      { error: `Failed to publish tool: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { error: error instanceof Error ? error.message : "Failed to publish tool" },
       { status: 500 },
     )
   }

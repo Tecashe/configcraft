@@ -132,7 +132,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
         type: type as any,
         provider,
         config: config || {},
-        credentials: encryptedCredentials,
+        credentials: encryptedCredentials||{},
         status: connectionStatus as any,
         organizationId: organization.id,
       },

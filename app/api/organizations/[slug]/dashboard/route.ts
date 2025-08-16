@@ -79,167 +79,286 @@
 // }
 
 
-import { NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
-import { prisma } from "@/lib/prisma"
-import { getOrganizationBySlug } from "@/lib/organization"
+// import { NextResponse } from "next/server"
+// import { auth } from "@clerk/nextjs/server"
+// import { prisma } from "@/lib/prisma"
+// import { getOrganizationBySlug } from "@/lib/organization"
 
-export async function GET(request: Request, { params }: { params: { slug: string } }) {
+// export async function GET(request: Request, { params }: { params: { slug: string } }) {
+//   try {
+//     const { userId } = await auth()
+//     if (!userId) {
+//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+//     }
+
+//     const organization = await getOrganizationBySlug(params.slug)
+//     if (!organization) {
+//       return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+//     }
+
+//     // Check if user has access to this organization
+//     const membership = await prisma.organizationMember.findFirst({
+//       where: {
+//         userId: userId,
+//         organizationId: organization.id,
+//         status: "ACTIVE",
+//       },
+//     })
+
+//     if (!membership) {
+//       return NextResponse.json({ error: "Access denied" }, { status: 403 })
+//     }
+
+//     // Get dashboard statistics
+//     const [toolsCount, membersCount, integrationsCount, subscription, recentTools, recentActivity] = await Promise.all([
+//       // Tools count
+//       prisma.tool.count({
+//         where: { organizationId: organization.id, status: { not: "ARCHIVED" } },
+//       }),
+
+//       // Members count
+//       prisma.organizationMember.count({
+//         where: { organizationId: organization.id, status: "ACTIVE" },
+//       }),
+
+//       // Integrations count
+//       prisma.integration.count({
+//         where: { organizationId: organization.id, status: "CONNECTED" },
+//       }),
+
+//       // Subscription details
+//       prisma.subscription.findFirst({
+//         where: { organizationId: organization.id },
+//         orderBy: { createdAt: "desc" },
+//       }),
+
+//       // Recent tools
+//       prisma.tool.findMany({
+//         where: { organizationId: organization.id },
+//         orderBy: { createdAt: "desc" },
+//         take: 5,
+//         select: {
+//           id: true,
+//           name: true,
+//           description: true,
+//           status: true,
+//           generationStatus: true,
+//           createdAt: true,
+//           category: true,
+//         },
+//       }),
+
+//       // Recent activity
+//       prisma.usageRecord.findMany({
+//         where: { organizationId: organization.id },
+//         orderBy: { createdAt: "desc" },
+//         take: 10,
+//         include: {
+//           user: {
+//             select: {
+//               firstName: true,
+//               lastName: true,
+//               imageUrl: true,
+//             },
+//           },
+//           tool: {
+//             select: {
+//               name: true,
+//             },
+//           },
+//         },
+//       }),
+//     ])
+
+//     // Calculate usage percentages
+//     const toolsUsagePercentage = subscription ? (toolsCount / subscription.toolsLimit) * 100 : 0
+//     const membersUsagePercentage = subscription ? (membersCount / subscription.membersLimit) * 100 : 0
+
+//     // Get tools by status
+//     const toolsByStatus = await prisma.tool.groupBy({
+//       by: ["status"],
+//       where: { organizationId: organization.id },
+//       _count: { status: true },
+//     })
+
+//     const statusCounts = {
+//       DRAFT: 0,
+//       GENERATING: 0,
+//       GENERATED: 0,
+//       PUBLISHED: 0,
+//       ERROR: 0,
+//       ARCHIVED: 0,
+//     }
+
+//     toolsByStatus.forEach((item) => {
+//       statusCounts[item.status as keyof typeof statusCounts] = item._count.status
+//     })
+
+//     return NextResponse.json({
+//       organization: {
+//         id: organization.id,
+//         name: organization.name,
+//         slug: organization.slug,
+//         description: organization.description,
+//         industry: organization.industry,
+//         size: organization.size,
+//       },
+//       stats: {
+//         tools: {
+//           total: toolsCount,
+//           limit: subscription?.toolsLimit || 1,
+//           usagePercentage: Math.min(toolsUsagePercentage, 100),
+//           byStatus: statusCounts,
+//         },
+//         members: {
+//           total: membersCount,
+//           limit: subscription?.membersLimit || 3,
+//           usagePercentage: Math.min(membersUsagePercentage, 100),
+//         },
+//         integrations: {
+//           total: integrationsCount,
+//         },
+//       },
+//       subscription: subscription
+//         ? {
+//             plan: subscription.plan,
+//             status: subscription.status,
+//             currentPeriodEnd: subscription.currentPeriodEnd,
+//             toolsLimit: subscription.toolsLimit,
+//             membersLimit: subscription.membersLimit,
+//           }
+//         : null,
+//       recentTools,
+//       recentActivity: recentActivity.map((activity) => ({
+//         id: activity.id,
+//         type: activity.type,
+//         createdAt: activity.createdAt,
+//         user: activity.user,
+//         tool: activity.tool,
+//         metadata: activity.metadata,
+//       })),
+//     })
+//   } catch (error) {
+//     console.error("Dashboard API error:", error)
+//     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+//   }
+// }
+
+import { type NextRequest, NextResponse } from "next/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { prisma } from "@/lib/prisma"
+import { checkUserAccess } from "@/lib/organization"
+import { z } from "zod"
+
+const createIntegrationSchema = z.object({
+  name: z.string().min(1).max(100),
+  type: z.enum(["CRM", "DATABASE", "PAYMENT", "STORAGE", "COMMUNICATION", "PRODUCTIVITY", "ANALYTICS"]),
+  provider: z.string().min(1),
+  config: z.record(z.any()).optional(),
+  credentials: z.record(z.any()).optional(),
+})
+
+export async function GET(request: NextRequest, { params }: { params: { slug: string } }) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
+    const user = await currentUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const organization = await getOrganizationBySlug(params.slug)
+    const { slug } = params
+
+    // Check user access
+    const hasAccess = await checkUserAccess(slug)
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Organization not found or access denied" }, { status: 404 })
+    }
+
+    // Get organization
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    })
+
     if (!organization) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 })
     }
 
-    // Check if user has access to this organization
-    const membership = await prisma.organizationMember.findFirst({
+    const integrations = await prisma.integration.findMany({
       where: {
-        userId: userId,
         organizationId: organization.id,
-        status: "ACTIVE",
       },
-    })
-
-    if (!membership) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 })
-    }
-
-    // Get dashboard statistics
-    const [toolsCount, membersCount, integrationsCount, subscription, recentTools, recentActivity] = await Promise.all([
-      // Tools count
-      prisma.tool.count({
-        where: { organizationId: organization.id, status: { not: "ARCHIVED" } },
-      }),
-
-      // Members count
-      prisma.organizationMember.count({
-        where: { organizationId: organization.id, status: "ACTIVE" },
-      }),
-
-      // Integrations count
-      prisma.integration.count({
-        where: { organizationId: organization.id, status: "CONNECTED" },
-      }),
-
-      // Subscription details
-      prisma.subscription.findFirst({
-        where: { organizationId: organization.id },
-        orderBy: { createdAt: "desc" },
-      }),
-
-      // Recent tools
-      prisma.tool.findMany({
-        where: { organizationId: organization.id },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          status: true,
-          generationStatus: true,
-          createdAt: true,
-          category: true,
-        },
-      }),
-
-      // Recent activity
-      prisma.usageRecord.findMany({
-        where: { organizationId: organization.id },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              imageUrl: true,
-            },
-          },
-          tool: {
-            select: {
-              name: true,
-            },
+      include: {
+        _count: {
+          select: {
+            toolIntegrations: true,
+            logs: true,
           },
         },
-      }),
-    ])
-
-    // Calculate usage percentages
-    const toolsUsagePercentage = subscription ? (toolsCount / subscription.toolsLimit) * 100 : 0
-    const membersUsagePercentage = subscription ? (membersCount / subscription.membersLimit) * 100 : 0
-
-    // Get tools by status
-    const toolsByStatus = await prisma.tool.groupBy({
-      by: ["status"],
-      where: { organizationId: organization.id },
-      _count: { status: true },
-    })
-
-    const statusCounts = {
-      DRAFT: 0,
-      GENERATING: 0,
-      GENERATED: 0,
-      PUBLISHED: 0,
-      ERROR: 0,
-      ARCHIVED: 0,
-    }
-
-    toolsByStatus.forEach((item) => {
-      statusCounts[item.status as keyof typeof statusCounts] = item._count.status
-    })
-
-    return NextResponse.json({
-      organization: {
-        id: organization.id,
-        name: organization.name,
-        slug: organization.slug,
-        description: organization.description,
-        industry: organization.industry,
-        size: organization.size,
       },
-      stats: {
-        tools: {
-          total: toolsCount,
-          limit: subscription?.toolsLimit || 1,
-          usagePercentage: Math.min(toolsUsagePercentage, 100),
-          byStatus: statusCounts,
-        },
-        members: {
-          total: membersCount,
-          limit: subscription?.membersLimit || 3,
-          usagePercentage: Math.min(membersUsagePercentage, 100),
-        },
-        integrations: {
-          total: integrationsCount,
-        },
+      orderBy: {
+        updatedAt: "desc",
       },
-      subscription: subscription
-        ? {
-            plan: subscription.plan,
-            status: subscription.status,
-            currentPeriodEnd: subscription.currentPeriodEnd,
-            toolsLimit: subscription.toolsLimit,
-            membersLimit: subscription.membersLimit,
-          }
-        : null,
-      recentTools,
-      recentActivity: recentActivity.map((activity) => ({
-        id: activity.id,
-        type: activity.type,
-        createdAt: activity.createdAt,
-        user: activity.user,
-        tool: activity.tool,
-        metadata: activity.metadata,
-      })),
     })
+
+    return NextResponse.json(integrations)
   } catch (error) {
-    console.error("Dashboard API error:", error)
+    console.error("Integrations fetch error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
+  try {
+    const user = await currentUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { slug } = params
+
+    // Check user access
+    const hasAccess = await checkUserAccess(slug, "ADMIN")
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
+    }
+
+    // Get organization
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    })
+
+    if (!organization) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+    }
+
+    const body = await request.json()
+    const validatedData = createIntegrationSchema.parse(body)
+
+    // Handle credentials properly - convert to JSON or null
+    let credentialsData = null
+    if (validatedData.credentials) {
+      credentialsData = validatedData.credentials
+    }
+
+    const integration = await prisma.integration.create({
+      data: {
+        name: validatedData.name,
+        type: validatedData.type,
+        provider: validatedData.provider,
+        config: validatedData.config || {},
+        credentials: credentialsData || {}, // This should now work with Json type
+        organizationId: organization.id,
+        status: "PENDING",
+      },
+    })
+
+    return NextResponse.json(integration)
+  } catch (error) {
+    console.error("Integration creation error:", error)
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Invalid input", details: error.errors }, { status: 400 })
+    }
+
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
