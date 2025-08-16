@@ -26,6 +26,7 @@ import {
   Cpu,
   Workflow,
   Timer,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -38,7 +39,7 @@ interface DashboardData {
     description?: string
     industry?: string
     size: string
-  }
+  } | null
   stats: {
     tools: {
       total: number
@@ -68,7 +69,7 @@ interface DashboardData {
     currentPeriodEnd: string
     toolsLimit: number
     membersLimit: number
-  } | null
+  }
   recentTools: Array<{
     id: string
     name: string
@@ -92,7 +93,7 @@ interface DashboardData {
     }
     metadata?: any
   }>
-  analytics?: {
+  analytics: {
     toolsOverTime: Array<{ date: string; count: number }>
     usageByCategory: Array<{ category: string; count: number; percentage: number }>
     memberActivity: Array<{ date: string; active: number; total: number }>
@@ -104,6 +105,7 @@ interface DashboardData {
       totalRequests: number
     }
   }
+  error?: string
 }
 
 export default function DashboardClientPage() {
@@ -121,13 +123,19 @@ export default function DashboardClientPage() {
 
   const fetchDashboardData = async () => {
     try {
+      setLoading(true)
+      setError(null)
+
       const response = await fetch(`/api/organizations/${orgSlug}/dashboard`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch dashboard data")
-      }
       const dashboardData = await response.json()
+
+      if (!response.ok) {
+        throw new Error(dashboardData.error || "Failed to fetch dashboard data")
+      }
+
       setData(dashboardData)
     } catch (err) {
+      console.error("Dashboard fetch error:", err)
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setLoading(false)
@@ -191,23 +199,12 @@ export default function DashboardClientPage() {
     },
   }
 
-  // Status distribution data for pie chart with null safety
-  const statusData = data?.stats?.tools?.byStatus
-    ? [
-        { name: "Published", value: data.stats.tools.byStatus.PUBLISHED || 0, color: "#10b981" },
-        { name: "Generated", value: data.stats.tools.byStatus.GENERATED || 0, color: "#8b5cf6" },
-        { name: "Generating", value: data.stats.tools.byStatus.GENERATING || 0, color: "#3b82f6" },
-        { name: "Draft", value: data.stats.tools.byStatus.DRAFT || 0, color: "#64748b" },
-        { name: "Error", value: data.stats.tools.byStatus.ERROR || 0, color: "#ef4444" },
-      ].filter((item) => item.value > 0)
-    : []
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-[60vh] bg-slate-900">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
-          <p className="text-sm text-slate-400">Loading dashboard...</p>
+          <p className="text-sm text-slate-400">Loading your dashboard...</p>
         </div>
       </div>
     )
@@ -215,33 +212,61 @@ export default function DashboardClientPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
+      <div className="flex items-center justify-center min-h-[60vh] bg-slate-900">
+        <div className="text-center space-y-4 max-w-md mx-auto p-6">
           <AlertTriangle className="h-12 w-12 text-red-400 mx-auto" />
           <div>
-            <h2 className="text-xl font-semibold mb-2 text-white">Error Loading Dashboard</h2>
-            <p className="text-slate-400 mb-4">{error}</p>
-            <Button onClick={fetchDashboardData} className="bg-purple-600 hover:bg-purple-700">
-              Try Again
-            </Button>
+            <h2 className="text-xl font-semibold mb-2 text-white">Unable to Load Dashboard</h2>
+            <p className="text-slate-400 mb-4">
+              We're having trouble connecting to your organization data. This might be a temporary issue.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button onClick={fetchDashboardData} className="bg-purple-600 hover:bg-purple-700" disabled={loading}>
+                <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+                Try Again
+              </Button>
+              <Link href={`/${orgSlug}/tools/create`}>
+                <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent">
+                  Create Your First Tool
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
-  if (!data || !data.stats || !data.organization) {
+  if (!data) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-[60vh] bg-slate-900">
         <div className="text-center space-y-4">
-          <h2 className="text-xl font-semibold text-white">No Data Available</h2>
-          <p className="text-slate-400">Unable to load dashboard data.</p>
+          <h2 className="text-xl font-semibold text-white">Getting Started</h2>
+          <p className="text-slate-400">Let's set up your organization dashboard.</p>
+          <Link href={`/${orgSlug}/tools/create`}>
+            <Button className="bg-purple-600 hover:bg-purple-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Your First Tool
+            </Button>
+          </Link>
         </div>
       </div>
     )
   }
 
-  const isNearLimit = (data.stats.tools?.usagePercentage || 0) > 80
+  // Status distribution data for pie chart
+  const statusData = data.stats?.tools?.byStatus
+    ? [
+        { name: "Published", value: data.stats.tools.byStatus.PUBLISHED, color: "#10b981" },
+        { name: "Generated", value: data.stats.tools.byStatus.GENERATED, color: "#8b5cf6" },
+        { name: "Generating", value: data.stats.tools.byStatus.GENERATING, color: "#3b82f6" },
+        { name: "Draft", value: data.stats.tools.byStatus.DRAFT, color: "#64748b" },
+        { name: "Error", value: data.stats.tools.byStatus.ERROR, color: "#ef4444" },
+      ].filter((item) => item.value > 0)
+    : []
+
+  const isNearLimit = (data.stats?.tools?.usagePercentage || 0) > 80
+  const organizationName = data.organization?.name || "Your Organization"
 
   return (
     <div className="space-y-6 animate-fade-in bg-slate-900 min-h-screen p-6">
@@ -249,11 +274,21 @@ export default function DashboardClientPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Welcome back!</h1>
-          <p className="text-slate-400">Here's what's happening with {data.organization.name} today.</p>
+          <p className="text-slate-400">Here's what's happening with {organizationName} today.</p>
         </div>
         <div className="flex items-center space-x-3">
+          <Button
+            onClick={fetchDashboardData}
+            variant="outline"
+            size="sm"
+            className="border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
+            disabled={loading}
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+            Refresh
+          </Button>
           <Link href={`/${orgSlug}/tools/create`}>
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white focus-ring">
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Create Tool</span>
               <span className="sm:hidden">Create</span>
@@ -271,8 +306,8 @@ export default function DashboardClientPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-orange-200">Approaching Tool Limit</p>
                 <p className="text-sm text-orange-300 mt-1">
-                  You're using {data.stats.tools?.total || 0} of {data.stats.tools?.limit || 0} tools.{" "}
-                  {data.subscription?.plan === "FREE"
+                  You're using {data.stats.tools.total} of {data.stats.tools.limit} tools.{" "}
+                  {data.subscription.plan === "FREE"
                     ? "Upgrade to create more tools."
                     : "Consider upgrading your plan."}
                 </p>
@@ -283,7 +318,7 @@ export default function DashboardClientPage() {
                   size="sm"
                   className="border-orange-500/30 text-orange-200 hover:bg-orange-950/70 bg-transparent"
                 >
-                  {data.subscription?.plan === "FREE" ? "Upgrade Plan" : "View Billing"}
+                  {data.subscription.plan === "FREE" ? "Upgrade Plan" : "View Billing"}
                 </Button>
               </Link>
             </div>
@@ -299,16 +334,14 @@ export default function DashboardClientPage() {
             <BarChart3 className="h-4 w-4 text-purple-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{data.stats.tools?.total || 0}</div>
+            <div className="text-2xl font-bold text-white">{data.stats.tools.total}</div>
             <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-slate-400">
-                {(data.stats.tools?.limit || 0) - (data.stats.tools?.total || 0)} remaining
-              </p>
+              <p className="text-xs text-slate-400">{data.stats.tools.limit - data.stats.tools.total} remaining</p>
               <Badge variant="secondary" className="text-xs bg-purple-500/10 text-purple-300 border-purple-500/20">
-                {data.subscription?.plan || "FREE"}
+                {data.subscription.plan}
               </Badge>
             </div>
-            <Progress value={data.stats.tools?.usagePercentage || 0} className="mt-2 h-1 bg-slate-700" />
+            <Progress value={data.stats.tools.usagePercentage} className="mt-2 h-1 bg-slate-700" />
           </CardContent>
         </Card>
 
@@ -318,13 +351,13 @@ export default function DashboardClientPage() {
             <Users className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{data.stats.members?.total || 0}</div>
+            <div className="text-2xl font-bold text-white">{data.stats.members.total}</div>
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-slate-400">
-                {(data.stats.members?.limit || 0) - (data.stats.members?.total || 0)} seats available
+                {data.stats.members.limit - data.stats.members.total} seats available
               </p>
             </div>
-            <Progress value={data.stats.members?.usagePercentage || 0} className="mt-2 h-1 bg-slate-700" />
+            <Progress value={data.stats.members.usagePercentage} className="mt-2 h-1 bg-slate-700" />
           </CardContent>
         </Card>
 
@@ -334,7 +367,7 @@ export default function DashboardClientPage() {
             <Zap className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{data.stats.integrations?.total || 0}</div>
+            <div className="text-2xl font-bold text-white">{data.stats.integrations.total}</div>
             <p className="text-xs text-slate-400 mt-2">Connected services</p>
             <Link href={`/${orgSlug}/integrations`}>
               <Button
@@ -354,10 +387,10 @@ export default function DashboardClientPage() {
             <TrendingUp className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{data.stats.tools?.byStatus?.PUBLISHED || 0}</div>
+            <div className="text-2xl font-bold text-white">{data.stats.tools.byStatus.PUBLISHED}</div>
             <p className="text-xs text-slate-400 mt-2">Live and accessible</p>
             <div className="mt-2 text-xs text-slate-400">
-              {(data.stats.tools?.byStatus?.GENERATING || 0) > 0 && (
+              {data.stats.tools.byStatus.GENERATING > 0 && (
                 <span className="text-blue-400">{data.stats.tools.byStatus.GENERATING} generating</span>
               )}
             </div>
@@ -409,10 +442,18 @@ export default function DashboardClientPage() {
               </ChartContainer>
             ) : (
               <div className="h-[300px] flex items-center justify-center">
-                <div className="text-center space-y-2">
+                <div className="text-center space-y-4">
                   <Target className="h-12 w-12 text-slate-500 mx-auto" />
-                  <p className="text-sm text-slate-400">No tools to display</p>
-                  <p className="text-xs text-slate-500">Create your first tool to see the distribution</p>
+                  <div>
+                    <p className="text-sm font-medium text-white mb-1">Ready to get started?</p>
+                    <p className="text-xs text-slate-400 mb-4">Create your first tool to see insights here</p>
+                  </div>
+                  <Link href={`/${orgSlug}/tools/create`}>
+                    <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Tool
+                    </Button>
+                  </Link>
                 </div>
               </div>
             )}
@@ -436,7 +477,7 @@ export default function DashboardClientPage() {
                   <span className="text-sm text-slate-300">Avg Generation Time</span>
                 </div>
                 <span className="text-sm font-medium text-white">
-                  {data.analytics?.performanceMetrics?.avgGenerationTime || 45}s
+                  {data.analytics.performanceMetrics.avgGenerationTime}s
                 </span>
               </div>
 
@@ -446,7 +487,7 @@ export default function DashboardClientPage() {
                   <span className="text-sm text-slate-300">Success Rate</span>
                 </div>
                 <span className="text-sm font-medium text-emerald-400">
-                  {data.analytics?.performanceMetrics?.successRate || 98.5}%
+                  {data.analytics.performanceMetrics.successRate}%
                 </span>
               </div>
 
@@ -455,9 +496,7 @@ export default function DashboardClientPage() {
                   <AlertTriangle className="h-4 w-4 text-red-400" />
                   <span className="text-sm text-slate-300">Error Rate</span>
                 </div>
-                <span className="text-sm font-medium text-red-400">
-                  {data.analytics?.performanceMetrics?.errorRate || 1.5}%
-                </span>
+                <span className="text-sm font-medium text-red-400">{data.analytics.performanceMetrics.errorRate}%</span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
@@ -466,7 +505,7 @@ export default function DashboardClientPage() {
                   <span className="text-sm text-slate-300">Total Requests</span>
                 </div>
                 <span className="text-sm font-medium text-white">
-                  {data.analytics?.performanceMetrics?.totalRequests || 1247}
+                  {data.analytics.performanceMetrics.totalRequests}
                 </span>
               </div>
             </div>
@@ -532,8 +571,10 @@ export default function DashboardClientPage() {
                 <div className="text-center py-8 space-y-4">
                   <Sparkles className="h-12 w-12 text-slate-500 mx-auto" />
                   <div>
-                    <p className="text-sm font-medium mb-1 text-white">No tools created yet</p>
-                    <p className="text-xs text-slate-400 mb-4">Create your first tool to get started</p>
+                    <p className="text-sm font-medium mb-1 text-white">Ready to build something amazing?</p>
+                    <p className="text-xs text-slate-400 mb-4">
+                      Create your first tool to get started with ConfigCraft
+                    </p>
                   </div>
                   <Link href={`/${orgSlug}/tools/create`}>
                     <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
@@ -584,8 +625,8 @@ export default function DashboardClientPage() {
                 <div className="text-center py-8 space-y-4">
                   <Clock className="h-12 w-12 text-slate-500 mx-auto" />
                   <div>
-                    <p className="text-sm font-medium text-white">No recent activity</p>
-                    <p className="text-xs text-slate-400">Activity will appear here as you use the platform</p>
+                    <p className="text-sm font-medium text-white">Activity will appear here</p>
+                    <p className="text-xs text-slate-400">Start using ConfigCraft to see your team's activity</p>
                   </div>
                 </div>
               )}
