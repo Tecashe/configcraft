@@ -191,14 +191,14 @@ export default function DashboardClientPage() {
     },
   }
 
-  // Status distribution data for pie chart
-  const statusData = data
+  // Status distribution data for pie chart with null safety
+  const statusData = data?.stats?.tools?.byStatus
     ? [
-        { name: "Published", value: data.stats.tools.byStatus.PUBLISHED, color: "#10b981" },
-        { name: "Generated", value: data.stats.tools.byStatus.GENERATED, color: "#8b5cf6" },
-        { name: "Generating", value: data.stats.tools.byStatus.GENERATING, color: "#3b82f6" },
-        { name: "Draft", value: data.stats.tools.byStatus.DRAFT, color: "#64748b" },
-        { name: "Error", value: data.stats.tools.byStatus.ERROR, color: "#ef4444" },
+        { name: "Published", value: data.stats.tools.byStatus.PUBLISHED || 0, color: "#10b981" },
+        { name: "Generated", value: data.stats.tools.byStatus.GENERATED || 0, color: "#8b5cf6" },
+        { name: "Generating", value: data.stats.tools.byStatus.GENERATING || 0, color: "#3b82f6" },
+        { name: "Draft", value: data.stats.tools.byStatus.DRAFT || 0, color: "#64748b" },
+        { name: "Error", value: data.stats.tools.byStatus.ERROR || 0, color: "#ef4444" },
       ].filter((item) => item.value > 0)
     : []
 
@@ -230,7 +230,7 @@ export default function DashboardClientPage() {
     )
   }
 
-  if (!data) {
+  if (!data || !data.stats || !data.organization) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
@@ -241,7 +241,7 @@ export default function DashboardClientPage() {
     )
   }
 
-  const isNearLimit = data.stats.tools.usagePercentage > 80
+  const isNearLimit = (data.stats.tools?.usagePercentage || 0) > 80
 
   return (
     <div className="space-y-6 animate-fade-in bg-slate-900 min-h-screen p-6">
@@ -271,7 +271,7 @@ export default function DashboardClientPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-orange-200">Approaching Tool Limit</p>
                 <p className="text-sm text-orange-300 mt-1">
-                  You're using {data.stats.tools.total} of {data.stats.tools.limit} tools.{" "}
+                  You're using {data.stats.tools?.total || 0} of {data.stats.tools?.limit || 0} tools.{" "}
                   {data.subscription?.plan === "FREE"
                     ? "Upgrade to create more tools."
                     : "Consider upgrading your plan."}
@@ -299,14 +299,16 @@ export default function DashboardClientPage() {
             <BarChart3 className="h-4 w-4 text-purple-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{data.stats.tools.total}</div>
+            <div className="text-2xl font-bold text-white">{data.stats.tools?.total || 0}</div>
             <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-slate-400">{data.stats.tools.limit - data.stats.tools.total} remaining</p>
+              <p className="text-xs text-slate-400">
+                {(data.stats.tools?.limit || 0) - (data.stats.tools?.total || 0)} remaining
+              </p>
               <Badge variant="secondary" className="text-xs bg-purple-500/10 text-purple-300 border-purple-500/20">
                 {data.subscription?.plan || "FREE"}
               </Badge>
             </div>
-            <Progress value={data.stats.tools.usagePercentage} className="mt-2 h-1 bg-slate-700" />
+            <Progress value={data.stats.tools?.usagePercentage || 0} className="mt-2 h-1 bg-slate-700" />
           </CardContent>
         </Card>
 
@@ -316,13 +318,13 @@ export default function DashboardClientPage() {
             <Users className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{data.stats.members.total}</div>
+            <div className="text-2xl font-bold text-white">{data.stats.members?.total || 0}</div>
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-slate-400">
-                {data.stats.members.limit - data.stats.members.total} seats available
+                {(data.stats.members?.limit || 0) - (data.stats.members?.total || 0)} seats available
               </p>
             </div>
-            <Progress value={data.stats.members.usagePercentage} className="mt-2 h-1 bg-slate-700" />
+            <Progress value={data.stats.members?.usagePercentage || 0} className="mt-2 h-1 bg-slate-700" />
           </CardContent>
         </Card>
 
@@ -332,7 +334,7 @@ export default function DashboardClientPage() {
             <Zap className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{data.stats.integrations.total}</div>
+            <div className="text-2xl font-bold text-white">{data.stats.integrations?.total || 0}</div>
             <p className="text-xs text-slate-400 mt-2">Connected services</p>
             <Link href={`/${orgSlug}/integrations`}>
               <Button
@@ -352,10 +354,10 @@ export default function DashboardClientPage() {
             <TrendingUp className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{data.stats.tools.byStatus.PUBLISHED}</div>
+            <div className="text-2xl font-bold text-white">{data.stats.tools?.byStatus?.PUBLISHED || 0}</div>
             <p className="text-xs text-slate-400 mt-2">Live and accessible</p>
             <div className="mt-2 text-xs text-slate-400">
-              {data.stats.tools.byStatus.GENERATING > 0 && (
+              {(data.stats.tools?.byStatus?.GENERATING || 0) > 0 && (
                 <span className="text-blue-400">{data.stats.tools.byStatus.GENERATING} generating</span>
               )}
             </div>
@@ -375,35 +377,45 @@ export default function DashboardClientPage() {
             <CardDescription className="text-slate-400">Current status breakdown of all your tools</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    contentStyle={{
-                      backgroundColor: "rgb(30 41 59)",
-                      border: "1px solid rgb(71 85 105)",
-                      borderRadius: "8px",
-                      color: "white",
-                    }}
-                  />
-                  <Legend wrapperStyle={{ color: "rgb(148 163 184)" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            {statusData.length > 0 ? (
+              <ChartContainer config={chartConfig} className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip
+                      content={<ChartTooltipContent />}
+                      contentStyle={{
+                        backgroundColor: "rgb(30 41 59)",
+                        border: "1px solid rgb(71 85 105)",
+                        borderRadius: "8px",
+                        color: "white",
+                      }}
+                    />
+                    <Legend wrapperStyle={{ color: "rgb(148 163 184)" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <Target className="h-12 w-12 text-slate-500 mx-auto" />
+                  <p className="text-sm text-slate-400">No tools to display</p>
+                  <p className="text-xs text-slate-500">Create your first tool to see the distribution</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -486,7 +498,7 @@ export default function DashboardClientPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.recentTools.length > 0 ? (
+              {data.recentTools && data.recentTools.length > 0 ? (
                 data.recentTools.map((tool) => (
                   <div
                     key={tool.id}
@@ -545,7 +557,7 @@ export default function DashboardClientPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {data.recentActivity.length > 0 ? (
+              {data.recentActivity && data.recentActivity.length > 0 ? (
                 data.recentActivity.slice(0, 5).map((activity) => (
                   <div key={activity.id} className="flex items-center space-x-3 text-sm">
                     <div className="w-8 h-8 bg-slate-700/50 rounded-full flex items-center justify-center flex-shrink-0">
