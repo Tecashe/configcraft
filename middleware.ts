@@ -170,15 +170,19 @@ const isPublicRoute = createRouteMatcher([
   "/api/monitoring/health",
 ])
 
-// Helper function to check if user has organizations
+// Helper function to check if user has organizations with COMPREHENSIVE LOGGING
 async function getUserFirstOrganization(userId: string): Promise<string | null> {
+  console.log(`🔍 [MIDDLEWARE] Checking organizations for user: ${userId}`)
+
   try {
     // Ensure user exists in our database
+    console.log(`📊 [MIDDLEWARE] Looking up user in database...`)
     let user = await prisma.user.findUnique({
       where: { clerkId: userId },
     })
 
     if (!user) {
+      console.log(`⚠️ [MIDDLEWARE] User not found in DB, creating fallback user...`)
       // Create user if they don't exist (fallback for webhook issues)
       user = await prisma.user.create({
         data: {
@@ -186,19 +190,27 @@ async function getUserFirstOrganization(userId: string): Promise<string | null> 
           email: `${userId}@temp.com`, // Temporary email, should be updated by webhook
         },
       })
+      console.log(`✅ [MIDDLEWARE] Fallback user created with ID: ${user.id}`)
+    } else {
+      console.log(`✅ [MIDDLEWARE] User found in DB with ID: ${user.id}`)
     }
 
     // Check if user owns any organizations
+    console.log(`🏢 [MIDDLEWARE] Checking owned organizations...`)
     const ownedOrg = await prisma.organization.findFirst({
       where: { ownerId: user.id },
       orderBy: { createdAt: "asc" },
     })
 
     if (ownedOrg) {
+      console.log(`👑 [MIDDLEWARE] User OWNS organization: ${ownedOrg.slug} (${ownedOrg.name})`)
       return ownedOrg.slug
+    } else {
+      console.log(`❌ [MIDDLEWARE] User owns NO organizations`)
     }
 
     // Check if user is a member of any organizations
+    console.log(`👥 [MIDDLEWARE] Checking organization memberships...`)
     const memberOrg = await prisma.organizationMember.findFirst({
       where: {
         userId,
@@ -215,12 +227,23 @@ async function getUserFirstOrganization(userId: string): Promise<string | null> 
     })
 
     if (memberOrg) {
+      console.log(
+        `🤝 [MIDDLEWARE] User is MEMBER of organization: ${memberOrg.organization.slug} (${memberOrg.organization.name})`,
+      )
       return memberOrg.organization.slug
+    } else {
+      console.log(`❌ [MIDDLEWARE] User is NOT a member of any organizations`)
     }
 
+    console.log(`🚫 [MIDDLEWARE] User has NO organizations at all - should go to onboarding`)
     return null
   } catch (error) {
-    console.error("Error checking user organizations:", error)
+    console.error(`💥 [MIDDLEWARE] ERROR checking user organizations:`, error)
+    console.error(`💥 [MIDDLEWARE] Error details:`, {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      userId,
+    })
     return null
   }
 }
@@ -228,16 +251,19 @@ async function getUserFirstOrganization(userId: string): Promise<string | null> 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   const startTime = Date.now()
   const requestLog = createRequestLog(req)
+  const pathname = req.nextUrl.pathname
+
+  console.log(`🚀 [MIDDLEWARE] Processing request: ${req.method} ${pathname}`)
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log(`✈️ [MIDDLEWARE] Handling CORS preflight for: ${pathname}`)
     const response = new NextResponse(null, { status: 200 })
     return setCORSHeaders(response, req.headers.get("origin") || undefined)
   }
 
   // Apply rate limiting
   const identifier = getClientIdentifier(req)
-  const pathname = req.nextUrl.pathname
 
   let rateLimitConfig = RATE_LIMITS.api // default
 
@@ -255,6 +281,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   const rateLimit = await rateLimiter.limit(identifier, rateLimitConfig)
 
   if (!rateLimit.success) {
+    console.log(`🚫 [MIDDLEWARE] Rate limit exceeded for ${identifier} on ${pathname}`)
     logSecurityEvent(
       "RATE_LIMIT_EXCEEDED",
       {
@@ -274,28 +301,40 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     return addSecurityHeaders(response)
   }
 
+  // Check if route is public
+  const isPublic = isPublicRoute(req)
+  console.log(`🔒 [MIDDLEWARE] Route ${pathname} is ${isPublic ? "PUBLIC" : "PROTECTED"}`)
+
   // Protect private routes
-  if (!isPublicRoute(req)) {
+  if (!isPublic) {
+    console.log(`🛡️ [MIDDLEWARE] Protecting route: ${pathname}`)
     await auth.protect()
   }
 
   // Get user info for authenticated requests
   const { userId } = await auth()
+  console.log(`👤 [MIDDLEWARE] User ID: ${userId || "ANONYMOUS"}`)
 
   // Handle organization-based routing and redirects
-  if (userId && !isPublicRoute(req)) {
+  if (userId && !isPublic) {
+    console.log(`🎯 [MIDDLEWARE] Processing authenticated user routing for: ${pathname}`)
+
     // Handle old dashboard redirect
     if (pathname === "/dashboard") {
+      console.log(`📊 [MIDDLEWARE] User accessing old /dashboard route`)
+
       // Check if user has existing organizations
       const firstOrgSlug = await getUserFirstOrganization(userId)
 
       if (firstOrgSlug) {
         // Redirect existing users to their organization dashboard
         const orgDashboardUrl = new URL(`/${firstOrgSlug}/dashboard`, req.url)
+        console.log(`↗️ [MIDDLEWARE] Redirecting existing user to: ${orgDashboardUrl.pathname}`)
         return NextResponse.redirect(orgDashboardUrl)
       } else {
         // Redirect new users to onboarding
         const onboardingUrl = new URL("/onboarding", req.url)
+        console.log(`🆕 [MIDDLEWARE] Redirecting new user to onboarding: ${onboardingUrl.pathname}`)
         return NextResponse.redirect(onboardingUrl)
       }
     }
@@ -305,6 +344,8 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     const matchedOldRoute = oldRoutes.find((route) => pathname.startsWith(route))
 
     if (matchedOldRoute) {
+      console.log(`🔄 [MIDDLEWARE] User accessing old route: ${matchedOldRoute}`)
+
       // Check if user has existing organizations
       const firstOrgSlug = await getUserFirstOrganization(userId)
 
@@ -312,9 +353,11 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         // Redirect existing users to their organization's equivalent page
         const routeName = matchedOldRoute.substring(1) // Remove leading slash
         const orgRouteUrl = new URL(`/${firstOrgSlug}/${routeName}`, req.url)
+        console.log(`↗️ [MIDDLEWARE] Redirecting existing user to: ${orgRouteUrl.pathname}`)
         return NextResponse.redirect(orgRouteUrl)
       } else {
         const onboardingUrl = new URL("/onboarding", req.url)
+        console.log(`🆕 [MIDDLEWARE] Redirecting new user to onboarding: ${onboardingUrl.pathname}`)
         return NextResponse.redirect(onboardingUrl)
       }
     }
@@ -323,28 +366,28 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     const orgRouteMatch = pathname.match(/^\/([^/]+)\/(dashboard|tools|templates|integrations|billing|settings)/)
     if (orgRouteMatch) {
       const [, slug, page] = orgRouteMatch
+      console.log(`🏢 [MIDDLEWARE] Processing organization route: /${slug}/${page}`)
 
       // Basic slug validation (alphanumeric and hyphens only)
       if (!/^[a-z0-9-]+$/.test(slug)) {
+        console.log(`❌ [MIDDLEWARE] Invalid slug format: ${slug}`)
+
         // Check if user has existing organizations before redirecting to onboarding
         const firstOrgSlug = await getUserFirstOrganization(userId)
 
         if (firstOrgSlug) {
           // Redirect to their valid organization
           const orgRouteUrl = new URL(`/${firstOrgSlug}/${page}`, req.url)
+          console.log(`↗️ [MIDDLEWARE] Redirecting to valid org: ${orgRouteUrl.pathname}`)
           return NextResponse.redirect(orgRouteUrl)
         } else {
           const onboardingUrl = new URL("/onboarding", req.url)
+          console.log(`🆕 [MIDDLEWARE] No valid orgs, redirecting to onboarding: ${onboardingUrl.pathname}`)
           return NextResponse.redirect(onboardingUrl)
         }
       }
 
-      // Add organization context to headers for API routes
-      const response = NextResponse.next()
-      response.headers.set("x-organization-slug", slug)
-      response.headers.set("x-current-page", page)
-
-      // Continue with security headers and logging below
+      console.log(`✅ [MIDDLEWARE] Valid organization route, continuing...`)
     }
   }
 
@@ -354,6 +397,8 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     userId: userId || undefined,
     duration: Date.now() - startTime,
   })
+
+  console.log(`⏱️ [MIDDLEWARE] Request processed in ${Date.now() - startTime}ms`)
 
   // Create response with security headers
   const response = NextResponse.next()
@@ -378,6 +423,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     response.headers.set("x-organization-slug", slug)
   }
 
+  console.log(`✅ [MIDDLEWARE] Response ready for: ${pathname}`)
   return response
 })
 
