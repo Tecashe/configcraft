@@ -10,6 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 // User model - integrates with Clerk
 model User {
   id        String   @id @default(cuid())
@@ -33,6 +34,7 @@ model User {
   apiKeys      ApiKey[]
   chatSessions ChatSession[]
   chatMessages ChatMessage[]
+  apiLogs      APILog[]
 
   @@map("users")
 }
@@ -74,6 +76,7 @@ model Organization {
   chatSessions  ChatSession[]
   publishedTools PublishedTool[]
   auditLogs     AuditLog[]
+  apiLogs       APILog[]
 
   @@map("organizations")
 }
@@ -247,6 +250,7 @@ model Tool {
   // V0 Integration fields
   v0Code      String?    @db.Text // Generated code from v0
   previewUrl  String?    // Preview URL from v0
+  chatUrl     String?    // Chat interface URL from v0
   publishedUrl String?   // Published tool URL
   generatedAt DateTime?  // When v0 generation completed
   publishedAt DateTime?  // When tool was published
@@ -259,6 +263,7 @@ model Tool {
   analysisData     String?           @db.Text // AI analysis results
   generatedCode    String?           @db.Text // Generated code
   v0GenerationId   String?           // v0 generation ID
+  v0ChatId         String?           // v0 chat session ID
   
   // Chat Session Integration
   chatSessionId    String?           // Associated chat session ID
@@ -284,6 +289,7 @@ model Tool {
   chatSessions  ChatSession[]
   publishedTools PublishedTool[]
   auditLogs     AuditLog[]
+  apiLogs       APILog[]
 
   @@unique([organizationId, slug])
   @@map("tools")
@@ -298,6 +304,7 @@ enum ToolStatus {
   ERROR
 }
 
+
 enum GenerationStatus {
   pending
   analyzing
@@ -305,6 +312,7 @@ enum GenerationStatus {
   generating
   finalizing
   completed
+  optimizing
   error
 }
 
@@ -611,4 +619,33 @@ model AuditLog {
   tool         Tool?         @relation(fields: [toolId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
+}
+
+// API logging model for comprehensive request tracking
+model APILog {
+  id            String   @id @default(cuid())
+  method        String   // GET, POST, PUT, DELETE, etc.
+  endpoint      String   // API endpoint path
+  statusCode    Int      // HTTP status code
+  responseTime  Int      // Response time in milliseconds
+  userAgent     String?  // User agent string
+  ipAddress     String?  // Client IP address
+  requestBody   Json?    // Request body (sanitized)
+  responseBody  Json?    // Response body (sanitized)
+  errorMessage  String?  // Error message if request failed
+  level         LogLevel @default(INFO) // Log level
+  createdAt     DateTime @default(now())
+
+  // Relationships
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [clerkId], onDelete: SetNull)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  toolId         String?
+  tool           Tool?        @relation(fields: [toolId], references: [id], onDelete: SetNull)
+
+  @@index([endpoint, createdAt])
+  @@index([userId, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("api_logs")
 }
