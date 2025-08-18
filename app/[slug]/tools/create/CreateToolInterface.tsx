@@ -1945,6 +1945,7 @@ interface GenerationStatus {
   chatUrl?: string
   chatId?: string
   currentPhase: "setup" | "ui" | "integration" | "deploy"
+  deploymentUrl?: string
 }
 
 interface RequirementsAnalysis {
@@ -2005,6 +2006,7 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
   const [selectedFile, setSelectedFile] = useState<ToolFile | null>(null)
   const [isPolling, setIsPolling] = useState(false)
   const [requirementsAnalysis, setRequirementsAnalysis] = useState<RequirementsAnalysis | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const { toast } = useToast()
   const router = useRouter()
@@ -2029,33 +2031,28 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
   }, [])
 
   const analyzeRequirements = useCallback(async () => {
-    if (!toolName.trim() || !requirements.trim() || !selectedCategory) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields before analyzing requirements.",
-        variant: "destructive",
-      })
-      return
-    }
+    if (!toolName.trim() || !requirements.trim()) return
 
-    addLog("Starting requirements analysis...", "info")
-    setGenerationStatus((prev) => ({
-      ...prev,
-      status: "analyzing",
-      progress: 10,
-      step: "Analyzing business requirements",
-      currentPhase: "setup",
-    }))
+    setIsAnalyzing(true)
+    addLog("Analyzing requirements and detecting needed integrations...", "info")
 
     try {
-      // Simulate analysis with realistic timing
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const response = await fetch("/api/integrations", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      })
 
-      const detectedIntegrations = AVAILABLE_INTEGRATIONS.filter(
-        (integration) =>
-          requirements.toLowerCase().includes(integration.name.toLowerCase()) ||
-          integration.dataTypes.some((type) => requirements.toLowerCase().includes(type)),
-      ).map((integration) => integration.id)
+      if (!response.ok) throw new Error("Failed to fetch available integrations")
+
+      const availableIntegrations = await response.json()
+
+      const detectedIntegrations = availableIntegrations
+        .filter(
+          (integration: any) =>
+            requirements.toLowerCase().includes(integration.name.toLowerCase()) ||
+            integration.dataTypes?.some((type: string) => requirements.toLowerCase().includes(type)),
+        )
+        .map((integration: any) => integration.id)
 
       const analysis: RequirementsAnalysis = {
         complexity: requirements.length > 500 ? "complex" : requirements.length > 200 ? "moderate" : "simple",
@@ -2101,8 +2098,10 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
         error: "Failed to analyze requirements",
         currentPhase: "setup",
       }))
+    } finally {
+      setIsAnalyzing(false)
     }
-  }, [toolName, requirements, selectedCategory, addLog, toast])
+  }, [toolName, requirements, selectedCategory, addLog])
 
   const generateUI = useCallback(async () => {
     if (!requirementsAnalysis) return
@@ -2168,27 +2167,37 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
       addLog(`Connecting to ${integrationId}...`, "info")
 
       try {
-        // Simulate integration connection
-        await new Promise((resolve) => setTimeout(resolve, 2000))
+        const response = await fetch(`/api/integrations/${integrationId}/connect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            toolId: generationStatus.chatId,
+            requirements: requirements,
+          }),
+        })
 
-        const integration = AVAILABLE_INTEGRATIONS.find((i) => i.id === integrationId)
-        if (!integration) throw new Error("Integration not found")
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || "Failed to connect integration")
+        }
+
+        const result = await response.json()
 
         const connectedIntegration: ConnectedIntegration = {
           id: integrationId,
-          name: integration.name,
-          provider: integration.name,
+          name: result.name,
+          provider: result.provider,
           status: "connected",
           lastSync: new Date().toISOString(),
-          testResult: "success",
+          testResult: result.testResult || "success",
         }
 
         setConnectedIntegrations((prev) => [...prev.filter((i) => i.id !== integrationId), connectedIntegration])
-        addLog(`Successfully connected to ${integration.name}`, "success")
+        addLog(`Successfully connected to ${result.name}`, "success")
 
         toast({
           title: "Integration Connected",
-          description: `${integration.name} has been successfully connected and tested.`,
+          description: `${result.name} has been successfully connected and tested.`,
         })
       } catch (error) {
         addLog(`Failed to connect to ${integrationId}`, "error")
@@ -2201,7 +2210,7 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
         setTestingIntegration(null)
       }
     },
-    [addLog, toast],
+    [addLog, toast, generationStatus.chatId, requirements],
   )
 
   const finalizeApplication = useCallback(async () => {
@@ -2215,8 +2224,23 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
     }))
 
     try {
-      // Simulate finalization process
-      await new Promise((resolve) => setTimeout(resolve, 3000))
+      const response = await fetch("/api/tools/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: generationStatus.chatId,
+          connectedIntegrations: connectedIntegrations,
+          toolName,
+          category: selectedCategory,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Finalization failed")
+      }
+
+      const result = await response.json()
 
       addLog("Application finalized successfully!", "success")
       addLog("Your business tool is ready for deployment", "success")
@@ -2227,6 +2251,7 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
         progress: 100,
         step: "Application ready for deployment",
         currentPhase: "deploy",
+        deploymentUrl: result.deploymentUrl,
       }))
 
       setCurrentStep(3)
@@ -2235,11 +2260,11 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
       setGenerationStatus((prev) => ({
         ...prev,
         status: "error",
-        error: "Failed to finalize application",
+        error: error instanceof Error ? error.message : "Failed to finalize application",
         currentPhase: "deploy",
       }))
     }
-  }, [addLog])
+  }, [addLog, generationStatus.chatId, connectedIntegrations, toolName, selectedCategory])
 
   const copyToClipboard = useCallback(
     async (text: string) => {
