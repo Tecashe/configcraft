@@ -1786,7 +1786,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-import { v0ToolGenerator } from "@/lib/v0-tool-generator"
+import { v0ToolGenerator } from "@/lib/v0-service"
 
 const TOOL_CATEGORIES = [
   {
