@@ -284,7 +284,7 @@ export function generateSecureToken(length = 32): string {
   return crypto.randomBytes(length).toString("hex")
 }
 
-// Validate input
+// Validate inpu
 export function sanitizeInput(input: string): string {
   return input.replace(/[<>"']/g, "")
 }
