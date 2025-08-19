@@ -403,6 +403,7 @@ enum IntegrationStatus {
   CONNECTED
   DISCONNECTED
   ERROR
+  TESTING
 }
 
 // Tool-specific integrations
