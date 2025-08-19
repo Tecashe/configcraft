@@ -163,7 +163,7 @@
 import type { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 
-// Security headers configuration
+// Security headers configura
 const SECURITY_HEADERS = {
   "X-DNS-Prefetch-Control": "on",
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
