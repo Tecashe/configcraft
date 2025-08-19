@@ -2428,6 +2428,14 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
         description: integration.description,
       }))
 
+      const requestBody = {
+        name: toolName,
+        description: requirements, // Changed from requirements to description
+        integrations: selectedIntegrations,
+        integrationContext,
+        category: selectedCategory,
+      }
+
       const enhancedPrompt = `
 Create a professional business application with the following requirements:
 
@@ -3047,7 +3055,7 @@ Generate a complete, production-ready application that businesses can immediatel
                             className={cn(
                               "flex items-center justify-between p-3 rounded-lg border transition-all",
                               isConnected && "border-green-500 bg-green-500/10",
-                              isRecommended && !isConnected && "border-blue-500 bg-blue-500/10",
+                              isRecommended && "border-blue-500 bg-blue-500/10",
                               !isConnected && !isRecommended && "border-border bg-muted/30",
                             )}
                           >
