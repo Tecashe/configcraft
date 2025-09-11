@@ -33,7 +33,7 @@ class RequestLogger {
 
   private sendToMonitoring(data: RequestLog) {
     // Send to your monitoring service (DataDog, New Relic, etc.)
-    console.log("REQUEST_LOG:", JSON.stringify(data))
+    // console.log("REQUEST_LOG:", JSON.stringify(data))
   }
 
   getRecentLogs(limit = 100): RequestLog[] {

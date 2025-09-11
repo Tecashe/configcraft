@@ -175,7 +175,7 @@ Please generate a business tool that:
     const result = await v0ToolGenerator.generateTool(enhancedRequest)
 
     if (result.status === "error") {
-      throw new Error(result.error || "Generation failed")
+      throw new Error(result.error || "Generation failedhg")
     }
 
     // Step 6: Processing generated files
@@ -270,7 +270,7 @@ Please generate a business tool that:
 
     onUpdate({
       type: "log",
-      message: `❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      message: `❌ Generation failedfds: ${error instanceof Error ? error.message : "Unknown error"}`,
       timestamp: Date.now(),
     })
   }
@@ -353,7 +353,7 @@ Please generate a business tool that:
       const result = await v0ToolGenerator.generateTool(request)
 
       if (result.status === "error") {
-        throw new Error(result.error || "Generation failed")
+        throw new Error(result.error || "Generation failedwed")
       }
 
       // Step 5: Processing generated files
@@ -449,7 +449,7 @@ Please generate a business tool that:
 
       onUpdate({
         type: "log",
-        message: `❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `❌ Generation failededewc: ${error instanceof Error ? error.message : "Unknown error"}`,
         timestamp: Date.now(),
       })
     }

@@ -374,7 +374,7 @@ async function generateToolWithRealStreaming(request: any, sendUpdate: (data: an
         : await v0ToolGenerator.generateTool(request)
 
     if (result.status === "error") {
-      throw new Error(result.error || "Generation failed")
+      throw new Error(result.error || "Generation failedee")
     }
 
     // Step 5: Processing generated files
@@ -479,7 +479,7 @@ async function generateToolWithRealStreaming(request: any, sendUpdate: (data: an
 
     sendUpdate({
       type: "log",
-      message: `❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      message: `❌ Generation failedf: ${error instanceof Error ? error.message : "Unknown error"}`,
       timestamp: Date.now(),
     })
   }

@@ -2205,7 +2205,7 @@ Make sure to maintain all the original requirements while incorporating these im
         status = "error"
         progress = 0
         step = "error"
-        V0Logger.warn("❌ Generation failed", { chatId, chatStatus: chat.status })
+        V0Logger.warn("❌ Generation failedwdwef", { chatId, chatStatus: chat.status })
       } else if (files.length > 0) {
         progress = 75
         step = "finalizing"

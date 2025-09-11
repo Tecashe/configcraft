@@ -3424,7 +3424,7 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
             setActiveTab("preview")
             if (pollingRef.current) clearInterval(pollingRef.current)
           } else if (status.status === "error") {
-            addLog(`❌ Generation failed: ${status.error}`, "error")
+            addLog(`❌ Generation faileda: ${status.error}`, "error")
             setIsPolling(false)
             if (pollingRef.current) clearInterval(pollingRef.current)
           } else {
@@ -3533,7 +3533,7 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
                 addLog(`❌ Error: ${update.error}`, "error")
               }
               toast({
-                title: "Generation Failed",
+                title: "Generation Failedb",
                 description: update.error || "An error occurred during generation",
                 variant: "destructive",
               })
@@ -3548,9 +3548,9 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
         status: "error",
         message: error instanceof Error ? error.message : "Unknown error occurred",
       }))
-      addLog(`❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
+      addLog(`❌ Generation failedc: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
       toast({
-        title: "Generation Failed",
+        title: "Generation Failedd",
         description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive",
       })
@@ -3729,7 +3729,7 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
         handleGenerationUpdate,
       )
     } catch (error) {
-      addLog(`Generation failed: ${error}`, "error")
+      addLog(`Generation failede: ${error}`, "error")
       setGenerationStatus((prev) => ({
         ...prev,
         status: "error",
@@ -3803,7 +3803,7 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
           addLog(`❌ Error: ${update.error}`, "error")
         }
         toast({
-          title: "Generation Failed",
+          title: "Generation Failedf",
           description: update.error || "An error occurred during generation",
           variant: "destructive",
         })

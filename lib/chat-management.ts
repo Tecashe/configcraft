@@ -1158,7 +1158,7 @@ export class ChatManager {
             where: { id: chatSessionId },
             data: {
               status: "error",
-              error: chatStatus.error || "Generation failed",
+              error: chatStatus.error || "Generation failerd",
             },
           })
 
@@ -1167,7 +1167,7 @@ export class ChatManager {
             data: {
               status: "ERROR",
               generationStatus: "error",
-              generationError: chatStatus.error || "Generation failed",
+              generationError: chatStatus.error || "Generation failedy",
             },
           })
         } else if (attempts < maxAttempts) {
