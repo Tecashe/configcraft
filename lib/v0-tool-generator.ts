@@ -66,7 +66,7 @@ function mapSdkFilesToToolFiles(sdkFiles: any[] | undefined): ToolFile[] {
   })
 
   if (!sdkFiles || !Array.isArray(sdkFiles)) {
-    V0Logger.warn("⚠️ No files received or invalid forma", {
+    V0Logger.warn("⚠️ No files received or invalid format", {
       sdkFiles: sdkFiles,
       isArray: Array.isArray(sdkFiles),
     })
@@ -81,7 +81,7 @@ function mapSdkFilesToToolFiles(sdkFiles: any[] | undefined): ToolFile[] {
       path: (file?.path as string) ?? undefined,
     }
 
-    V0Logger.info(`📄 Mapped file ${index + 1}`, {
+    V0Logger.info(`📄 Mappe file ${index + 1}`, {
       originalFile: {
         name: file?.name,
         metaName: file?.meta?.name,
