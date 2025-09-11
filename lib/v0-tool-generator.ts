@@ -81,7 +81,7 @@ function mapSdkFilesToToolFiles(sdkFiles: any[] | undefined): ToolFile[] {
       path: (file?.path as string) ?? undefined,
     }
 
-    V0Logger.info(`📄 Mappe file ${index + 1}`, {
+    V0Logger.info(`📄 Mapped file ${index + 1}`, {
       originalFile: {
         name: file?.name,
         metaName: file?.meta?.name,
