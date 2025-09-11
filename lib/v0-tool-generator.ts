@@ -66,7 +66,7 @@ function mapSdkFilesToToolFiles(sdkFiles: any[] | undefined): ToolFile[] {
   })
 
   if (!sdkFiles || !Array.isArray(sdkFiles)) {
-    V0Logger.warn("⚠️ No files received or invalid format", {
+    V0Logger.warn("⚠️ No files received or invalid forma", {
       sdkFiles: sdkFiles,
       isArray: Array.isArray(sdkFiles),
     })
