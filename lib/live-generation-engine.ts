@@ -270,7 +270,7 @@ Please generate a business tool that:
 
     onUpdate({
       type: "log",
-      message: `❌ Generation failedfds: ${error instanceof Error ? error.message : "Unknown error"}`,
+      message: `❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       timestamp: Date.now(),
     })
   }
