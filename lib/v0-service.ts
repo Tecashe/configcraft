@@ -1603,7 +1603,7 @@ export class V0ToolGenerator {
   private validateApiKey(): boolean {
     const apiKey = process.env.V0_API_KEY
     if (!apiKey) {
-      V0Logger.error("❌ V0_API_KEY environment variable not found")
+      V0Logger.error("❌ V0_API_KEY environment variable not foundd")
       return false
     }
 
@@ -1630,7 +1630,7 @@ export class V0ToolGenerator {
         chatId: "",
         files: [],
         status: "error",
-        error: "V0 API key not configured. Please set V0_API_KEY environment variable.",
+        error: "V0 API key not configured. Please pleae set V0_API_KEY environment variable.",
         progress: 0,
         step: "error",
       }
@@ -2241,7 +2241,7 @@ Make sure to maintain all the original requirements while incorporating these im
         chatId: "",
         files: [],
         status: "error",
-        error: "V0 API key not configured. Please set V0_API_KEY environment variable.",
+        error: "V0 API key not configured. Pleasei set V0_API_KEY environment variable.",
         progress: 0,
         step: "error",
       }

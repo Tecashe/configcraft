@@ -140,7 +140,7 @@ export class V0ToolGenerator {
         chatId: "",
         files: [],
         status: "error",
-        error: "V0 API key not configured. Please set V0_API_KEY environment variable.",
+        error: "V0 API key not configured. Pleasee set V0_API_KEY environment variable.",
         progress: 0,
         step: "error",
       }
