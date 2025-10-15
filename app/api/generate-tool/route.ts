@@ -339,7 +339,7 @@ export async function POST(request: NextRequest) {
       system:
         "You are an expert React and TypeScript developer who creates professional business applications with modern UI/UX patterns. Always generate complete, production-ready code with proper error handling, TypeScript types, and responsive design.",
       chatPrivacy: "private",
-      responseMode: "async",
+      responseMode: "sync",
       modelConfiguration: {
         modelId: "v0-1.5-md",
         imageGenerations: false,
