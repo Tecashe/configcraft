@@ -1555,7 +1555,7 @@ export interface ChatMessage {
   timestamp: Date
 }
 
-// Enhanced logging utility
+// Enhanced logging util
 class V0Logger {
   private static log(level: "info" | "warn" | "error", message: string, data?: any) {
     const timestamp = new Date().toISOString()
