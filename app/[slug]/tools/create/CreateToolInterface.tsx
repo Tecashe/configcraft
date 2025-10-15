@@ -6180,8 +6180,6 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
   const [connectedIntegrations, setConnectedIntegrations] = useState<any[]>([])
   const [integrationTests, setIntegrationTests] = useState<any>(null)
 
-  const [iframeError, setIframeError] = useState(false)
-
   const { toast } = useToast()
   const router = useRouter()
   const logsEndRef = useRef<HTMLDivElement>(null)
@@ -7203,6 +7201,7 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* {console.log("[v0] Rendering preview, demoUrl:", generationStatus.demoUrl)} */}
                   {generationStatus.demoUrl ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
@@ -7225,71 +7224,19 @@ export default function EnhancedCreateToolInterface({ organizationSlug }: Create
                               className="border-border hover:bg-accent"
                             >
                               <Globe className="h-4 w-4 mr-2" />
-                              View in Chat
+                              View Chat
                             </Button>
                           )}
                         </div>
                       </div>
-
-                      {iframeError ? (
-                        <div className="border border-border rounded-lg overflow-hidden bg-muted/30 p-12 text-center">
-                          <AlertCircle className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
-                          <h3 className="text-lg font-semibold mb-2 text-foreground">Preview Cannot Be Embedded</h3>
-                          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                            The generated tool cannot be displayed in an iframe due to security restrictions. Please use
-                            the buttons above to view your tool in a new tab.
-                          </p>
-                          <div className="flex gap-3 justify-center">
-                            <Button
-                              onClick={() => window.open(generationStatus.demoUrl, "_blank")}
-                              className="bg-primary hover:bg-primary/90"
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Open Tool in New Tab
-                            </Button>
-                            {generationStatus.chatUrl && (
-                              <Button
-                                variant="outline"
-                                onClick={() => window.open(generationStatus.chatUrl, "_blank")}
-                                className="border-border hover:bg-accent"
-                              >
-                                <Globe className="h-4 w-4 mr-2" />
-                                View in v0 Chat
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="border border-border rounded-lg overflow-hidden bg-background">
-                          {/* {console.log("[v0] Rendering iframe with src:", generationStatus.demoUrl)} */}
-                          <iframe
-                            src={generationStatus.demoUrl}
-                            className="w-full h-[800px] bg-background"
-                            title="Generated Tool Preview"
-                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-                            onError={() => {
-                              console.log("[v0] Iframe failed to load")
-                              setIframeError(true)
-                            }}
-                            onLoad={(e) => {
-                              console.log("[v0] Iframe loaded successfully")
-                              // Check if iframe content is accessible
-                              try {
-                                const iframe = e.target as HTMLIFrameElement
-                                // Try to access iframe content - will throw if blocked by X-Frame-Options
-                                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
-                                if (!iframeDoc) {
-                                  console.log("[v0] Iframe content blocked by security policy")
-                                  setIframeError(true)
-                                }
-                              } catch (error) {
-                                console.log("[v0] Iframe access error:", error)
-                                setIframeError(true)
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
+                      <div className="border border-border rounded-lg overflow-hidden bg-background">
+                        <iframe
+                          src={generationStatus.demoUrl}
+                          className="w-full h-[800px] bg-background"
+                          title="Generated Tool Preview"
+                          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-12 text-muted-foreground">
