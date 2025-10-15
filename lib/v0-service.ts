@@ -3375,7 +3375,7 @@ export class V0ToolGenerator {
 
   async generateTool(request: ToolGenerationRequest): Promise<ToolGenerationResult> {
     const startTime = Date.now()
-    V0Logger.info("🚀 Starting tool generation with v0 SDK", {
+    V0Logger.info("🚀 Starting tool generation via API route", {
       toolName: request.toolName,
       category: request.category,
       requirementsLength: request.requirements.length,
@@ -3383,116 +3383,109 @@ export class V0ToolGenerator {
       timestamp: new Date().toISOString(),
     })
 
-    // Validate API key first
-    // if (!this.validateApiKey()) {
-    //   return {
-    //     chatId: "",
-    //     files: [],
-    //     status: "error",
-    //     error: "V0 API key not configured. Please pleae set V0_API_KEY environment variable.",
-    //     progress: 0,
-    //     step: "error",
-    //   }
-    // }
-
     try {
-      // Step 1: Build
-      V0Logger.info("📝 Building comprehensive tool prompt")
-      const prompt = this.buildToolPrompt(request.toolName, request.requirements, request.category)
-      V0Logger.info("✅ Prompt built successfully", {
-        promptLength: prompt.length,
-        promptPreview: prompt.substring(0, 200) + "...",
-      })
+      V0Logger.info("📤 Sending request to server-side streaming API")
 
-      // Step 2: Create chat with v0 SDK
-      V0Logger.info("🤖 Creating chat with v0 SDK", {
-        modelId: "v0-1.5-md",
-        chatPrivacy: "private",
-        imageGenerations: false,
-      })
-
-      const chatStartTime = Date.now()
-      const chat: any = await v0.chats.create({
-        message: prompt,
-        system:
-          "You are an expert React and TypeScript developer who creates professional business applications with modern UI/UX patterns. Always generate complete, production-ready code with proper error handling, TypeScript types, and responsive design.",
-        chatPrivacy: "private",
-        modelConfiguration: {
-          modelId: "v0-1.5-md",
-          imageGenerations: false,
-          thinking: false,
+      const response = await fetch("/api/generate-tool", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify(request),
       })
 
-      const chatEndTime = Date.now()
-      V0Logger.info(`✅ Chat created successfully`, {
-        chatId: chat.id,
-        chatUrl: chat.url,
-        demoUrl: chat.demo,
-        status: chat.status,
-        createdAt: chat.createdAt,
-        filesCount: chat.files?.length || 0,
-        creationTime: `${chatEndTime - chatStartTime}ms`,
-      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `API request failed with status ${response.status}`)
+      }
 
-      // Step 3: Process and validate response
-      V0Logger.info("🔍 Processing chat response", {
-        chatId: chat.id,
-        hasFiles: !!chat.files,
-        filesArray: Array.isArray(chat.files),
-        rawFilesCount: chat.files?.length || 0,
-      })
+      // Check if response is streaming (SSE)
+      const contentType = response.headers.get("content-type")
+      if (contentType?.includes("text/event-stream")) {
+        V0Logger.info("🌊 Receiving streaming response")
 
-      // Map files with enhanced logging
-      const files = mapSdkFilesToToolFiles(chat.files)
+        // Handle streaming response
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
 
-      // Step 4: Determine status and validate results
-      let status: "generating" | "completed" | "error" = "completed"
-      let progress = 100
-      let step = "completed"
+        let chatId = ""
+        let demoUrl = ""
+        let chatUrl = ""
+        const files: ToolFile[] = []
 
-      if (!chat.id) {
-        V0Logger.error("❌ No chat ID returned from v0", { chatResponse: chat })
-        status = "error"
-        progress = 0
-        step = "error"
-      } else if (files.length === 0) {
-        V0Logger.warn("⚠️ No files generated, but chat exists", {
-          chatId: chat.id,
-          chatStatus: chat.status,
-          demoUrl: chat.demo,
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value)
+            const lines = chunk.split("\n")
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const eventData = JSON.parse(line.slice(6))
+                  V0Logger.info("📦 Stream event:", eventData.event)
+
+                  // Handle different event types
+                  if (eventData.event === "chat_created") {
+                    chatId = eventData.data.id
+                    demoUrl = eventData.data.demo
+                    chatUrl = eventData.data.url
+                  } else if (eventData.event === "file_complete") {
+                    files.push({
+                      name: eventData.data.name,
+                      content: eventData.data.content,
+                      type: eventData.data.type,
+                    })
+                  } else if (eventData.event === "error") {
+                    throw new Error(eventData.data.message)
+                  }
+                } catch (e) {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+        }
+
+        const totalTime = Date.now() - startTime
+        V0Logger.info("✅ Streaming generation completed", {
+          chatId,
+          filesCount: files.length,
+          totalTime: `${totalTime}ms`,
         })
-        status = "generating"
-        progress = 50
-        step = "generating"
+
+        return {
+          chatId,
+          demoUrl,
+          chatUrl,
+          files,
+          status: "completed",
+          progress: 100,
+          step: "completed",
+        }
       } else {
-        V0Logger.info("🎉 Tool generation completed successfully", {
-          chatId: chat.id,
-          filesGenerated: files.length,
-          hasDemoUrl: !!chat.demo,
-          totalContentSize: files.reduce((sum, f) => sum + f.content.length, 0),
+        // Fallback to regular JSON response
+        const result = await response.json()
+
+        const totalTime = Date.now() - startTime
+        V0Logger.info("✅ Tool generation completed", {
+          chatId: result.chatId,
+          filesCount: result.files?.length || 0,
+          totalTime: `${totalTime}ms`,
         })
+
+        return {
+          chatId: result.chatId,
+          demoUrl: result.demoUrl,
+          chatUrl: result.chatUrl,
+          files: result.files || [],
+          status: result.success ? "completed" : "error",
+          progress: 100,
+          step: "completed",
+        }
       }
-
-      const totalTime = Date.now() - startTime
-      const result: ToolGenerationResult = {
-        chatId: chat.id,
-        demoUrl: chat.demo as string | undefined,
-        chatUrl: chat.url as string | undefined,
-        files,
-        status,
-        progress,
-        step,
-      }
-
-      V0Logger.info("📊 Tool generation summary", {
-        ...result,
-        totalGenerationTime: `${totalTime}ms`,
-        averageFileSize:
-          files.length > 0 ? Math.round(files.reduce((sum, f) => sum + f.content.length, 0) / files.length) : 0,
-      })
-
-      return result
     } catch (error) {
       const totalTime = Date.now() - startTime
       V0Logger.error("💥 v0 generation error", {
@@ -3502,197 +3495,106 @@ export class V0ToolGenerator {
                 name: error.name,
                 message: error.message,
                 stack: error.stack,
-                cause: error.cause,
               }
             : error,
         totalTime: `${totalTime}ms`,
-        request: {
-          toolName: request.toolName,
-          category: request.category,
-          requirementsLength: request.requirements.length,
-        },
       })
-
-      // Enhanced error handling with specific error types
-      let errorMessage = "Unknown error occurred during tool generation"
-      if (error instanceof Error) {
-        errorMessage = error.message
-
-        // Check for specific v0 API errors
-        if (error.message.includes("401") || error.message.includes("Unauthorized")) {
-          errorMessage = "Invalid V0 API key. Please check your V0_API_KEY environment variable."
-        } else if (error.message.includes("429") || error.message.includes("rate limit")) {
-          errorMessage = "Rate limit exceeded. Please try again in a few minutes."
-        } else if (error.message.includes("400") || error.message.includes("Bad Request")) {
-          errorMessage = "Invalid request parameters. Please check your tool requirements."
-        } else if (error.message.includes("500") || error.message.includes("Internal Server Error")) {
-          errorMessage = "v0 service is temporarily unavailable. Please try again later."
-        }
-      }
 
       return {
         chatId: "",
         files: [],
         status: "error",
-        error: errorMessage,
+        error: error instanceof Error ? error.message : "Unknown error occurred during tool generation",
         progress: 0,
         step: "error",
       }
     }
   }
 
-  private buildToolPrompt(toolName: string, requirements: string, category: string): string {
-    V0Logger.info("🏗️ Building comprehensive prompt", {
-      toolName,
-      category,
-      requirementsLength: requirements.length,
-    })
-
-    const prompt = `Create a professional business application: ${toolName}
-
-Category: ${category}
-
-Business Requirements:
-${requirements}
-
-Technical Specifications:
-- Build with React and TypeScript for type safety
-- Use Tailwind CSS for modern, responsive design
-- Include comprehensive form validation and error handling
-- Add loading states and user feedback for all async operations
-- Implement full CRUD operations (Create, Read, Update, Delete)
-- Include search, filter, and sort functionality where appropriate
-- Add data export capabilities (CSV/Excel) if relevant
-- Ensure mobile-first responsive design
-- Include proper accessibility features (ARIA labels, keyboard navigation)
-- Use modern UI patterns (cards, tables, modals, dropdowns, tabs)
-- Add realistic sample data for demonstration purposes
-- Include user roles and permissions if applicable
-- Add email notification triggers where relevant
-- Implement comprehensive data validation (client and server-side patterns)
-- Include analytics/reporting dashboard if needed
-- Add proper error boundaries and fallback UI
-- Use React hooks and modern patterns
-- Include proper TypeScript interfaces and types
-
-Design Guidelines:
-- Clean, professional interface suitable for business use
-- Consistent color scheme and typography
-- Intuitive navigation and user experience
-- Loading skeletons for async operations
-- Success/error toast notifications
-- Proper spacing and visual hierarchy using Tailwind
-- Modern buttons, inputs, and interactive elements
-- Dark mode support with proper contrast ratios
-- Professional color palette (avoid bright/neon colors)
-
-Code Requirements:
-- Generate multiple files for proper component structure
-- Include comprehensive TypeScript interfaces and types
-- Add proper error boundaries and error handling
-- Include proper state management (useState, useEffect, custom hooks)
-- Add utility functions and helpers as needed
-- Generate a complete, working application with multiple pages/views
-- Include proper routing if multi-page application
-- Add proper data persistence patterns (localStorage, API calls)
-- Include comprehensive comments and documentation
-
-The application should be production-ready and immediately usable by business teams. Generate ALL necessary files including components, types, utilities, hooks, and the main application file. Make it a complete, functional business tool that demonstrates best practices in React development.`
-
-    V0Logger.info("✅ Prompt construction completed", {
-      finalPromptLength: prompt.length,
-      sections: [
-        "Category",
-        "Business Requirements",
-        "Technical Specifications",
-        "Design Guidelines",
-        "Code Requirements",
-      ],
-    })
-
-    return prompt.trim()
-  }
-
   async regenerateTool(chatId: string, feedback: string): Promise<ToolGenerationResult> {
     V0Logger.info("🔄 Starting tool regeneration", {
       chatId,
       feedbackLength: feedback.length,
-      timestamp: new Date().toISOString(),
     })
 
-    // if (!this.validateApiKey()) {
-    //   return {
-    //     chatId,
-    //     files: [],
-    //     status: "error",
-    //     error: "V0 API key not configured",
-    //     progress: 0,
-    //     step: "error",
-    //   }
-    // }
-
     try {
-      V0Logger.info("📤 Sending regeneration message to v0", { chatId, feedback })
-
-      const messageStartTime = Date.now()
-      await v0.chats.sendMessage({
-        chatId,
-        message: `Please improve the tool based on this feedback: ${feedback}
-
-Make sure to maintain all the original requirements while incorporating these improvements. Keep the code production-ready with proper TypeScript types, error handling, and responsive design.`,
+      const response = await fetch("/api/regenerate-tool", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chatId, feedback }),
       })
 
-      const messageEndTime = Date.now()
-      V0Logger.info("✅ Message sent successfully", {
-        chatId,
-        messageTime: `${messageEndTime - messageStartTime}ms`,
-      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Regeneration failed")
+      }
 
-      V0Logger.info("📥 Fetching updated chat from v0", { chatId })
+      const result = await response.json()
 
-      const fetchStartTime = Date.now()
-      const updatedChat: any = await v0.chats.getById({ chatId })
-      const fetchEndTime = Date.now()
-
-      V0Logger.info("✅ Updated chat retrieved", {
-        chatId: updatedChat.id,
-        status: updatedChat.status,
-        filesCount: updatedChat.files?.length || 0,
-        fetchTime: `${fetchEndTime - fetchStartTime}ms`,
-      })
-
-      const files = mapSdkFilesToToolFiles(updatedChat.files)
-
-      const result: ToolGenerationResult = {
-        chatId: updatedChat.id,
-        demoUrl: updatedChat.demo as string | undefined,
-        chatUrl: updatedChat.url as string | undefined,
-        files,
+      return {
+        chatId: result.chatId,
+        demoUrl: result.demoUrl,
+        chatUrl: result.chatUrl,
+        files: result.files || [],
         status: "completed",
         progress: 100,
         step: "completed",
       }
-
-      V0Logger.info("🎉 Tool regeneration completed", result)
-      return result
     } catch (error) {
-      V0Logger.error("💥 Regeneration error", {
-        chatId,
-        error:
-          error instanceof Error
-            ? {
-                name: error.name,
-                message: error.message,
-                stack: error.stack,
-              }
-            : error,
-      })
+      V0Logger.error("💥 Regeneration error", { chatId, error })
 
       return {
         chatId,
         files: [],
         status: "error",
         error: error instanceof Error ? error.message : "Regeneration failed",
+        progress: 0,
+        step: "error",
+      }
+    }
+  }
+
+  async continueChat(chatId: string, message: string): Promise<ToolGenerationResult> {
+    V0Logger.info("💬 Continuing chat conversation", {
+      chatId,
+      messageLength: message.length,
+    })
+
+    try {
+      const response = await fetch("/api/continue-chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chatId, message }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Chat continuation failed")
+      }
+
+      const result = await response.json()
+
+      return {
+        chatId: result.chatId,
+        demoUrl: result.demoUrl,
+        chatUrl: result.chatUrl,
+        files: result.files || [],
+        status: "completed",
+        progress: 100,
+        step: "completed",
+      }
+    } catch (error) {
+      V0Logger.error("💥 Chat continuation error", { chatId, error })
+
+      return {
+        chatId,
+        files: [],
+        status: "error",
+        error: error instanceof Error ? error.message : "Chat continuation failed",
         progress: 0,
         step: "error",
       }
@@ -3758,83 +3660,6 @@ Make sure to maintain all the original requirements while incorporating these im
             : error,
       })
       return null
-    }
-  }
-
-  async continueChat(chatId: string, message: string): Promise<ToolGenerationResult> {
-    V0Logger.info("💬 Continuing chat conversation", {
-      chatId,
-      messageLength: message.length,
-      timestamp: new Date().toISOString(),
-    })
-
-    // if (!this.validateApiKey()) {
-    //   return {
-    //     chatId,
-    //     files: [],
-    //     status: "error",
-    //     error: "V0 API key not configured",
-    //     progress: 0,
-    //     step: "error",
-    //   }
-    // }
-
-    try {
-      const sendStartTime = Date.now()
-      await v0.chats.sendMessage({ chatId, message })
-      const sendEndTime = Date.now()
-
-      V0Logger.info("✅ Message sent to chat", {
-        chatId,
-        sendTime: `${sendEndTime - sendStartTime}ms`,
-      })
-
-      const fetchStartTime = Date.now()
-      const updatedChat: any = await v0.chats.getById({ chatId })
-      const fetchEndTime = Date.now()
-
-      V0Logger.info("📥 Updated chat retrieved", {
-        chatId: updatedChat.id,
-        filesCount: updatedChat.files?.length || 0,
-        fetchTime: `${fetchEndTime - fetchStartTime}ms`,
-      })
-
-      const files = mapSdkFilesToToolFiles(updatedChat.files)
-
-      const result: ToolGenerationResult = {
-        chatId: updatedChat.id,
-        demoUrl: updatedChat.demo as string | undefined,
-        chatUrl: updatedChat.url as string | undefined,
-        files,
-        status: "completed",
-        progress: 100,
-        step: "completed",
-      }
-
-      V0Logger.info("🎉 Chat continuation completed", result)
-      return result
-    } catch (error) {
-      V0Logger.error("💥 Chat continuation error", {
-        chatId,
-        message,
-        error:
-          error instanceof Error
-            ? {
-                name: error.name,
-                message: error.message,
-                stack: error.stack,
-              }
-            : error,
-      })
-
-      return {
-        chatId,
-        files: [],
-        status: "error",
-        error: error instanceof Error ? error.message : "Chat continuation failed",
-        progress: 0,
-        step: "error",
-      }
     }
   }
 
@@ -4240,6 +4065,158 @@ export const integrations = {
     }
 
     return [...files, envFile, integrationUtilsFile]
+  }
+
+  async generateToolStreaming(
+    request: ToolGenerationRequest,
+    onChunk: (chunk: { type: string; content: string; file?: any }) => void,
+  ): Promise<ToolGenerationResult> {
+    const startTime = Date.now()
+    V0Logger.info("🚀 Starting tool generation with v0 SDK", {
+      toolName: request.toolName,
+      category: request.category,
+    })
+
+    try {
+      const prompt = this.buildToolPrompt(request.toolName, request.requirements, request.category)
+
+      V0Logger.info("🤖 Creating chat with v0 SDK")
+
+      const chat: any = await v0.chats.create({
+        message: prompt,
+        system:
+          "You are an expert React and TypeScript developer who creates professional business applications with modern UI/UX patterns. Always generate complete, production-ready code with proper error handling, TypeScript types, and responsive design.",
+        chatPrivacy: "private",
+        responseMode: "async", // Changed from "experimental_stream" to "async"
+        modelConfiguration: {
+          modelId: "v0-1.5-md",
+          imageGenerations: false,
+          thinking: false,
+        },
+      })
+
+      V0Logger.info("✅ Chat created successfully", {
+        chatId: chat.id,
+        filesCount: chat.files?.length || 0,
+      })
+
+      const files = mapSdkFilesToToolFiles(chat.files)
+
+      // Send completion event to UI
+      onChunk({
+        type: "chat_created",
+        content: "",
+        file: { chatId: chat.id, demoUrl: chat.demo, chatUrl: chat.url },
+      })
+
+      files.forEach((file) => {
+        onChunk({
+          type: "file_complete",
+          content: "",
+          file: file,
+        })
+      })
+
+      const totalTime = Date.now() - startTime
+      V0Logger.info("🎉 Generation completed", {
+        chatId: chat.id,
+        filesGenerated: files.length,
+        totalTime: `${totalTime}ms`,
+      })
+
+      return {
+        chatId: chat.id,
+        demoUrl: chat.demo as string | undefined,
+        chatUrl: chat.url as string | undefined,
+        files,
+        status: "completed",
+        progress: 100,
+        step: "completed",
+      }
+    } catch (error) {
+      V0Logger.error("💥 Generation error", { error })
+
+      return {
+        chatId: "",
+        files: [],
+        status: "error",
+        error: error instanceof Error ? error.message : "Generation failed",
+        progress: 0,
+        step: "error",
+      }
+    }
+  }
+
+  private buildToolPrompt(toolName: string, requirements: string, category: string): string {
+    V0Logger.info("🏗️ Building comprehensive prompt", {
+      toolName,
+      category,
+      requirementsLength: requirements.length,
+    })
+
+    const prompt = `Create a professional business application: ${toolName}
+
+Category: ${category}
+
+Business Requirements:
+${requirements}
+
+Technical Specifications:
+- Build with React and TypeScript for type safety
+- Use Tailwind CSS for modern, responsive design
+- Include comprehensive form validation and error handling
+- Add loading states and user feedback for all async operations
+- Implement full CRUD operations (Create, Read, Update, Delete)
+- Include search, filter, and sort functionality where appropriate
+- Add data export capabilities (CSV/Excel) if relevant
+- Ensure mobile-first responsive design
+- Include proper accessibility features (ARIA labels, keyboard navigation)
+- Use modern UI patterns (cards, tables, modals, dropdowns, tabs)
+- Add realistic sample data for demonstration purposes
+- Include user roles and permissions if applicable
+- Add email notification triggers where relevant
+- Implement comprehensive data validation (client and server-side patterns)
+- Include analytics/reporting dashboard if needed
+- Add proper error boundaries and fallback UI
+- Use React hooks and modern patterns
+- Include proper TypeScript interfaces and types
+
+Design Guidelines:
+- Clean, professional interface suitable for business use
+- Consistent color scheme and typography
+- Intuitive navigation and user experience
+- Loading skeletons for async operations
+- Success/error toast notifications
+- Proper spacing and visual hierarchy using Tailwind
+- Modern buttons, inputs, and interactive elements
+- Dark mode support with proper contrast ratios
+- Professional color palette (avoid bright/neon colors)
+
+Code Requirements:
+- Generate multiple files for proper component structure
+- Include comprehensive TypeScript interfaces and types
+- Add proper error boundaries and error handling
+- Include proper state management (useState, useEffect, custom hooks)
+- Add utility functions and helpers as needed
+- Generate a complete, working application with multiple pages/views
+- Include proper routing if multi-page application
+- Add proper data persistence patterns (localStorage, API calls)
+- Include comprehensive comments and documentation
+
+The application should be production-ready and immediately usable by business teams. Generate ALL necessary files including components, types, utilities, hooks, and the main application file. Make it a complete, functional business tool that demonstrates best practices in React development.`
+
+    V0Logger.info("✅ Prompt construction completed", {
+      finalPromptLength: prompt.length,
+      sections: [
+        "Category",
+        "Business Requirements",
+        "Technical Specifications",
+        "Design Guidelines",
+        "Code Requirements",
+      ],
+    })
+
+    return prompt.trim()
   }
 }
 
