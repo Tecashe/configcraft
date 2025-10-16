@@ -36,16 +36,34 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     const body = await request.json()
     const { chatSessionId, files } = body
 
-    const chatSession = await prisma.chatSession.findUnique({
-      where: {
-        id: chatSessionId,
-        toolId: tool.id,
-        organizationId: organization.id,
-      },
-    })
+    let chatSession
+    if (chatSessionId) {
+      // If chatSessionId is provided, verify it exists and belongs to this tool
+      chatSession = await prisma.chatSession.findUnique({
+        where: {
+          id: chatSessionId,
+        },
+      })
 
-    if (!chatSession) {
-      return NextResponse.json({ error: "Chat session not found" }, { status: 404 })
+      // Verify the session belongs to this tool and organization
+      if (!chatSession || chatSession.toolId !== tool.id || chatSession.organizationId !== organization.id) {
+        return NextResponse.json({ error: "Chat session not found" }, { status: 404 })
+      }
+    } else {
+      // If no chatSessionId, find the most recent chat session for this tool
+      chatSession = await prisma.chatSession.findFirst({
+        where: {
+          toolId: tool.id,
+          organizationId: organization.id,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      })
+
+      if (!chatSession) {
+        return NextResponse.json({ error: "No chat session found for this tool" }, { status: 404 })
+      }
     }
 
     const savedFiles = await Promise.all(
@@ -56,7 +74,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
             content: file.content,
             type: file.type,
             size: Buffer.byteLength(file.content, "utf8"),
-            chatSessionId,
+            chatSessionId: chatSession.id,
           },
         }),
       ),
