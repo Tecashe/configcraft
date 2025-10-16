@@ -1405,8 +1405,510 @@
 //   )
 // }
 
-import UltimateGenerationInterface from "@/components/create/ultimate-create-page"
+// import UltimateGenerationInterface from "@/components/create/ultimate-create-page"
+
+// export default function CreateToolPage() {
+//   return <UltimateGenerationInterface />
+// }
+
+
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import {
+  Sparkles,
+  Rocket,
+  Eye,
+  Download,
+  Loader2,
+  ExternalLink,
+  Copy,
+  ChevronLeft,
+  Zap,
+  Database,
+  CreditCard,
+  Mail,
+  Brain,
+  FileCode,
+} from "lucide-react"
+import { v0ServiceAdvanced, type StreamEvent } from "@/lib/v0-service-advanced"
+import { vercelDeployment } from "@/lib/vercel-deployments"
+import { useToast } from "@/hooks/use-toast"
+
+interface GeneratedFile {
+  name: string
+  content: string
+  type: string
+  path?: string
+}
+
+interface GenerationResult {
+  chatId: string
+  demoUrl: string | null
+  webUrl: string
+  files: GeneratedFile[]
+}
 
 export default function CreateToolPage() {
-  return <UltimateGenerationInterface />
+  const [step, setStep] = useState<"configure" | "generating" | "preview">("configure")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isDeploying, setIsDeploying] = useState(false)
+  const [generationProgress, setGenerationProgress] = useState(0)
+  const [streamingLogs, setStreamingLogs] = useState<string[]>([])
+  const [result, setResult] = useState<GenerationResult | null>(null)
+  const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
+  const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null)
+
+  // Form state
+  const [toolName, setToolName] = useState("")
+  const [category, setCategory] = useState("dashboard")
+  const [requirements, setRequirements] = useState("")
+  const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([])
+
+  const { toast } = useToast()
+  const params = useParams()
+  const router = useRouter()
+  const orgSlug = params?.slug as string
+  const logsEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [streamingLogs])
+
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString()
+    setStreamingLogs((prev) => [...prev, `[${timestamp}] ${message}`])
+  }
+
+  const handleGenerate = async () => {
+    if (!toolName || !requirements) {
+      toast({ title: "Please fill in tool name and requirements", variant: "destructive" })
+      return
+    }
+
+    setIsGenerating(true)
+    setGenerationProgress(0)
+    setStreamingLogs([])
+    setStep("generating")
+
+    try {
+      addLog("🚀 Initializing AI generation engine...")
+      setGenerationProgress(5)
+
+      const response = await v0ServiceAdvanced.generateToolWithStreaming(
+        {
+          toolName,
+          category,
+          requirements,
+          organizationSlug: orgSlug,
+          userEmail: "user@example.com",
+          integrations: selectedIntegrations,
+          attachments: [],
+          chatPrivacy: "private",
+        },
+        (event: StreamEvent) => {
+          if (event.type === "chunk") {
+            addLog(`${event.data.message}`)
+            setGenerationProgress((prev) => Math.min(prev + 5, 95))
+          } else if (event.type === "complete") {
+            addLog("✅ Generation complete!")
+            setGenerationProgress(100)
+          } else if (event.type === "error") {
+            addLog(`❌ Error: ${event.data.error}`)
+          }
+        },
+      )
+
+      const latestVersion = (response as any).latestVersion
+      const files: GeneratedFile[] =
+        latestVersion?.files?.map((file: any) => ({
+          name: file.name || file.path || "unnamed",
+          content: file.content || file.data || "",
+          type: file.type || file.language || "typescript",
+          path: file.path,
+        })) || []
+
+      const generationResult: GenerationResult = {
+        chatId: response.id,
+        demoUrl: latestVersion?.demoUrl || null,
+        webUrl: (response as any).webUrl || "",
+        files,
+      }
+
+      setResult(generationResult)
+      if (files.length > 0) {
+        setSelectedFile(files[0])
+      }
+
+      addLog(`✨ Generated ${files.length} files successfully!`)
+      setStep("preview")
+      toast({ title: "Tool generated successfully!" })
+    } catch (error) {
+      addLog(`❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+      toast({ title: "Generation failed", description: "Please try again", variant: "destructive" })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleDeploy = async () => {
+    if (!result || result.files.length === 0) {
+      toast({ title: "No files to deploy", variant: "destructive" })
+      return
+    }
+
+    setIsDeploying(true)
+    addLog("🚀 Starting deployment to Vercel...")
+
+    try {
+      const deploymentResult = await vercelDeployment.deployToVercel({
+        projectName: toolName.toLowerCase().replace(/\s+/g, "-"),
+        files: result.files.map((file) => ({
+          path: file.path || file.name,
+          content: file.content,
+        })),
+      })
+
+      if (deploymentResult.success) {
+        setDeploymentUrl(deploymentResult.url || null)
+        addLog(`✅ Deployed successfully! URL: ${deploymentResult.url}`)
+        toast({ title: "Deployed successfully!", description: deploymentResult.url })
+      } else {
+        addLog(`❌ Deployment failed: ${deploymentResult.error}`)
+        toast({ title: "Deployment failed", variant: "destructive" })
+      }
+    } catch (error) {
+      addLog(`❌ Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`)
+      toast({ title: "Deployment error", variant: "destructive" })
+    } finally {
+      setIsDeploying(false)
+    }
+  }
+
+  const downloadFiles = () => {
+    if (!result) return
+
+    result.files.forEach((file) => {
+      const blob = new Blob([file.content], { type: "text/plain" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = file.name
+      a.click()
+      URL.revokeObjectURL(url)
+    })
+
+    toast({ title: `Downloaded ${result.files.length} files` })
+  }
+
+  const integrationOptions = [
+    { id: "supabase", name: "Supabase", icon: Database, color: "emerald" },
+    { id: "stripe", name: "Stripe", icon: CreditCard, color: "purple" },
+    { id: "openai", name: "OpenAI", icon: Brain, color: "blue" },
+    { id: "resend", name: "Resend", icon: Mail, color: "orange" },
+  ]
+
+  return (
+    <div className="min-h-screen bg-[#121212]">
+      <div className="border-b border-[#444444] bg-[#121212]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(`/${orgSlug}/tools`)}
+              className="text-[#B0B0B0] hover:text-[#E0E0E0] hover:bg-[#444444]"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <div className="h-6 w-px bg-[#444444]" />
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-2 h-2 rounded-full ${step === "configure" ? "bg-[#888888]" : step === "generating" ? "bg-purple-400 animate-pulse" : "bg-emerald-400"}`}
+              />
+              <span className="text-[#E0E0E0] font-medium">
+                {step === "configure" ? "Configure" : step === "generating" ? "Generating" : "Preview"}
+              </span>
+            </div>
+          </div>
+          {step === "preview" && result && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadFiles}
+                className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] hover:text-[#E0E0E0] bg-transparent"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleDeploy}
+                disabled={isDeploying}
+                className="bg-[#888888] hover:bg-[#666666] text-[#121212]"
+              >
+                {isDeploying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Rocket className="h-4 w-4 mr-2" />}
+                Deploy
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {step === "configure" && (
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#888888]/10 rounded-2xl mb-6">
+              <Sparkles className="h-8 w-8 text-[#888888]" />
+            </div>
+            <h1 className="text-4xl font-bold text-[#E0E0E0] mb-3">Create Your Tool</h1>
+            <p className="text-[#B0B0B0] text-lg">Describe what you want to build and let AI do the rest</p>
+          </div>
+
+          <div className="space-y-8">
+            <Card className="bg-[#1a1a1a] border-[#444444] p-8">
+              <div className="space-y-6">
+                <div>
+                  <Label htmlFor="toolName" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+                    Tool Name
+                  </Label>
+                  <Input
+                    id="toolName"
+                    value={toolName}
+                    onChange={(e) => setToolName(e.target.value)}
+                    placeholder="e.g., Customer Support Dashboard"
+                    className="h-12 bg-[#0a0a0a] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] focus:border-[#888888]"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="category" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+                    Category
+                  </Label>
+                  <select
+                    id="category"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full h-12 px-4 rounded-md bg-[#0a0a0a] border border-[#444444] text-[#E0E0E0] focus:border-[#888888] focus:outline-none"
+                  >
+                    <option value="dashboard">Dashboard</option>
+                    <option value="form">Form</option>
+                    <option value="landing-page">Landing Page</option>
+                    <option value="admin-panel">Admin Panel</option>
+                    <option value="e-commerce">E-commerce</option>
+                    <option value="analytics">Analytics</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="requirements" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+                    Requirements
+                  </Label>
+                  <Textarea
+                    id="requirements"
+                    value={requirements}
+                    onChange={(e) => setRequirements(e.target.value)}
+                    placeholder="Describe your tool in detail. What features do you need? What should it look like? Who will use it?"
+                    rows={10}
+                    className="bg-[#0a0a0a] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] focus:border-[#888888] resize-none"
+                  />
+                  <p className="text-sm text-[#B0B0B0] mt-2">{requirements.length} characters</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-[#1a1a1a] border-[#444444] p-8">
+              <Label className="text-base font-semibold text-[#E0E0E0] mb-4 block">
+                Integrations <span className="text-[#B0B0B0] font-normal">(Optional)</span>
+              </Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {integrationOptions.map((integration) => {
+                  const Icon = integration.icon
+                  const isSelected = selectedIntegrations.includes(integration.id)
+                  return (
+                    <button
+                      key={integration.id}
+                      onClick={() => {
+                        setSelectedIntegrations((prev) =>
+                          prev.includes(integration.id)
+                            ? prev.filter((i) => i !== integration.id)
+                            : [...prev, integration.id],
+                        )
+                      }}
+                      className={`p-6 rounded-xl border-2 transition-all ${
+                        isSelected
+                          ? "border-[#888888] bg-[#888888]/10"
+                          : "border-[#444444] bg-[#0a0a0a] hover:border-[#666666]"
+                      }`}
+                    >
+                      <Icon className={`h-8 w-8 mx-auto mb-3 ${isSelected ? "text-[#888888]" : "text-[#B0B0B0]"}`} />
+                      <p className={`text-sm font-medium ${isSelected ? "text-[#E0E0E0]" : "text-[#B0B0B0]"}`}>
+                        {integration.name}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            </Card>
+
+            <Button
+              onClick={handleGenerate}
+              disabled={isGenerating || !toolName || !requirements}
+              className="w-full h-14 text-lg bg-[#888888] hover:bg-[#666666] text-[#121212] font-semibold"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-5 w-5 mr-2" />
+                  Generate Tool
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === "generating" && (
+        <div className="h-[calc(100vh-73px)] flex items-center justify-center p-6">
+          <div className="w-full max-w-4xl space-y-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-purple-500/10 rounded-full mb-6 relative">
+                <Sparkles className="h-10 w-10 text-purple-400 animate-pulse" />
+                <div className="absolute inset-0 rounded-full border-2 border-purple-400/20 animate-ping" />
+              </div>
+              <h2 className="text-3xl font-bold text-[#E0E0E0] mb-2">Generating Your Tool</h2>
+              <p className="text-[#B0B0B0]">AI is crafting your custom tool...</p>
+            </div>
+
+            <Card className="bg-[#1a1a1a] border-[#444444] p-8">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#E0E0E0] font-medium">Progress</span>
+                  <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-base px-4 py-1">
+                    {generationProgress}%
+                  </Badge>
+                </div>
+
+                <div className="w-full bg-[#0a0a0a] rounded-full h-3 overflow-hidden">
+                  <div
+                    className="h-full bg-[#888888] transition-all duration-500 ease-out"
+                    style={{ width: `${generationProgress}%` }}
+                  />
+                </div>
+
+                <div className="bg-[#0a0a0a] rounded-lg p-6 h-96 overflow-y-auto font-mono text-sm space-y-1">
+                  {streamingLogs.map((log, index) => (
+                    <div key={index} className="text-[#B0B0B0]">
+                      {log}
+                    </div>
+                  ))}
+                  <div ref={logsEndRef} />
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {step === "preview" && result && (
+        <div className="h-[calc(100vh-73px)] flex">
+          <div className="w-80 border-r border-[#444444] bg-[#1a1a1a] flex flex-col">
+            <div className="p-4 border-b border-[#444444]">
+              <h3 className="text-sm font-semibold text-[#E0E0E0] mb-1">Generated Files</h3>
+              <p className="text-xs text-[#B0B0B0]">{result.files.length} files</p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {result.files.map((file, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedFile(file)}
+                  className={`w-full text-left p-3 rounded-lg transition-colors ${
+                    selectedFile === file ? "bg-[#888888] text-[#121212]" : "text-[#B0B0B0] hover:bg-[#444444]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileCode className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm font-mono truncate">{file.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col bg-[#0a0a0a]">
+            {result.demoUrl ? (
+              <>
+                <div className="p-4 border-b border-[#444444] flex items-center justify-between bg-[#1a1a1a]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-400" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                      <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                    </div>
+                    <span className="text-sm text-[#B0B0B0] font-mono">{result.demoUrl}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(result.demoUrl!, "_blank")}
+                    className="text-[#B0B0B0] hover:text-[#E0E0E0]"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+                <iframe
+                  src={result.demoUrl}
+                  className="flex-1 w-full bg-white"
+                  title="Generated Tool Preview"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                />
+              </>
+            ) : selectedFile ? (
+              <div className="flex-1 flex flex-col">
+                <div className="p-4 border-b border-[#444444] flex items-center justify-between bg-[#1a1a1a]">
+                  <span className="text-sm font-mono text-[#E0E0E0]">{selectedFile.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedFile.content)
+                      toast({ title: "Copied to clipboard" })
+                    }}
+                    className="text-[#B0B0B0] hover:text-[#E0E0E0]"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-auto p-6">
+                  <pre className="text-sm text-[#E0E0E0] font-mono whitespace-pre-wrap break-words">
+                    <code>{selectedFile.content}</code>
+                  </pre>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-[#B0B0B0]">
+                  <Eye className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg">Select a file to view</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
