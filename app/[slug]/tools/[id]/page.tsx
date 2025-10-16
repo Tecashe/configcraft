@@ -452,7 +452,7 @@ interface Tool {
   name: string
   status: string
   previewUrl?: string
-  files?: Array<{ name: string; content: string; type?: string; path?: string }>
+  files?: Array<{ name: string; content: string; type?: string; path: string }>
 }
 
 export default function ToolViewerPage() {
@@ -746,7 +746,7 @@ export default function ToolViewerPage() {
               </div>
               <div className="p-2 overflow-y-auto h-[calc(100%-73px)]">
                 <AdvancedFileTree
-                  files={tool.files}
+                  files={tool?.files}
                   selectedFile={selectedFile?.name || null}
                   onFileSelect={setSelectedFile}
                 />

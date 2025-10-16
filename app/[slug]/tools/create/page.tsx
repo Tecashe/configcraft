@@ -1412,6 +1412,508 @@
 // }
 
 
+// "use client"
+
+// import { useState, useEffect, useRef } from "react"
+// import { useParams, useRouter } from "next/navigation"
+// import { Button } from "@/components/ui/button"
+// import { Card } from "@/components/ui/card"
+// import { Input } from "@/components/ui/input"
+// import { Textarea } from "@/components/ui/textarea"
+// import { Label } from "@/components/ui/label"
+// import { Badge } from "@/components/ui/badge"
+// import {
+//   Sparkles,
+//   Rocket,
+//   Eye,
+//   Download,
+//   Loader2,
+//   ExternalLink,
+//   Copy,
+//   ChevronLeft,
+//   Zap,
+//   Database,
+//   CreditCard,
+//   Mail,
+//   Brain,
+//   FileCode,
+// } from "lucide-react"
+// import { v0ServiceAdvanced, type StreamEvent } from "@/lib/v0-service-advanced"
+// import { vercelDeployment } from "@/lib/vercel-deployments"
+// import { useToast } from "@/hooks/use-toast"
+
+// interface GeneratedFile {
+//   name: string
+//   content: string
+//   type: string
+//   path?: string
+// }
+
+// interface GenerationResult {
+//   chatId: string
+//   demoUrl: string | null
+//   webUrl: string
+//   files: GeneratedFile[]
+// }
+
+// export default function CreateToolPage() {
+//   const [step, setStep] = useState<"configure" | "generating" | "preview">("configure")
+//   const [isGenerating, setIsGenerating] = useState(false)
+//   const [isDeploying, setIsDeploying] = useState(false)
+//   const [generationProgress, setGenerationProgress] = useState(0)
+//   const [streamingLogs, setStreamingLogs] = useState<string[]>([])
+//   const [result, setResult] = useState<GenerationResult | null>(null)
+//   const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
+//   const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null)
+
+//   // Form state
+//   const [toolName, setToolName] = useState("")
+//   const [category, setCategory] = useState("dashboard")
+//   const [requirements, setRequirements] = useState("")
+//   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([])
+
+//   const { toast } = useToast()
+//   const params = useParams()
+//   const router = useRouter()
+//   const orgSlug = params?.slug as string
+//   const logsEndRef = useRef<HTMLDivElement>(null)
+
+//   useEffect(() => {
+//     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
+//   }, [streamingLogs])
+
+//   const addLog = (message: string) => {
+//     const timestamp = new Date().toLocaleTimeString()
+//     setStreamingLogs((prev) => [...prev, `[${timestamp}] ${message}`])
+//   }
+
+//   const handleGenerate = async () => {
+//     if (!toolName || !requirements) {
+//       toast({ title: "Please fill in tool name and requirements", variant: "destructive" })
+//       return
+//     }
+
+//     setIsGenerating(true)
+//     setGenerationProgress(0)
+//     setStreamingLogs([])
+//     setStep("generating")
+
+//     try {
+//       addLog("🚀 Initializing AI generation engine...")
+//       setGenerationProgress(5)
+
+//       const response = await v0ServiceAdvanced.generateToolWithStreaming(
+//         {
+//           toolName,
+//           category,
+//           requirements,
+//           organizationSlug: orgSlug,
+//           userEmail: "user@example.com",
+//           integrations: selectedIntegrations,
+//           attachments: [],
+//           chatPrivacy: "private",
+//         },
+//         (event: StreamEvent) => {
+//           if (event.type === "chunk") {
+//             addLog(`${event.data.message}`)
+//             setGenerationProgress((prev) => Math.min(prev + 5, 95))
+//           } else if (event.type === "complete") {
+//             addLog("✅ Generation complete!")
+//             setGenerationProgress(100)
+//           } else if (event.type === "error") {
+//             addLog(`❌ Error: ${event.data.error}`)
+//           }
+//         },
+//       )
+
+//       const latestVersion = (response as any).latestVersion
+//       const files: GeneratedFile[] =
+//         latestVersion?.files?.map((file: any) => ({
+//           name: file.name || file.path || "unnamed",
+//           content: file.content || file.data || "",
+//           type: file.type || file.language || "typescript",
+//           path: file.path,
+//         })) || []
+
+//       const generationResult: GenerationResult = {
+//         chatId: response.id,
+//         demoUrl: latestVersion?.demoUrl || null,
+//         webUrl: (response as any).webUrl || "",
+//         files,
+//       }
+
+//       setResult(generationResult)
+//       if (files.length > 0) {
+//         setSelectedFile(files[0])
+//       }
+
+//       addLog(`✨ Generated ${files.length} files successfully!`)
+//       setStep("preview")
+//       toast({ title: "Tool generated successfully!" })
+//     } catch (error) {
+//       addLog(`❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+//       toast({ title: "Generation failed", description: "Please try again", variant: "destructive" })
+//     } finally {
+//       setIsGenerating(false)
+//     }
+//   }
+
+//   const handleDeploy = async () => {
+//     if (!result || result.files.length === 0) {
+//       toast({ title: "No files to deploy", variant: "destructive" })
+//       return
+//     }
+
+//     setIsDeploying(true)
+//     addLog("🚀 Starting deployment to Vercel...")
+
+//     try {
+//       const deploymentResult = await vercelDeployment.deployToVercel({
+//         projectName: toolName.toLowerCase().replace(/\s+/g, "-"),
+//         files: result.files.map((file) => ({
+//           path: file.path || file.name,
+//           content: file.content,
+//         })),
+//       })
+
+//       if (deploymentResult.success) {
+//         setDeploymentUrl(deploymentResult.url || null)
+//         addLog(`✅ Deployed successfully! URL: ${deploymentResult.url}`)
+//         toast({ title: "Deployed successfully!", description: deploymentResult.url })
+//       } else {
+//         addLog(`❌ Deployment failed: ${deploymentResult.error}`)
+//         toast({ title: "Deployment failed", variant: "destructive" })
+//       }
+//     } catch (error) {
+//       addLog(`❌ Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`)
+//       toast({ title: "Deployment error", variant: "destructive" })
+//     } finally {
+//       setIsDeploying(false)
+//     }
+//   }
+
+//   const downloadFiles = () => {
+//     if (!result) return
+
+//     result.files.forEach((file) => {
+//       const blob = new Blob([file.content], { type: "text/plain" })
+//       const url = URL.createObjectURL(blob)
+//       const a = document.createElement("a")
+//       a.href = url
+//       a.download = file.name
+//       a.click()
+//       URL.revokeObjectURL(url)
+//     })
+
+//     toast({ title: `Downloaded ${result.files.length} files` })
+//   }
+
+//   const integrationOptions = [
+//     { id: "supabase", name: "Supabase", icon: Database, color: "emerald" },
+//     { id: "stripe", name: "Stripe", icon: CreditCard, color: "purple" },
+//     { id: "openai", name: "OpenAI", icon: Brain, color: "blue" },
+//     { id: "resend", name: "Resend", icon: Mail, color: "orange" },
+//   ]
+
+//   return (
+//     <div className="min-h-screen bg-[#121212]">
+//       <div className="border-b border-[#444444] bg-[#121212]/80 backdrop-blur-xl sticky top-0 z-50">
+//         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+//           <div className="flex items-center gap-4">
+//             <Button
+//               variant="ghost"
+//               size="sm"
+//               onClick={() => router.push(`/${orgSlug}/tools`)}
+//               className="text-[#B0B0B0] hover:text-[#E0E0E0] hover:bg-[#444444]"
+//             >
+//               <ChevronLeft className="h-4 w-4 mr-1" />
+//               Back
+//             </Button>
+//             <div className="h-6 w-px bg-[#444444]" />
+//             <div className="flex items-center gap-3">
+//               <div
+//                 className={`w-2 h-2 rounded-full ${step === "configure" ? "bg-[#888888]" : step === "generating" ? "bg-purple-400 animate-pulse" : "bg-emerald-400"}`}
+//               />
+//               <span className="text-[#E0E0E0] font-medium">
+//                 {step === "configure" ? "Configure" : step === "generating" ? "Generating" : "Preview"}
+//               </span>
+//             </div>
+//           </div>
+//           {step === "preview" && result && (
+//             <div className="flex items-center gap-2">
+//               <Button
+//                 variant="outline"
+//                 size="sm"
+//                 onClick={downloadFiles}
+//                 className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] hover:text-[#E0E0E0] bg-transparent"
+//               >
+//                 <Download className="h-4 w-4 mr-2" />
+//                 Download
+//               </Button>
+//               <Button
+//                 size="sm"
+//                 onClick={handleDeploy}
+//                 disabled={isDeploying}
+//                 className="bg-[#888888] hover:bg-[#666666] text-[#121212]"
+//               >
+//                 {isDeploying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Rocket className="h-4 w-4 mr-2" />}
+//                 Deploy
+//               </Button>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       {step === "configure" && (
+//         <div className="max-w-4xl mx-auto px-6 py-12">
+//           <div className="text-center mb-12">
+//             <div className="inline-flex items-center justify-center w-16 h-16 bg-[#888888]/10 rounded-2xl mb-6">
+//               <Sparkles className="h-8 w-8 text-[#888888]" />
+//             </div>
+//             <h1 className="text-4xl font-bold text-[#E0E0E0] mb-3">Create Your Tool</h1>
+//             <p className="text-[#B0B0B0] text-lg">Describe what you want to build and let AI do the rest</p>
+//           </div>
+
+//           <div className="space-y-8">
+//             <Card className="bg-[#1a1a1a] border-[#444444] p-8">
+//               <div className="space-y-6">
+//                 <div>
+//                   <Label htmlFor="toolName" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+//                     Tool Name
+//                   </Label>
+//                   <Input
+//                     id="toolName"
+//                     value={toolName}
+//                     onChange={(e) => setToolName(e.target.value)}
+//                     placeholder="e.g., Customer Support Dashboard"
+//                     className="h-12 bg-[#0a0a0a] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] focus:border-[#888888]"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <Label htmlFor="category" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+//                     Category
+//                   </Label>
+//                   <select
+//                     id="category"
+//                     value={category}
+//                     onChange={(e) => setCategory(e.target.value)}
+//                     className="w-full h-12 px-4 rounded-md bg-[#0a0a0a] border border-[#444444] text-[#E0E0E0] focus:border-[#888888] focus:outline-none"
+//                   >
+//                     <option value="dashboard">Dashboard</option>
+//                     <option value="form">Form</option>
+//                     <option value="landing-page">Landing Page</option>
+//                     <option value="admin-panel">Admin Panel</option>
+//                     <option value="e-commerce">E-commerce</option>
+//                     <option value="analytics">Analytics</option>
+//                   </select>
+//                 </div>
+
+//                 <div>
+//                   <Label htmlFor="requirements" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+//                     Requirements
+//                   </Label>
+//                   <Textarea
+//                     id="requirements"
+//                     value={requirements}
+//                     onChange={(e) => setRequirements(e.target.value)}
+//                     placeholder="Describe your tool in detail. What features do you need? What should it look like? Who will use it?"
+//                     rows={10}
+//                     className="bg-[#0a0a0a] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] focus:border-[#888888] resize-none"
+//                   />
+//                   <p className="text-sm text-[#B0B0B0] mt-2">{requirements.length} characters</p>
+//                 </div>
+//               </div>
+//             </Card>
+
+//             <Card className="bg-[#1a1a1a] border-[#444444] p-8">
+//               <Label className="text-base font-semibold text-[#E0E0E0] mb-4 block">
+//                 Integrations <span className="text-[#B0B0B0] font-normal">(Optional)</span>
+//               </Label>
+//               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+//                 {integrationOptions.map((integration) => {
+//                   const Icon = integration.icon
+//                   const isSelected = selectedIntegrations.includes(integration.id)
+//                   return (
+//                     <button
+//                       key={integration.id}
+//                       onClick={() => {
+//                         setSelectedIntegrations((prev) =>
+//                           prev.includes(integration.id)
+//                             ? prev.filter((i) => i !== integration.id)
+//                             : [...prev, integration.id],
+//                         )
+//                       }}
+//                       className={`p-6 rounded-xl border-2 transition-all ${
+//                         isSelected
+//                           ? "border-[#888888] bg-[#888888]/10"
+//                           : "border-[#444444] bg-[#0a0a0a] hover:border-[#666666]"
+//                       }`}
+//                     >
+//                       <Icon className={`h-8 w-8 mx-auto mb-3 ${isSelected ? "text-[#888888]" : "text-[#B0B0B0]"}`} />
+//                       <p className={`text-sm font-medium ${isSelected ? "text-[#E0E0E0]" : "text-[#B0B0B0]"}`}>
+//                         {integration.name}
+//                       </p>
+//                     </button>
+//                   )
+//                 })}
+//               </div>
+//             </Card>
+
+//             <Button
+//               onClick={handleGenerate}
+//               disabled={isGenerating || !toolName || !requirements}
+//               className="w-full h-14 text-lg bg-[#888888] hover:bg-[#666666] text-[#121212] font-semibold"
+//             >
+//               {isGenerating ? (
+//                 <>
+//                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+//                   Generating...
+//                 </>
+//               ) : (
+//                 <>
+//                   <Zap className="h-5 w-5 mr-2" />
+//                   Generate Tool
+//                 </>
+//               )}
+//             </Button>
+//           </div>
+//         </div>
+//       )}
+
+//       {step === "generating" && (
+//         <div className="h-[calc(100vh-73px)] flex items-center justify-center p-6">
+//           <div className="w-full max-w-4xl space-y-8">
+//             <div className="text-center">
+//               <div className="inline-flex items-center justify-center w-20 h-20 bg-purple-500/10 rounded-full mb-6 relative">
+//                 <Sparkles className="h-10 w-10 text-purple-400 animate-pulse" />
+//                 <div className="absolute inset-0 rounded-full border-2 border-purple-400/20 animate-ping" />
+//               </div>
+//               <h2 className="text-3xl font-bold text-[#E0E0E0] mb-2">Generating Your Tool</h2>
+//               <p className="text-[#B0B0B0]">AI is crafting your custom tool...</p>
+//             </div>
+
+//             <Card className="bg-[#1a1a1a] border-[#444444] p-8">
+//               <div className="space-y-6">
+//                 <div className="flex items-center justify-between">
+//                   <span className="text-[#E0E0E0] font-medium">Progress</span>
+//                   <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-base px-4 py-1">
+//                     {generationProgress}%
+//                   </Badge>
+//                 </div>
+
+//                 <div className="w-full bg-[#0a0a0a] rounded-full h-3 overflow-hidden">
+//                   <div
+//                     className="h-full bg-[#888888] transition-all duration-500 ease-out"
+//                     style={{ width: `${generationProgress}%` }}
+//                   />
+//                 </div>
+
+//                 <div className="bg-[#0a0a0a] rounded-lg p-6 h-96 overflow-y-auto font-mono text-sm space-y-1">
+//                   {streamingLogs.map((log, index) => (
+//                     <div key={index} className="text-[#B0B0B0]">
+//                       {log}
+//                     </div>
+//                   ))}
+//                   <div ref={logsEndRef} />
+//                 </div>
+//               </div>
+//             </Card>
+//           </div>
+//         </div>
+//       )}
+
+//       {step === "preview" && result && (
+//         <div className="h-[calc(100vh-73px)] flex">
+//           <div className="w-80 border-r border-[#444444] bg-[#1a1a1a] flex flex-col">
+//             <div className="p-4 border-b border-[#444444]">
+//               <h3 className="text-sm font-semibold text-[#E0E0E0] mb-1">Generated Files</h3>
+//               <p className="text-xs text-[#B0B0B0]">{result.files.length} files</p>
+//             </div>
+//             <div className="flex-1 overflow-y-auto p-2 space-y-1">
+//               {result.files.map((file, index) => (
+//                 <button
+//                   key={index}
+//                   onClick={() => setSelectedFile(file)}
+//                   className={`w-full text-left p-3 rounded-lg transition-colors ${
+//                     selectedFile === file ? "bg-[#888888] text-[#121212]" : "text-[#B0B0B0] hover:bg-[#444444]"
+//                   }`}
+//                 >
+//                   <div className="flex items-center gap-2">
+//                     <FileCode className="h-4 w-4 flex-shrink-0" />
+//                     <span className="text-sm font-mono truncate">{file.name}</span>
+//                   </div>
+//                 </button>
+//               ))}
+//             </div>
+//           </div>
+
+//           <div className="flex-1 flex flex-col bg-[#0a0a0a]">
+//             {result.demoUrl ? (
+//               <>
+//                 <div className="p-4 border-b border-[#444444] flex items-center justify-between bg-[#1a1a1a]">
+//                   <div className="flex items-center gap-3">
+//                     <div className="flex items-center gap-1.5">
+//                       <div className="w-3 h-3 rounded-full bg-red-400" />
+//                       <div className="w-3 h-3 rounded-full bg-yellow-400" />
+//                       <div className="w-3 h-3 rounded-full bg-emerald-400" />
+//                     </div>
+//                     <span className="text-sm text-[#B0B0B0] font-mono">{result.demoUrl}</span>
+//                   </div>
+//                   <Button
+//                     variant="ghost"
+//                     size="sm"
+//                     onClick={() => window.open(result.demoUrl!, "_blank")}
+//                     className="text-[#B0B0B0] hover:text-[#E0E0E0]"
+//                   >
+//                     <ExternalLink className="h-4 w-4" />
+//                   </Button>
+//                 </div>
+//                 <iframe
+//                   src={result.demoUrl}
+//                   className="flex-1 w-full bg-white"
+//                   title="Generated Tool Preview"
+//                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+//                 />
+//               </>
+//             ) : selectedFile ? (
+//               <div className="flex-1 flex flex-col">
+//                 <div className="p-4 border-b border-[#444444] flex items-center justify-between bg-[#1a1a1a]">
+//                   <span className="text-sm font-mono text-[#E0E0E0]">{selectedFile.name}</span>
+//                   <Button
+//                     variant="ghost"
+//                     size="sm"
+//                     onClick={() => {
+//                       navigator.clipboard.writeText(selectedFile.content)
+//                       toast({ title: "Copied to clipboard" })
+//                     }}
+//                     className="text-[#B0B0B0] hover:text-[#E0E0E0]"
+//                   >
+//                     <Copy className="h-4 w-4" />
+//                   </Button>
+//                 </div>
+//                 <div className="flex-1 overflow-auto p-6">
+//                   <pre className="text-sm text-[#E0E0E0] font-mono whitespace-pre-wrap break-words">
+//                     <code>{selectedFile.content}</code>
+//                   </pre>
+//                 </div>
+//               </div>
+//             ) : (
+//               <div className="flex-1 flex items-center justify-center">
+//                 <div className="text-center text-[#B0B0B0]">
+//                   <Eye className="h-16 w-16 mx-auto mb-4 opacity-50" />
+//                   <p className="text-lg">Select a file to view</p>
+//                 </div>
+//               </div>
+//             )}
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   )
+// }
+
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -1425,7 +1927,6 @@ import { Badge } from "@/components/ui/badge"
 import {
   Sparkles,
   Rocket,
-  Eye,
   Download,
   Loader2,
   ExternalLink,
@@ -1437,6 +1938,17 @@ import {
   Mail,
   Brain,
   FileCode,
+  Maximize2,
+  Minimize2,
+  Code2,
+  Monitor,
+  SplitSquareHorizontal,
+  Search,
+  Check,
+  ChevronRight,
+  Settings,
+  RefreshCw,
+  X,
 } from "lucide-react"
 import { v0ServiceAdvanced, type StreamEvent } from "@/lib/v0-service-advanced"
 import { vercelDeployment } from "@/lib/vercel-deployments"
@@ -1456,6 +1968,8 @@ interface GenerationResult {
   files: GeneratedFile[]
 }
 
+type ViewMode = "preview" | "code" | "split"
+
 export default function CreateToolPage() {
   const [step, setStep] = useState<"configure" | "generating" | "preview">("configure")
   const [isGenerating, setIsGenerating] = useState(false)
@@ -1465,6 +1979,13 @@ export default function CreateToolPage() {
   const [result, setResult] = useState<GenerationResult | null>(null)
   const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
   const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null)
+
+  const [viewMode, setViewMode] = useState<ViewMode>("preview")
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [fileSearchQuery, setFileSearchQuery] = useState("")
+  const [showLogs, setShowLogs] = useState(false)
+  const [iframeScale, setIframeScale] = useState(100)
 
   // Form state
   const [toolName, setToolName] = useState("")
@@ -1477,10 +1998,29 @@ export default function CreateToolPage() {
   const router = useRouter()
   const orgSlug = params?.slug as string
   const logsEndRef = useRef<HTMLDivElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [streamingLogs])
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (step !== "preview") return
+
+      if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setIsFullscreen(!isFullscreen)
+      }
+      if (e.key === "l" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setShowLogs(!showLogs)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
+  }, [step, isFullscreen, showLogs])
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString()
@@ -1549,6 +2089,7 @@ export default function CreateToolPage() {
 
       addLog(`✨ Generated ${files.length} files successfully!`)
       setStep("preview")
+      setViewMode(generationResult.demoUrl ? "preview" : "code")
       toast({ title: "Tool generated successfully!" })
     } catch (error) {
       addLog(`❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -1608,6 +2149,20 @@ export default function CreateToolPage() {
     toast({ title: `Downloaded ${result.files.length} files` })
   }
 
+  const downloadSingleFile = (file: GeneratedFile) => {
+    const blob = new Blob([file.content], { type: "text/plain" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = file.name
+    a.click()
+    URL.revokeObjectURL(url)
+    toast({ title: `Downloaded ${file.name}` })
+  }
+
+  const filteredFiles =
+    result?.files.filter((file) => file.name.toLowerCase().includes(fileSearchQuery.toLowerCase())) || []
+
   const integrationOptions = [
     { id: "supabase", name: "Supabase", icon: Database, color: "emerald" },
     { id: "stripe", name: "Stripe", icon: CreditCard, color: "purple" },
@@ -1616,47 +2171,112 @@ export default function CreateToolPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#121212]">
-      <div className="border-b border-[#444444] bg-[#121212]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push(`/${orgSlug}/tools`)}
-              className="text-[#B0B0B0] hover:text-[#E0E0E0] hover:bg-[#444444]"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <div className="h-6 w-px bg-[#444444]" />
-            <div className="flex items-center gap-3">
+    <div className={`min-h-screen bg-background ${isFullscreen ? "fixed inset-0 z-50" : ""}`}>
+      <div className="border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-[2000px] mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {!isFullscreen && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/${orgSlug}/tools`)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Back
+                </Button>
+                <div className="h-5 w-px bg-border" />
+              </>
+            )}
+            <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${step === "configure" ? "bg-[#888888]" : step === "generating" ? "bg-purple-400 animate-pulse" : "bg-emerald-400"}`}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  step === "configure"
+                    ? "bg-muted-foreground"
+                    : step === "generating"
+                      ? "bg-primary animate-pulse"
+                      : "bg-emerald-500"
+                }`}
               />
-              <span className="text-[#E0E0E0] font-medium">
-                {step === "configure" ? "Configure" : step === "generating" ? "Generating" : "Preview"}
+              <span className="text-sm font-medium text-foreground">
+                {step === "configure" ? "Configure" : step === "generating" ? "Generating" : toolName || "Preview"}
               </span>
             </div>
           </div>
+
           {step === "preview" && result && (
             <div className="flex items-center gap-2">
+              {result.demoUrl && (
+                <div className="flex items-center gap-1 mr-2 bg-muted rounded-lg p-1">
+                  <Button
+                    variant={viewMode === "preview" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("preview")}
+                    className="h-7 px-2"
+                  >
+                    <Monitor className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "code" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("code")}
+                    className="h-7 px-2"
+                  >
+                    <Code2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "split" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("split")}
+                    className="h-7 px-2"
+                  >
+                    <SplitSquareHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLogs(!showLogs)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+
+              <div className="h-5 w-px bg-border" />
+
               <Button
                 variant="outline"
                 size="sm"
                 onClick={downloadFiles}
-                className="border-[#444444] text-[#B0B0B0] hover:bg-[#444444] hover:text-[#E0E0E0] bg-transparent"
+                className="text-muted-foreground hover:text-foreground bg-transparent"
               >
-                <Download className="h-4 w-4 mr-2" />
-                Download
+                <Download className="h-4 w-4 mr-1.5" />
+                All
               </Button>
+
               <Button
                 size="sm"
                 onClick={handleDeploy}
                 disabled={isDeploying}
-                className="bg-[#888888] hover:bg-[#666666] text-[#121212]"
+                className="bg-primary hover:bg-primary/90"
               >
-                {isDeploying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Rocket className="h-4 w-4 mr-2" />}
+                {isDeploying ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Rocket className="h-4 w-4 mr-1.5" />
+                )}
                 Deploy
               </Button>
             </div>
@@ -1665,20 +2285,22 @@ export default function CreateToolPage() {
       </div>
 
       {step === "configure" && (
-        <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="max-w-5xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#888888]/10 rounded-2xl mb-6">
-              <Sparkles className="h-8 w-8 text-[#888888]" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-6">
+              <Sparkles className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-4xl font-bold text-[#E0E0E0] mb-3">Create Your Tool</h1>
-            <p className="text-[#B0B0B0] text-lg">Describe what you want to build and let AI do the rest</p>
+            <h1 className="text-4xl font-bold text-foreground mb-3 text-balance">Create Your Tool</h1>
+            <p className="text-muted-foreground text-lg text-pretty">
+              Describe what you want to build and let AI do the rest
+            </p>
           </div>
 
-          <div className="space-y-8">
-            <Card className="bg-[#1a1a1a] border-[#444444] p-8">
+          <div className="space-y-6">
+            <Card className="bg-card border-border p-8">
               <div className="space-y-6">
                 <div>
-                  <Label htmlFor="toolName" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+                  <Label htmlFor="toolName" className="text-base font-semibold text-foreground mb-3 block">
                     Tool Name
                   </Label>
                   <Input
@@ -1686,19 +2308,19 @@ export default function CreateToolPage() {
                     value={toolName}
                     onChange={(e) => setToolName(e.target.value)}
                     placeholder="e.g., Customer Support Dashboard"
-                    className="h-12 bg-[#0a0a0a] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] focus:border-[#888888]"
+                    className="h-12 bg-background border-border text-foreground placeholder-muted-foreground"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="category" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+                  <Label htmlFor="category" className="text-base font-semibold text-foreground mb-3 block">
                     Category
                   </Label>
                   <select
                     id="category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full h-12 px-4 rounded-md bg-[#0a0a0a] border border-[#444444] text-[#E0E0E0] focus:border-[#888888] focus:outline-none"
+                    className="w-full h-12 px-4 rounded-lg bg-background border border-border text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="dashboard">Dashboard</option>
                     <option value="form">Form</option>
@@ -1710,7 +2332,7 @@ export default function CreateToolPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="requirements" className="text-base font-semibold text-[#E0E0E0] mb-3 block">
+                  <Label htmlFor="requirements" className="text-base font-semibold text-foreground mb-3 block">
                     Requirements
                   </Label>
                   <Textarea
@@ -1719,16 +2341,16 @@ export default function CreateToolPage() {
                     onChange={(e) => setRequirements(e.target.value)}
                     placeholder="Describe your tool in detail. What features do you need? What should it look like? Who will use it?"
                     rows={10}
-                    className="bg-[#0a0a0a] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] focus:border-[#888888] resize-none"
+                    className="bg-background border-border text-foreground placeholder-muted-foreground resize-none"
                   />
-                  <p className="text-sm text-[#B0B0B0] mt-2">{requirements.length} characters</p>
+                  <p className="text-sm text-muted-foreground mt-2">{requirements.length} characters</p>
                 </div>
               </div>
             </Card>
 
-            <Card className="bg-[#1a1a1a] border-[#444444] p-8">
-              <Label className="text-base font-semibold text-[#E0E0E0] mb-4 block">
-                Integrations <span className="text-[#B0B0B0] font-normal">(Optional)</span>
+            <Card className="bg-card border-border p-8">
+              <Label className="text-base font-semibold text-foreground mb-4 block">
+                Integrations <span className="text-muted-foreground font-normal">(Optional)</span>
               </Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {integrationOptions.map((integration) => {
@@ -1746,12 +2368,14 @@ export default function CreateToolPage() {
                       }}
                       className={`p-6 rounded-xl border-2 transition-all ${
                         isSelected
-                          ? "border-[#888888] bg-[#888888]/10"
-                          : "border-[#444444] bg-[#0a0a0a] hover:border-[#666666]"
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-background hover:border-primary/50"
                       }`}
                     >
-                      <Icon className={`h-8 w-8 mx-auto mb-3 ${isSelected ? "text-[#888888]" : "text-[#B0B0B0]"}`} />
-                      <p className={`text-sm font-medium ${isSelected ? "text-[#E0E0E0]" : "text-[#B0B0B0]"}`}>
+                      <Icon
+                        className={`h-8 w-8 mx-auto mb-3 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
+                      />
+                      <p className={`text-sm font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>
                         {integration.name}
                       </p>
                     </button>
@@ -1763,7 +2387,7 @@ export default function CreateToolPage() {
             <Button
               onClick={handleGenerate}
               disabled={isGenerating || !toolName || !requirements}
-              className="w-full h-14 text-lg bg-[#888888] hover:bg-[#666666] text-[#121212] font-semibold"
+              className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             >
               {isGenerating ? (
                 <>
@@ -1785,33 +2409,33 @@ export default function CreateToolPage() {
         <div className="h-[calc(100vh-73px)] flex items-center justify-center p-6">
           <div className="w-full max-w-4xl space-y-8">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-purple-500/10 rounded-full mb-6 relative">
-                <Sparkles className="h-10 w-10 text-purple-400 animate-pulse" />
-                <div className="absolute inset-0 rounded-full border-2 border-purple-400/20 animate-ping" />
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6 relative">
+                <Sparkles className="h-10 w-10 text-primary animate-pulse" />
+                <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
               </div>
-              <h2 className="text-3xl font-bold text-[#E0E0E0] mb-2">Generating Your Tool</h2>
-              <p className="text-[#B0B0B0]">AI is crafting your custom tool...</p>
+              <h2 className="text-3xl font-bold text-foreground mb-2">Generating Your Tool</h2>
+              <p className="text-muted-foreground">AI is crafting your custom tool...</p>
             </div>
 
-            <Card className="bg-[#1a1a1a] border-[#444444] p-8">
+            <Card className="bg-card border-border p-8">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <span className="text-[#E0E0E0] font-medium">Progress</span>
-                  <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-base px-4 py-1">
+                  <span className="text-foreground font-medium">Progress</span>
+                  <Badge className="bg-primary/10 text-primary border-primary/20 text-base px-4 py-1">
                     {generationProgress}%
                   </Badge>
                 </div>
 
-                <div className="w-full bg-[#0a0a0a] rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
                   <div
-                    className="h-full bg-[#888888] transition-all duration-500 ease-out"
+                    className="h-full bg-primary transition-all duration-500 ease-out"
                     style={{ width: `${generationProgress}%` }}
                   />
                 </div>
 
-                <div className="bg-[#0a0a0a] rounded-lg p-6 h-96 overflow-y-auto font-mono text-sm space-y-1">
+                <div className="bg-background rounded-lg p-6 h-96 overflow-y-auto font-mono text-sm space-y-1">
                   {streamingLogs.map((log, index) => (
-                    <div key={index} className="text-[#B0B0B0]">
+                    <div key={index} className="text-muted-foreground">
                       {log}
                     </div>
                   ))}
@@ -1824,85 +2448,212 @@ export default function CreateToolPage() {
       )}
 
       {step === "preview" && result && (
-        <div className="h-[calc(100vh-73px)] flex">
-          <div className="w-80 border-r border-[#444444] bg-[#1a1a1a] flex flex-col">
-            <div className="p-4 border-b border-[#444444]">
-              <h3 className="text-sm font-semibold text-[#E0E0E0] mb-1">Generated Files</h3>
-              <p className="text-xs text-[#B0B0B0]">{result.files.length} files</p>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {result.files.map((file, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedFile(file)}
-                  className={`w-full text-left p-3 rounded-lg transition-colors ${
-                    selectedFile === file ? "bg-[#888888] text-[#121212]" : "text-[#B0B0B0] hover:bg-[#444444]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <FileCode className="h-4 w-4 flex-shrink-0" />
-                    <span className="text-sm font-mono truncate">{file.name}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col bg-[#0a0a0a]">
-            {result.demoUrl ? (
-              <>
-                <div className="p-4 border-b border-[#444444] flex items-center justify-between bg-[#1a1a1a]">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-400" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                      <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                    </div>
-                    <span className="text-sm text-[#B0B0B0] font-mono">{result.demoUrl}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(result.demoUrl!, "_blank")}
-                    className="text-[#B0B0B0] hover:text-[#E0E0E0]"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-                <iframe
-                  src={result.demoUrl}
-                  className="flex-1 w-full bg-white"
-                  title="Generated Tool Preview"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-                />
-              </>
-            ) : selectedFile ? (
-              <div className="flex-1 flex flex-col">
-                <div className="p-4 border-b border-[#444444] flex items-center justify-between bg-[#1a1a1a]">
-                  <span className="text-sm font-mono text-[#E0E0E0]">{selectedFile.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(selectedFile.content)
-                      toast({ title: "Copied to clipboard" })
-                    }}
-                    className="text-[#B0B0B0] hover:text-[#E0E0E0]"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex-1 overflow-auto p-6">
-                  <pre className="text-sm text-[#E0E0E0] font-mono whitespace-pre-wrap break-words">
-                    <code>{selectedFile.content}</code>
-                  </pre>
-                </div>
+        <div className={`flex ${isFullscreen ? "h-screen" : "h-[calc(100vh-73px)]"}`}>
+          <div
+            className={`border-r border-border bg-card flex flex-col transition-all duration-300 ${
+              isSidebarCollapsed ? "w-12" : "w-80"
+            }`}
+          >
+            {isSidebarCollapsed ? (
+              <div className="p-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsSidebarCollapsed(false)} className="w-full">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-[#B0B0B0]">
-                  <Eye className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">Select a file to view</p>
+              <>
+                <div className="p-4 border-b border-border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">Files</h3>
+                      <p className="text-xs text-muted-foreground">{result.files.length} total</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsSidebarCollapsed(true)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={fileSearchQuery}
+                      onChange={(e) => setFileSearchQuery(e.target.value)}
+                      placeholder="Search files..."
+                      className="pl-9 h-9 bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                  {filteredFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className={`group rounded-lg transition-colors ${
+                        selectedFile === file ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                    >
+                      <button
+                        onClick={() => setSelectedFile(file)}
+                        className="w-full text-left p-3 flex items-center gap-2"
+                      >
+                        <FileCode className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-sm font-mono truncate flex-1">{file.name}</span>
+                        {selectedFile === file && <Check className="h-4 w-4 flex-shrink-0" />}
+                      </button>
+                      <div className="px-3 pb-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigator.clipboard.writeText(file.content)
+                            toast({ title: "Copied to clipboard" })
+                          }}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            downloadSingleFile(file)
+                          }}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex-1 flex flex-col bg-background overflow-hidden">
+            {/* Preview/Code Area */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Preview Panel */}
+              {(viewMode === "preview" || viewMode === "split") && result.demoUrl && (
+                <div
+                  className={`flex flex-col bg-muted ${viewMode === "split" ? "w-1/2 border-r border-border" : "flex-1"}`}
+                >
+                  <div className="p-3 border-b border-border flex items-center justify-between bg-card">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-400" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                        <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                      </div>
+                      <span className="text-xs text-muted-foreground font-mono truncate">{result.demoUrl}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (iframeRef.current) {
+                            iframeRef.current.src = result.demoUrl!
+                          }
+                        }}
+                        className="h-7 w-7 p-0"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(result.demoUrl!, "_blank")}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex-1 relative overflow-hidden">
+                    <iframe
+                      ref={iframeRef}
+                      src={result.demoUrl}
+                      className="absolute inset-0 w-full h-full bg-white"
+                      title="Generated Tool Preview"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                      style={{
+                        transform: `scale(${iframeScale / 100})`,
+                        transformOrigin: "top left",
+                        width: `${(100 / iframeScale) * 100}%`,
+                        height: `${(100 / iframeScale) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Code Panel */}
+              {(viewMode === "code" || viewMode === "split" || !result.demoUrl) && selectedFile && (
+                <div className={`flex flex-col ${viewMode === "split" && result.demoUrl ? "w-1/2" : "flex-1"}`}>
+                  <div className="p-3 border-b border-border flex items-center justify-between bg-card">
+                    <span className="text-sm font-mono text-foreground">{selectedFile.name}</span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedFile.content)
+                          toast({ title: "Copied to clipboard" })
+                        }}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        Copy
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => downloadSingleFile(selectedFile)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-auto p-6 bg-background">
+                    <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-words leading-relaxed">
+                      <code>{selectedFile.content}</code>
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {showLogs && (
+              <div className="border-t border-border bg-card h-64 flex flex-col">
+                <div className="p-3 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Generation Logs</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {streamingLogs.length}
+                    </Badge>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setShowLogs(false)} className="h-7 w-7 p-0">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1 bg-background">
+                  {streamingLogs.map((log, index) => (
+                    <div key={index} className="text-muted-foreground">
+                      {log}
+                    </div>
+                  ))}
+                  <div ref={logsEndRef} />
                 </div>
               </div>
             )}
