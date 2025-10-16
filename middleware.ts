@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/auth/signin(.*)",
   "/auth/signup(.*)",
+  "/onboarding",  // ✅ ADD THIS - onboarding should be accessible
   "/api/webhooks/clerk",
   "/api/webhooks/stripe",
   "/api/monitoring/health",
@@ -73,10 +74,6 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   // Handle organization-based routing and redirects
   if (userId && !isPublicRoute(req)) {
-    // ✅ REMOVED THE PROBLEMATIC REDIRECT!
-    // Let /dashboard page handle the logic itself
-    // It will check if user has organizations and redirect accordingly
-    
     // Handle old route redirects (tools, templates, integrations, billing, settings)
     // These routes require an organization context
     const oldRoutes = ["/tools", "/templates", "/integrations", "/billing", "/settings"]
@@ -149,6 +146,13 @@ export const config = {
     "/(api|trpc)(.*)",
   ],
 }
+
+
+
+
+
+
+
 // import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 // import { type NextRequest, NextResponse } from "next/server"
 // import { rateLimiter, getClientIdentifier, RATE_LIMITS } from "@/lib/rate-limit"
