@@ -1914,6 +1914,757 @@
 // }
 
 
+// "use client"
+
+// import { useState, useEffect, useRef } from "react"
+// import { useParams, useRouter } from "next/navigation"
+// import { Button } from "@/components/ui/button"
+// import { Card } from "@/components/ui/card"
+// import { Input } from "@/components/ui/input"
+// import { Textarea } from "@/components/ui/textarea"
+// import { Label } from "@/components/ui/label"
+// import { Badge } from "@/components/ui/badge"
+// import {
+//   Sparkles,
+//   Rocket,
+//   Download,
+//   Loader2,
+//   ExternalLink,
+//   Copy,
+//   ChevronLeft,
+//   Zap,
+//   Database,
+//   CreditCard,
+//   Mail,
+//   Brain,
+//   FileCode,
+//   Maximize2,
+//   Minimize2,
+//   Code2,
+//   Monitor,
+//   SplitSquareHorizontal,
+//   Search,
+//   Check,
+//   ChevronRight,
+//   Settings,
+//   RefreshCw,
+//   X,
+// } from "lucide-react"
+// import { v0ServiceAdvanced, type StreamEvent } from "@/lib/v0-service-advanced"
+// import { vercelDeployment } from "@/lib/vercel-deployments"
+// import { useToast } from "@/hooks/use-toast"
+
+// interface GeneratedFile {
+//   name: string
+//   content: string
+//   type: string
+//   path?: string
+// }
+
+// interface GenerationResult {
+//   chatId: string
+//   demoUrl: string | null
+//   webUrl: string
+//   files: GeneratedFile[]
+// }
+
+// type ViewMode = "preview" | "code" | "split"
+
+// export default function CreateToolPage() {
+//   const [step, setStep] = useState<"configure" | "generating" | "preview">("configure")
+//   const [isGenerating, setIsGenerating] = useState(false)
+//   const [isDeploying, setIsDeploying] = useState(false)
+//   const [generationProgress, setGenerationProgress] = useState(0)
+//   const [streamingLogs, setStreamingLogs] = useState<string[]>([])
+//   const [result, setResult] = useState<GenerationResult | null>(null)
+//   const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
+//   const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null)
+
+//   const [viewMode, setViewMode] = useState<ViewMode>("preview")
+//   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+//   const [isFullscreen, setIsFullscreen] = useState(false)
+//   const [fileSearchQuery, setFileSearchQuery] = useState("")
+//   const [showLogs, setShowLogs] = useState(false)
+//   const [iframeScale, setIframeScale] = useState(100)
+
+//   // Form state
+//   const [toolName, setToolName] = useState("")
+//   const [category, setCategory] = useState("dashboard")
+//   const [requirements, setRequirements] = useState("")
+//   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([])
+
+//   const { toast } = useToast()
+//   const params = useParams()
+//   const router = useRouter()
+//   const orgSlug = params?.slug as string
+//   const logsEndRef = useRef<HTMLDivElement>(null)
+//   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+//   useEffect(() => {
+//     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
+//   }, [streamingLogs])
+
+//   useEffect(() => {
+//     const handleKeyPress = (e: KeyboardEvent) => {
+//       if (step !== "preview") return
+
+//       if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
+//         e.preventDefault()
+//         setIsFullscreen(!isFullscreen)
+//       }
+//       if (e.key === "l" && (e.metaKey || e.ctrlKey)) {
+//         e.preventDefault()
+//         setShowLogs(!showLogs)
+//       }
+//     }
+
+//     window.addEventListener("keydown", handleKeyPress)
+//     return () => window.removeEventListener("keydown", handleKeyPress)
+//   }, [step, isFullscreen, showLogs])
+
+//   const addLog = (message: string) => {
+//     const timestamp = new Date().toLocaleTimeString()
+//     setStreamingLogs((prev) => [...prev, `[${timestamp}] ${message}`])
+//   }
+
+//   const handleGenerate = async () => {
+//     if (!toolName || !requirements) {
+//       toast({ title: "Please fill in tool name and requirements", variant: "destructive" })
+//       return
+//     }
+
+//     setIsGenerating(true)
+//     setGenerationProgress(0)
+//     setStreamingLogs([])
+//     setStep("generating")
+
+//     try {
+//       addLog("🚀 Initializing AI generation engine...")
+//       setGenerationProgress(5)
+
+//       const response = await v0ServiceAdvanced.generateToolWithStreaming(
+//         {
+//           toolName,
+//           category,
+//           requirements,
+//           organizationSlug: orgSlug,
+//           userEmail: "user@example.com",
+//           integrations: selectedIntegrations,
+//           attachments: [],
+//           chatPrivacy: "private",
+//         },
+//         (event: StreamEvent) => {
+//           if (event.type === "chunk") {
+//             addLog(`${event.data.message}`)
+//             setGenerationProgress((prev) => Math.min(prev + 5, 95))
+//           } else if (event.type === "complete") {
+//             addLog("✅ Generation complete!")
+//             setGenerationProgress(100)
+//           } else if (event.type === "error") {
+//             addLog(`❌ Error: ${event.data.error}`)
+//           }
+//         },
+//       )
+
+//       const latestVersion = (response as any).latestVersion
+//       const files: GeneratedFile[] =
+//         latestVersion?.files?.map((file: any) => ({
+//           name: file.name || file.path || "unnamed",
+//           content: file.content || file.data || "",
+//           type: file.type || file.language || "typescript",
+//           path: file.path,
+//         })) || []
+
+//       const generationResult: GenerationResult = {
+//         chatId: response.id,
+//         demoUrl: latestVersion?.demoUrl || null,
+//         webUrl: (response as any).webUrl || "",
+//         files,
+//       }
+
+//       setResult(generationResult)
+//       if (files.length > 0) {
+//         setSelectedFile(files[0])
+//       }
+
+//       addLog(`✨ Generated ${files.length} files successfully!`)
+//       setStep("preview")
+//       setViewMode(generationResult.demoUrl ? "preview" : "code")
+//       toast({ title: "Tool generated successfully!" })
+//     } catch (error) {
+//       addLog(`❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+//       toast({ title: "Generation failed", description: "Please try again", variant: "destructive" })
+//     } finally {
+//       setIsGenerating(false)
+//     }
+//   }
+
+//   const handleDeploy = async () => {
+//     if (!result || result.files.length === 0) {
+//       toast({ title: "No files to deploy", variant: "destructive" })
+//       return
+//     }
+
+//     setIsDeploying(true)
+//     addLog("🚀 Starting deployment to Vercel...")
+
+//     try {
+//       const deploymentResult = await vercelDeployment.deployToVercel({
+//         projectName: toolName.toLowerCase().replace(/\s+/g, "-"),
+//         files: result.files.map((file) => ({
+//           path: file.path || file.name,
+//           content: file.content,
+//         })),
+//       })
+
+//       if (deploymentResult.success) {
+//         setDeploymentUrl(deploymentResult.url || null)
+//         addLog(`✅ Deployed successfully! URL: ${deploymentResult.url}`)
+//         toast({ title: "Deployed successfully!", description: deploymentResult.url })
+//       } else {
+//         addLog(`❌ Deployment failed: ${deploymentResult.error}`)
+//         toast({ title: "Deployment failed", variant: "destructive" })
+//       }
+//     } catch (error) {
+//       addLog(`❌ Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`)
+//       toast({ title: "Deployment error", variant: "destructive" })
+//     } finally {
+//       setIsDeploying(false)
+//     }
+//   }
+
+//   const downloadFiles = () => {
+//     if (!result) return
+
+//     result.files.forEach((file) => {
+//       const blob = new Blob([file.content], { type: "text/plain" })
+//       const url = URL.createObjectURL(blob)
+//       const a = document.createElement("a")
+//       a.href = url
+//       a.download = file.name
+//       a.click()
+//       URL.revokeObjectURL(url)
+//     })
+
+//     toast({ title: `Downloaded ${result.files.length} files` })
+//   }
+
+//   const downloadSingleFile = (file: GeneratedFile) => {
+//     const blob = new Blob([file.content], { type: "text/plain" })
+//     const url = URL.createObjectURL(blob)
+//     const a = document.createElement("a")
+//     a.href = url
+//     a.download = file.name
+//     a.click()
+//     URL.revokeObjectURL(url)
+//     toast({ title: `Downloaded ${file.name}` })
+//   }
+
+//   const filteredFiles =
+//     result?.files.filter((file) => file.name.toLowerCase().includes(fileSearchQuery.toLowerCase())) || []
+
+//   const integrationOptions = [
+//     { id: "supabase", name: "Supabase", icon: Database, color: "emerald" },
+//     { id: "stripe", name: "Stripe", icon: CreditCard, color: "purple" },
+//     { id: "openai", name: "OpenAI", icon: Brain, color: "blue" },
+//     { id: "resend", name: "Resend", icon: Mail, color: "orange" },
+//   ]
+
+//   return (
+//     <div className={`min-h-screen bg-background ${isFullscreen ? "fixed inset-0 z-50" : ""}`}>
+//       <div className="border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-50">
+//         <div className="max-w-[2000px] mx-auto px-4 py-3 flex items-center justify-between">
+//           <div className="flex items-center gap-3">
+//             {!isFullscreen && (
+//               <>
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   onClick={() => router.push(`/${orgSlug}/tools`)}
+//                   className="text-muted-foreground hover:text-foreground"
+//                 >
+//                   <ChevronLeft className="h-4 w-4 mr-1" />
+//                   Back
+//                 </Button>
+//                 <div className="h-5 w-px bg-border" />
+//               </>
+//             )}
+//             <div className="flex items-center gap-2">
+//               <div
+//                 className={`w-2 h-2 rounded-full transition-colors ${
+//                   step === "configure"
+//                     ? "bg-muted-foreground"
+//                     : step === "generating"
+//                       ? "bg-primary animate-pulse"
+//                       : "bg-emerald-500"
+//                 }`}
+//               />
+//               <span className="text-sm font-medium text-foreground">
+//                 {step === "configure" ? "Configure" : step === "generating" ? "Generating" : toolName || "Preview"}
+//               </span>
+//             </div>
+//           </div>
+
+//           {step === "preview" && result && (
+//             <div className="flex items-center gap-2">
+//               {result.demoUrl && (
+//                 <div className="flex items-center gap-1 mr-2 bg-muted rounded-lg p-1">
+//                   <Button
+//                     variant={viewMode === "preview" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setViewMode("preview")}
+//                     className="h-7 px-2"
+//                   >
+//                     <Monitor className="h-3.5 w-3.5" />
+//                   </Button>
+//                   <Button
+//                     variant={viewMode === "code" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setViewMode("code")}
+//                     className="h-7 px-2"
+//                   >
+//                     <Code2 className="h-3.5 w-3.5" />
+//                   </Button>
+//                   <Button
+//                     variant={viewMode === "split" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setViewMode("split")}
+//                     className="h-7 px-2"
+//                   >
+//                     <SplitSquareHorizontal className="h-3.5 w-3.5" />
+//                   </Button>
+//                 </div>
+//               )}
+
+//               <Button
+//                 variant="ghost"
+//                 size="sm"
+//                 onClick={() => setShowLogs(!showLogs)}
+//                 className="text-muted-foreground hover:text-foreground"
+//               >
+//                 <Settings className="h-4 w-4" />
+//               </Button>
+
+//               <Button
+//                 variant="ghost"
+//                 size="sm"
+//                 onClick={() => setIsFullscreen(!isFullscreen)}
+//                 className="text-muted-foreground hover:text-foreground"
+//               >
+//                 {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+//               </Button>
+
+//               <div className="h-5 w-px bg-border" />
+
+//               <Button
+//                 variant="outline"
+//                 size="sm"
+//                 onClick={downloadFiles}
+//                 className="text-muted-foreground hover:text-foreground bg-transparent"
+//               >
+//                 <Download className="h-4 w-4 mr-1.5" />
+//                 All
+//               </Button>
+
+//               <Button
+//                 size="sm"
+//                 onClick={handleDeploy}
+//                 disabled={isDeploying}
+//                 className="bg-primary hover:bg-primary/90"
+//               >
+//                 {isDeploying ? (
+//                   <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+//                 ) : (
+//                   <Rocket className="h-4 w-4 mr-1.5" />
+//                 )}
+//                 Deploy
+//               </Button>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       {step === "configure" && (
+//         <div className="max-w-5xl mx-auto px-6 py-12">
+//           <div className="text-center mb-12">
+//             <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-6">
+//               <Sparkles className="h-8 w-8 text-primary" />
+//             </div>
+//             <h1 className="text-4xl font-bold text-foreground mb-3 text-balance">Create Your Tool</h1>
+//             <p className="text-muted-foreground text-lg text-pretty">
+//               Describe what you want to build and let AI do the rest
+//             </p>
+//           </div>
+
+//           <div className="space-y-6">
+//             <Card className="bg-card border-border p-8">
+//               <div className="space-y-6">
+//                 <div>
+//                   <Label htmlFor="toolName" className="text-base font-semibold text-foreground mb-3 block">
+//                     Tool Name
+//                   </Label>
+//                   <Input
+//                     id="toolName"
+//                     value={toolName}
+//                     onChange={(e) => setToolName(e.target.value)}
+//                     placeholder="e.g., Customer Support Dashboard"
+//                     className="h-12 bg-background border-border text-foreground placeholder-muted-foreground"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <Label htmlFor="category" className="text-base font-semibold text-foreground mb-3 block">
+//                     Category
+//                   </Label>
+//                   <select
+//                     id="category"
+//                     value={category}
+//                     onChange={(e) => setCategory(e.target.value)}
+//                     className="w-full h-12 px-4 rounded-lg bg-background border border-border text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+//                   >
+//                     <option value="dashboard">Dashboard</option>
+//                     <option value="form">Form</option>
+//                     <option value="landing-page">Landing Page</option>
+//                     <option value="admin-panel">Admin Panel</option>
+//                     <option value="e-commerce">E-commerce</option>
+//                     <option value="analytics">Analytics</option>
+//                   </select>
+//                 </div>
+
+//                 <div>
+//                   <Label htmlFor="requirements" className="text-base font-semibold text-foreground mb-3 block">
+//                     Requirements
+//                   </Label>
+//                   <Textarea
+//                     id="requirements"
+//                     value={requirements}
+//                     onChange={(e) => setRequirements(e.target.value)}
+//                     placeholder="Describe your tool in detail. What features do you need? What should it look like? Who will use it?"
+//                     rows={10}
+//                     className="bg-background border-border text-foreground placeholder-muted-foreground resize-none"
+//                   />
+//                   <p className="text-sm text-muted-foreground mt-2">{requirements.length} characters</p>
+//                 </div>
+//               </div>
+//             </Card>
+
+//             <Card className="bg-card border-border p-8">
+//               <Label className="text-base font-semibold text-foreground mb-4 block">
+//                 Integrations <span className="text-muted-foreground font-normal">(Optional)</span>
+//               </Label>
+//               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+//                 {integrationOptions.map((integration) => {
+//                   const Icon = integration.icon
+//                   const isSelected = selectedIntegrations.includes(integration.id)
+//                   return (
+//                     <button
+//                       key={integration.id}
+//                       onClick={() => {
+//                         setSelectedIntegrations((prev) =>
+//                           prev.includes(integration.id)
+//                             ? prev.filter((i) => i !== integration.id)
+//                             : [...prev, integration.id],
+//                         )
+//                       }}
+//                       className={`p-6 rounded-xl border-2 transition-all ${
+//                         isSelected
+//                           ? "border-primary bg-primary/10"
+//                           : "border-border bg-background hover:border-primary/50"
+//                       }`}
+//                     >
+//                       <Icon
+//                         className={`h-8 w-8 mx-auto mb-3 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
+//                       />
+//                       <p className={`text-sm font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>
+//                         {integration.name}
+//                       </p>
+//                     </button>
+//                   )
+//                 })}
+//               </div>
+//             </Card>
+
+//             <Button
+//               onClick={handleGenerate}
+//               disabled={isGenerating || !toolName || !requirements}
+//               className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+//             >
+//               {isGenerating ? (
+//                 <>
+//                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+//                   Generating...
+//                 </>
+//               ) : (
+//                 <>
+//                   <Zap className="h-5 w-5 mr-2" />
+//                   Generate Tool
+//                 </>
+//               )}
+//             </Button>
+//           </div>
+//         </div>
+//       )}
+
+//       {step === "generating" && (
+//         <div className="h-[calc(100vh-73px)] flex items-center justify-center p-6">
+//           <div className="w-full max-w-4xl space-y-8">
+//             <div className="text-center">
+//               <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6 relative">
+//                 <Sparkles className="h-10 w-10 text-primary animate-pulse" />
+//                 <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
+//               </div>
+//               <h2 className="text-3xl font-bold text-foreground mb-2">Generating Your Tool</h2>
+//               <p className="text-muted-foreground">AI is crafting your custom tool...</p>
+//             </div>
+
+//             <Card className="bg-card border-border p-8">
+//               <div className="space-y-6">
+//                 <div className="flex items-center justify-between">
+//                   <span className="text-foreground font-medium">Progress</span>
+//                   <Badge className="bg-primary/10 text-primary border-primary/20 text-base px-4 py-1">
+//                     {generationProgress}%
+//                   </Badge>
+//                 </div>
+
+//                 <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+//                   <div
+//                     className="h-full bg-primary transition-all duration-500 ease-out"
+//                     style={{ width: `${generationProgress}%` }}
+//                   />
+//                 </div>
+
+//                 <div className="bg-background rounded-lg p-6 h-96 overflow-y-auto font-mono text-sm space-y-1">
+//                   {streamingLogs.map((log, index) => (
+//                     <div key={index} className="text-muted-foreground">
+//                       {log}
+//                     </div>
+//                   ))}
+//                   <div ref={logsEndRef} />
+//                 </div>
+//               </div>
+//             </Card>
+//           </div>
+//         </div>
+//       )}
+
+//       {step === "preview" && result && (
+//         <div className={`flex ${isFullscreen ? "h-screen" : "h-[calc(100vh-73px)]"}`}>
+//           <div
+//             className={`border-r border-border bg-card flex flex-col transition-all duration-300 ${
+//               isSidebarCollapsed ? "w-12" : "w-80"
+//             }`}
+//           >
+//             {isSidebarCollapsed ? (
+//               <div className="p-2">
+//                 <Button variant="ghost" size="sm" onClick={() => setIsSidebarCollapsed(false)} className="w-full">
+//                   <ChevronRight className="h-4 w-4" />
+//                 </Button>
+//               </div>
+//             ) : (
+//               <>
+//                 <div className="p-4 border-b border-border space-y-3">
+//                   <div className="flex items-center justify-between">
+//                     <div>
+//                       <h3 className="text-sm font-semibold text-foreground">Files</h3>
+//                       <p className="text-xs text-muted-foreground">{result.files.length} total</p>
+//                     </div>
+//                     <Button
+//                       variant="ghost"
+//                       size="sm"
+//                       onClick={() => setIsSidebarCollapsed(true)}
+//                       className="h-7 w-7 p-0"
+//                     >
+//                       <ChevronLeft className="h-4 w-4" />
+//                     </Button>
+//                   </div>
+//                   <div className="relative">
+//                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+//                     <Input
+//                       value={fileSearchQuery}
+//                       onChange={(e) => setFileSearchQuery(e.target.value)}
+//                       placeholder="Search files..."
+//                       className="pl-9 h-9 bg-background"
+//                     />
+//                   </div>
+//                 </div>
+//                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
+//                   {filteredFiles.map((file, index) => (
+//                     <div
+//                       key={index}
+//                       className={`group rounded-lg transition-colors ${
+//                         selectedFile === file ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+//                       }`}
+//                     >
+//                       <button
+//                         onClick={() => setSelectedFile(file)}
+//                         className="w-full text-left p-3 flex items-center gap-2"
+//                       >
+//                         <FileCode className="h-4 w-4 flex-shrink-0" />
+//                         <span className="text-sm font-mono truncate flex-1">{file.name}</span>
+//                         {selectedFile === file && <Check className="h-4 w-4 flex-shrink-0" />}
+//                       </button>
+//                       <div className="px-3 pb-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+//                         <Button
+//                           variant="ghost"
+//                           size="sm"
+//                           onClick={(e) => {
+//                             e.stopPropagation()
+//                             navigator.clipboard.writeText(file.content)
+//                             toast({ title: "Copied to clipboard" })
+//                           }}
+//                           className="h-6 px-2 text-xs"
+//                         >
+//                           <Copy className="h-3 w-3 mr-1" />
+//                           Copy
+//                         </Button>
+//                         <Button
+//                           variant="ghost"
+//                           size="sm"
+//                           onClick={(e) => {
+//                             e.stopPropagation()
+//                             downloadSingleFile(file)
+//                           }}
+//                           className="h-6 px-2 text-xs"
+//                         >
+//                           <Download className="h-3 w-3 mr-1" />
+//                           Save
+//                         </Button>
+//                       </div>
+//                     </div>
+//                   ))}
+//                 </div>
+//               </>
+//             )}
+//           </div>
+
+//           <div className="flex-1 flex flex-col bg-background overflow-hidden">
+//             {/* Preview/Code Area */}
+//             <div className="flex-1 flex overflow-hidden">
+//               {/* Preview Panel */}
+//               {(viewMode === "preview" || viewMode === "split") && result.demoUrl && (
+//                 <div
+//                   className={`flex flex-col bg-muted ${viewMode === "split" ? "w-1/2 border-r border-border" : "flex-1"}`}
+//                 >
+//                   <div className="p-3 border-b border-border flex items-center justify-between bg-card">
+//                     <div className="flex items-center gap-2 flex-1 min-w-0">
+//                       <div className="flex items-center gap-1.5">
+//                         <div className="w-3 h-3 rounded-full bg-red-400" />
+//                         <div className="w-3 h-3 rounded-full bg-yellow-400" />
+//                         <div className="w-3 h-3 rounded-full bg-emerald-400" />
+//                       </div>
+//                       <span className="text-xs text-muted-foreground font-mono truncate">{result.demoUrl}</span>
+//                     </div>
+//                     <div className="flex items-center gap-1">
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => {
+//                           if (iframeRef.current) {
+//                             iframeRef.current.src = result.demoUrl!
+//                           }
+//                         }}
+//                         className="h-7 w-7 p-0"
+//                       >
+//                         <RefreshCw className="h-3.5 w-3.5" />
+//                       </Button>
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => window.open(result.demoUrl!, "_blank")}
+//                         className="h-7 w-7 p-0"
+//                       >
+//                         <ExternalLink className="h-3.5 w-3.5" />
+//                       </Button>
+//                     </div>
+//                   </div>
+//                   <div className="flex-1 relative overflow-hidden">
+//                     <iframe
+//                       ref={iframeRef}
+//                       src={result.demoUrl}
+//                       className="absolute inset-0 w-full h-full bg-white"
+//                       title="Generated Tool Preview"
+//                       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+//                       style={{
+//                         transform: `scale(${iframeScale / 100})`,
+//                         transformOrigin: "top left",
+//                         width: `${(100 / iframeScale) * 100}%`,
+//                         height: `${(100 / iframeScale) * 100}%`,
+//                       }}
+//                     />
+//                   </div>
+//                 </div>
+//               )}
+
+//               {/* Code Panel */}
+//               {(viewMode === "code" || viewMode === "split" || !result.demoUrl) && selectedFile && (
+//                 <div className={`flex flex-col ${viewMode === "split" && result.demoUrl ? "w-1/2" : "flex-1"}`}>
+//                   <div className="p-3 border-b border-border flex items-center justify-between bg-card">
+//                     <span className="text-sm font-mono text-foreground">{selectedFile.name}</span>
+//                     <div className="flex items-center gap-1">
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => {
+//                           navigator.clipboard.writeText(selectedFile.content)
+//                           toast({ title: "Copied to clipboard" })
+//                         }}
+//                         className="h-7 px-2 text-xs"
+//                       >
+//                         <Copy className="h-3.5 w-3.5 mr-1" />
+//                         Copy
+//                       </Button>
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => downloadSingleFile(selectedFile)}
+//                         className="h-7 px-2 text-xs"
+//                       >
+//                         <Download className="h-3.5 w-3.5 mr-1" />
+//                         Download
+//                       </Button>
+//                     </div>
+//                   </div>
+//                   <div className="flex-1 overflow-auto p-6 bg-background">
+//                     <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-words leading-relaxed">
+//                       <code>{selectedFile.content}</code>
+//                     </pre>
+//                   </div>
+//                 </div>
+//               )}
+//             </div>
+
+//             {showLogs && (
+//               <div className="border-t border-border bg-card h-64 flex flex-col">
+//                 <div className="p-3 border-b border-border flex items-center justify-between">
+//                   <div className="flex items-center gap-2">
+//                     <Settings className="h-4 w-4 text-muted-foreground" />
+//                     <span className="text-sm font-semibold text-foreground">Generation Logs</span>
+//                     <Badge variant="secondary" className="text-xs">
+//                       {streamingLogs.length}
+//                     </Badge>
+//                   </div>
+//                   <Button variant="ghost" size="sm" onClick={() => setShowLogs(false)} className="h-7 w-7 p-0">
+//                     <X className="h-4 w-4" />
+//                   </Button>
+//                 </div>
+//                 <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1 bg-background">
+//                   {streamingLogs.map((log, index) => (
+//                     <div key={index} className="text-muted-foreground">
+//                       {log}
+//                     </div>
+//                   ))}
+//                   <div ref={logsEndRef} />
+//                 </div>
+//               </div>
+//             )}
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   )
+// }
+
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -1924,6 +2675,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Sparkles,
   Rocket,
@@ -1946,9 +2700,22 @@ import {
   Search,
   Check,
   ChevronRight,
-  Settings,
   RefreshCw,
   X,
+  MessageSquare,
+  GitBranch,
+  BarChart3,
+  Clock,
+  RotateCcw,
+  FolderTree,
+  Terminal,
+  Smartphone,
+  Tablet,
+  Laptop,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  Send,
 } from "lucide-react"
 import { v0ServiceAdvanced, type StreamEvent } from "@/lib/v0-service-advanced"
 import { vercelDeployment } from "@/lib/vercel-deployments"
@@ -1969,23 +2736,61 @@ interface GenerationResult {
 }
 
 type ViewMode = "preview" | "code" | "split"
+type DeviceMode = "desktop" | "tablet" | "mobile"
+type LogLevel = "info" | "success" | "warning" | "error"
+
+interface LogEntry {
+  id: string
+  timestamp: Date
+  level: LogLevel
+  message: string
+  details?: string
+}
+
+interface ChatHistory {
+  id: string
+  message: string
+  role: "user" | "assistant"
+  timestamp: Date
+}
+
+interface Version {
+  id: string
+  name: string
+  timestamp: Date
+  filesCount: number
+}
 
 export default function CreateToolPage() {
   const [step, setStep] = useState<"configure" | "generating" | "preview">("configure")
   const [isGenerating, setIsGenerating] = useState(false)
   const [isDeploying, setIsDeploying] = useState(false)
   const [generationProgress, setGenerationProgress] = useState(0)
-  const [streamingLogs, setStreamingLogs] = useState<string[]>([])
   const [result, setResult] = useState<GenerationResult | null>(null)
   const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
   const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null)
 
   const [viewMode, setViewMode] = useState<ViewMode>("preview")
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop")
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fileSearchQuery, setFileSearchQuery] = useState("")
-  const [showLogs, setShowLogs] = useState(false)
+  const [showLogs, setShowLogs] = useState(true)
+  const [showChat, setShowChat] = useState(false)
+  const [showVersions, setShowVersions] = useState(false)
+  const [showAnalytics, setShowAnalytics] = useState(false)
   const [iframeScale, setIframeScale] = useState(100)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([])
+  const [versions, setVersions] = useState<Version[]>([])
+  const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
+  const [chatMessage, setChatMessage] = useState("")
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
+  const [fileFilter, setFileFilter] = useState<string>("all")
+  const [isRegenerating, setIsRegenerating] = useState(false)
+  const [regenerationFeedback, setRegenerationFeedback] = useState("")
+  const [showRegenerationDialog, setShowRegenerationDialog] = useState(false)
+  const [rightPanelTab, setRightPanelTab] = useState<"logs" | "chat" | "versions" | "analytics">("logs")
 
   // Form state
   const [toolName, setToolName] = useState("")
@@ -1999,10 +2804,15 @@ export default function CreateToolPage() {
   const orgSlug = params?.slug as string
   const logsEndRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [streamingLogs])
+  }, [logs])
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [chatHistory])
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -2014,17 +2824,39 @@ export default function CreateToolPage() {
       }
       if (e.key === "l" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
-        setShowLogs(!showLogs)
+        setRightPanelTab("logs")
+      }
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setRightPanelTab("chat")
+      }
+      if (e.key === "1" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setViewMode("preview")
+      }
+      if (e.key === "2" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setViewMode("code")
+      }
+      if (e.key === "3" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setViewMode("split")
       }
     }
 
     window.addEventListener("keydown", handleKeyPress)
     return () => window.removeEventListener("keydown", handleKeyPress)
-  }, [step, isFullscreen, showLogs])
+  }, [step, isFullscreen])
 
-  const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString()
-    setStreamingLogs((prev) => [...prev, `[${timestamp}] ${message}`])
+  const addLog = (message: string, level: LogLevel = "info", details?: string) => {
+    const newLog: LogEntry = {
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: new Date(),
+      level,
+      message,
+      details,
+    }
+    setLogs((prev) => [...prev, newLog])
   }
 
   const handleGenerate = async () => {
@@ -2035,11 +2867,11 @@ export default function CreateToolPage() {
 
     setIsGenerating(true)
     setGenerationProgress(0)
-    setStreamingLogs([])
+    setLogs([])
     setStep("generating")
 
     try {
-      addLog("🚀 Initializing AI generation engine...")
+      addLog("Initializing AI generation engine...", "info")
       setGenerationProgress(5)
 
       const response = await v0ServiceAdvanced.generateToolWithStreaming(
@@ -2055,13 +2887,13 @@ export default function CreateToolPage() {
         },
         (event: StreamEvent) => {
           if (event.type === "chunk") {
-            addLog(`${event.data.message}`)
+            addLog(event.data.message, "info")
             setGenerationProgress((prev) => Math.min(prev + 5, 95))
           } else if (event.type === "complete") {
-            addLog("✅ Generation complete!")
+            addLog("Generation complete!", "success")
             setGenerationProgress(100)
           } else if (event.type === "error") {
-            addLog(`❌ Error: ${event.data.error}`)
+            addLog(`Error: ${event.data.error}`, "error")
           }
         },
       )
@@ -2087,15 +2919,121 @@ export default function CreateToolPage() {
         setSelectedFile(files[0])
       }
 
-      addLog(`✨ Generated ${files.length} files successfully!`)
+      const initialVersion: Version = {
+        id: "v1",
+        name: "Initial Generation",
+        timestamp: new Date(),
+        filesCount: files.length,
+      }
+      setVersions([initialVersion])
+      setSelectedVersion("v1")
+
+      addLog(`Generated ${files.length} files successfully!`, "success")
       setStep("preview")
       setViewMode(generationResult.demoUrl ? "preview" : "code")
       toast({ title: "Tool generated successfully!" })
     } catch (error) {
-      addLog(`❌ Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+      addLog(`Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
       toast({ title: "Generation failed", description: "Please try again", variant: "destructive" })
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const handleRegenerate = async () => {
+    if (!result || !regenerationFeedback.trim()) {
+      toast({ title: "Please provide feedback for regeneration", variant: "destructive" })
+      return
+    }
+
+    setIsRegenerating(true)
+    setShowRegenerationDialog(false)
+    addLog("Starting regeneration with feedback...", "info")
+
+    try {
+      const response = await v0ServiceAdvanced.continueChat(
+        result.chatId,
+        `Please improve the tool based on this feedback: ${regenerationFeedback}`,
+        (event: StreamEvent) => {
+          if (event.type === "chunk") {
+            addLog(event.data.message, "info")
+          }
+        },
+      )
+
+      const latestVersion = (response as any).latestVersion
+      const files: GeneratedFile[] =
+        latestVersion?.files?.map((file: any) => ({
+          name: file.name || file.path || "unnamed",
+          content: file.content || file.data || "",
+          type: file.type || file.language || "typescript",
+          path: file.path,
+        })) || []
+
+      const updatedResult: GenerationResult = {
+        ...result,
+        files,
+        demoUrl: latestVersion?.demoUrl || result.demoUrl,
+      }
+
+      setResult(updatedResult)
+      if (files.length > 0) {
+        setSelectedFile(files[0])
+      }
+
+      const newVersion: Version = {
+        id: `v${versions.length + 1}`,
+        name: `Regeneration ${versions.length}`,
+        timestamp: new Date(),
+        filesCount: files.length,
+      }
+      setVersions((prev) => [...prev, newVersion])
+      setSelectedVersion(newVersion.id)
+
+      addLog("Regeneration complete!", "success")
+      setRegenerationFeedback("")
+      toast({ title: "Tool regenerated successfully!" })
+    } catch (error) {
+      addLog(`Regeneration failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
+      toast({ title: "Regeneration failed", variant: "destructive" })
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || !result) return
+
+    const userMessage: ChatHistory = {
+      id: Math.random().toString(36).substr(2, 9),
+      message: chatMessage,
+      role: "user",
+      timestamp: new Date(),
+    }
+    setChatHistory((prev) => [...prev, userMessage])
+    setChatMessage("")
+    setIsSendingMessage(true)
+
+    try {
+      const response = await v0ServiceAdvanced.continueChat(result.chatId, chatMessage)
+
+      const assistantMessage: ChatHistory = {
+        id: Math.random().toString(36).substr(2, 9),
+        message: "Message sent successfully. The tool will be updated based on your request.",
+        role: "assistant",
+        timestamp: new Date(),
+      }
+      setChatHistory((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      const errorMessage: ChatHistory = {
+        id: Math.random().toString(36).substr(2, 9),
+        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        role: "assistant",
+        timestamp: new Date(),
+      }
+      setChatHistory((prev) => [...prev, errorMessage])
+    } finally {
+      setIsSendingMessage(false)
     }
   }
 
@@ -2106,7 +3044,7 @@ export default function CreateToolPage() {
     }
 
     setIsDeploying(true)
-    addLog("🚀 Starting deployment to Vercel...")
+    addLog("Starting deployment to Vercel...", "info")
 
     try {
       const deploymentResult = await vercelDeployment.deployToVercel({
@@ -2119,14 +3057,14 @@ export default function CreateToolPage() {
 
       if (deploymentResult.success) {
         setDeploymentUrl(deploymentResult.url || null)
-        addLog(`✅ Deployed successfully! URL: ${deploymentResult.url}`)
+        addLog(`Deployed successfully! URL: ${deploymentResult.url}`, "success")
         toast({ title: "Deployed successfully!", description: deploymentResult.url })
       } else {
-        addLog(`❌ Deployment failed: ${deploymentResult.error}`)
+        addLog(`Deployment failed: ${deploymentResult.error}`, "error")
         toast({ title: "Deployment failed", variant: "destructive" })
       }
     } catch (error) {
-      addLog(`❌ Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`)
+      addLog(`Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
       toast({ title: "Deployment error", variant: "destructive" })
     } finally {
       setIsDeploying(false)
@@ -2160,8 +3098,22 @@ export default function CreateToolPage() {
     toast({ title: `Downloaded ${file.name}` })
   }
 
+  const copyAllCode = () => {
+    if (!result) return
+    const allCode = result.files.map((f) => `// ${f.name}\n${f.content}`).join("\n\n")
+    navigator.clipboard.writeText(allCode)
+    toast({ title: "All code copied to clipboard" })
+  }
+
   const filteredFiles =
-    result?.files.filter((file) => file.name.toLowerCase().includes(fileSearchQuery.toLowerCase())) || []
+    result?.files.filter((file) => {
+      const matchesSearch = file.name.toLowerCase().includes(fileSearchQuery.toLowerCase())
+      if (fileFilter === "all") return matchesSearch
+      if (fileFilter === "components") return matchesSearch && file.name.includes("component")
+      if (fileFilter === "pages") return matchesSearch && file.name.includes("page")
+      if (fileFilter === "styles") return matchesSearch && (file.name.includes(".css") || file.name.includes("style"))
+      return matchesSearch
+    }) || []
 
   const integrationOptions = [
     { id: "supabase", name: "Supabase", icon: Database, color: "emerald" },
@@ -2170,11 +3122,24 @@ export default function CreateToolPage() {
     { id: "resend", name: "Resend", icon: Mail, color: "orange" },
   ]
 
+  const getDeviceDimensions = () => {
+    switch (deviceMode) {
+      case "mobile":
+        return { width: "375px", height: "667px" }
+      case "tablet":
+        return { width: "768px", height: "1024px" }
+      default:
+        return { width: "100%", height: "100%" }
+    }
+  }
+
+  const deviceDimensions = getDeviceDimensions()
+
   return (
     <div className={`min-h-screen bg-background ${isFullscreen ? "fixed inset-0 z-50" : ""}`}>
-      <div className="border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-[2000px] mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="border-b border-border bg-card/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
+        <div className="max-w-[2400px] mx-auto px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             {!isFullscreen && (
               <>
                 <Button
@@ -2186,63 +3151,134 @@ export default function CreateToolPage() {
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Back
                 </Button>
-                <div className="h-5 w-px bg-border" />
+                <Separator orientation="vertical" className="h-6" />
               </>
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full transition-colors ${
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
                   step === "configure"
                     ? "bg-muted-foreground"
                     : step === "generating"
-                      ? "bg-primary animate-pulse"
-                      : "bg-emerald-500"
+                      ? "bg-primary animate-pulse shadow-lg shadow-primary/50"
+                      : "bg-emerald-500 shadow-lg shadow-emerald-500/50"
                 }`}
               />
-              <span className="text-sm font-medium text-foreground">
-                {step === "configure" ? "Configure" : step === "generating" ? "Generating" : toolName || "Preview"}
-              </span>
+              <div>
+                <span className="text-sm font-semibold text-foreground">
+                  {step === "configure" ? "Configure Tool" : step === "generating" ? "Generating..." : toolName}
+                </span>
+                {step === "preview" && result && (
+                  <p className="text-xs text-muted-foreground">{result.files.length} files generated</p>
+                )}
+              </div>
             </div>
           </div>
 
           {step === "preview" && result && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {result.demoUrl && (
-                <div className="flex items-center gap-1 mr-2 bg-muted rounded-lg p-1">
+                <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border">
                   <Button
                     variant={viewMode === "preview" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("preview")}
-                    className="h-7 px-2"
+                    className="h-8 px-3 text-xs"
+                    title="Preview Only (⌘1)"
                   >
-                    <Monitor className="h-3.5 w-3.5" />
+                    <Monitor className="h-3.5 w-3.5 mr-1.5" />
+                    Preview
                   </Button>
                   <Button
                     variant={viewMode === "code" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("code")}
-                    className="h-7 px-2"
+                    className="h-8 px-3 text-xs"
+                    title="Code Only (⌘2)"
                   >
-                    <Code2 className="h-3.5 w-3.5" />
+                    <Code2 className="h-3.5 w-3.5 mr-1.5" />
+                    Code
                   </Button>
                   <Button
                     variant={viewMode === "split" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("split")}
-                    className="h-7 px-2"
+                    className="h-8 px-3 text-xs"
+                    title="Split View (⌘3)"
                   >
-                    <SplitSquareHorizontal className="h-3.5 w-3.5" />
+                    <SplitSquareHorizontal className="h-3.5 w-3.5 mr-1.5" />
+                    Split
                   </Button>
                 </div>
               )}
 
+              {result.demoUrl && (viewMode === "preview" || viewMode === "split") && (
+                <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border">
+                  <Button
+                    variant={deviceMode === "desktop" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setDeviceMode("desktop")}
+                    className="h-8 w-8 p-0"
+                    title="Desktop View"
+                  >
+                    <Laptop className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant={deviceMode === "tablet" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setDeviceMode("tablet")}
+                    className="h-8 w-8 p-0"
+                    title="Tablet View"
+                  >
+                    <Tablet className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant={deviceMode === "mobile" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setDeviceMode("mobile")}
+                    className="h-8 w-8 p-0"
+                    title="Mobile View"
+                  >
+                    <Smartphone className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+
+              <Separator orientation="vertical" className="h-6" />
+
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowLogs(!showLogs)}
+                onClick={() => setShowRegenerationDialog(true)}
+                disabled={isRegenerating}
                 className="text-muted-foreground hover:text-foreground"
               >
-                <Settings className="h-4 w-4" />
+                {isRegenerating ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-1.5" />
+                )}
+                Regenerate
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={copyAllCode}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Copy className="h-4 w-4 mr-1.5" />
+                Copy All
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={downloadFiles}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                Download
               </Button>
 
               <Button
@@ -2250,21 +3286,12 @@ export default function CreateToolPage() {
                 size="sm"
                 onClick={() => setIsFullscreen(!isFullscreen)}
                 className="text-muted-foreground hover:text-foreground"
+                title="Fullscreen (⌘F)"
               >
                 {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </Button>
 
-              <div className="h-5 w-px bg-border" />
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={downloadFiles}
-                className="text-muted-foreground hover:text-foreground bg-transparent"
-              >
-                <Download className="h-4 w-4 mr-1.5" />
-                All
-              </Button>
+              <Separator orientation="vertical" className="h-6" />
 
               <Button
                 size="sm"
@@ -2277,7 +3304,7 @@ export default function CreateToolPage() {
                 ) : (
                   <Rocket className="h-4 w-4 mr-1.5" />
                 )}
-                Deploy
+                Deploy to Vercel
               </Button>
             </div>
           )}
@@ -2285,74 +3312,80 @@ export default function CreateToolPage() {
       </div>
 
       {step === "configure" && (
-        <div className="max-w-5xl mx-auto px-6 py-12">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-6">
-              <Sparkles className="h-8 w-8 text-primary" />
+        <div className="max-w-6xl mx-auto px-6 py-16">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-3xl mb-8 relative">
+              <Sparkles className="h-10 w-10 text-primary" />
+              <div className="absolute inset-0 rounded-3xl bg-primary/10 animate-pulse" />
             </div>
-            <h1 className="text-4xl font-bold text-foreground mb-3 text-balance">Create Your Tool</h1>
-            <p className="text-muted-foreground text-lg text-pretty">
-              Describe what you want to build and let AI do the rest
+            <h1 className="text-5xl font-bold text-foreground mb-4 text-balance">Create Your Business Tool</h1>
+            <p className="text-muted-foreground text-xl text-pretty max-w-2xl mx-auto">
+              Describe your vision and watch AI transform it into a production-ready application
             </p>
           </div>
 
-          <div className="space-y-6">
-            <Card className="bg-card border-border p-8">
-              <div className="space-y-6">
+          <div className="space-y-8">
+            <Card className="bg-card border-border p-10 shadow-lg">
+              <div className="space-y-8">
                 <div>
-                  <Label htmlFor="toolName" className="text-base font-semibold text-foreground mb-3 block">
+                  <Label htmlFor="toolName" className="text-lg font-semibold text-foreground mb-4 block">
                     Tool Name
                   </Label>
                   <Input
                     id="toolName"
                     value={toolName}
                     onChange={(e) => setToolName(e.target.value)}
-                    placeholder="e.g., Customer Support Dashboard"
-                    className="h-12 bg-background border-border text-foreground placeholder-muted-foreground"
+                    placeholder="e.g., Customer Support Dashboard, Inventory Manager, Analytics Platform"
+                    className="h-14 bg-background border-border text-foreground placeholder-muted-foreground text-base"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="category" className="text-base font-semibold text-foreground mb-3 block">
+                  <Label htmlFor="category" className="text-lg font-semibold text-foreground mb-4 block">
                     Category
                   </Label>
                   <select
                     id="category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full h-12 px-4 rounded-lg bg-background border border-border text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full h-14 px-4 rounded-lg bg-background border border-border text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-base"
                   >
-                    <option value="dashboard">Dashboard</option>
-                    <option value="form">Form</option>
+                    <option value="dashboard">Dashboard & Analytics</option>
+                    <option value="form">Forms & Data Collection</option>
                     <option value="landing-page">Landing Page</option>
                     <option value="admin-panel">Admin Panel</option>
                     <option value="e-commerce">E-commerce</option>
-                    <option value="analytics">Analytics</option>
+                    <option value="crm">CRM & Sales</option>
+                    <option value="project-management">Project Management</option>
+                    <option value="inventory">Inventory Management</option>
                   </select>
                 </div>
 
                 <div>
-                  <Label htmlFor="requirements" className="text-base font-semibold text-foreground mb-3 block">
-                    Requirements
+                  <Label htmlFor="requirements" className="text-lg font-semibold text-foreground mb-4 block">
+                    Detailed Requirements
                   </Label>
                   <Textarea
                     id="requirements"
                     value={requirements}
                     onChange={(e) => setRequirements(e.target.value)}
-                    placeholder="Describe your tool in detail. What features do you need? What should it look like? Who will use it?"
-                    rows={10}
-                    className="bg-background border-border text-foreground placeholder-muted-foreground resize-none"
+                    placeholder="Describe your tool in detail:&#10;• What features do you need?&#10;• Who will use it?&#10;• What data will it display?&#10;• Any specific design preferences?&#10;• Integration requirements?"
+                    rows={12}
+                    className="bg-background border-border text-foreground placeholder-muted-foreground resize-none text-base leading-relaxed"
                   />
-                  <p className="text-sm text-muted-foreground mt-2">{requirements.length} characters</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <p className="text-sm text-muted-foreground">{requirements.length} characters</p>
+                    <p className="text-xs text-muted-foreground">Tip: More detail = better results</p>
+                  </div>
                 </div>
               </div>
             </Card>
 
-            <Card className="bg-card border-border p-8">
-              <Label className="text-base font-semibold text-foreground mb-4 block">
-                Integrations <span className="text-muted-foreground font-normal">(Optional)</span>
+            <Card className="bg-card border-border p-10 shadow-lg">
+              <Label className="text-lg font-semibold text-foreground mb-6 block">
+                Integrations <span className="text-muted-foreground font-normal text-base">(Optional)</span>
               </Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {integrationOptions.map((integration) => {
                   const Icon = integration.icon
                   const isSelected = selectedIntegrations.includes(integration.id)
@@ -2366,16 +3399,23 @@ export default function CreateToolPage() {
                             : [...prev, integration.id],
                         )
                       }}
-                      className={`p-6 rounded-xl border-2 transition-all ${
+                      className={`relative p-8 rounded-2xl border-2 transition-all ${
                         isSelected
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-background hover:border-primary/50"
+                          ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
+                          : "border-border bg-background hover:border-primary/50 hover:shadow-md"
                       }`}
                     >
+                      {isSelected && (
+                        <div className="absolute top-3 right-3">
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
                       <Icon
-                        className={`h-8 w-8 mx-auto mb-3 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
+                        className={`h-10 w-10 mx-auto mb-4 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
                       />
-                      <p className={`text-sm font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>
+                      <p
+                        className={`text-base font-semibold ${isSelected ? "text-foreground" : "text-muted-foreground"}`}
+                      >
                         {integration.name}
                       </p>
                     </button>
@@ -2387,17 +3427,17 @@ export default function CreateToolPage() {
             <Button
               onClick={handleGenerate}
               disabled={isGenerating || !toolName || !requirements}
-              className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              className="w-full h-16 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:shadow-primary/40"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Generating...
+                  <Loader2 className="h-6 w-6 mr-3 animate-spin" />
+                  Generating Your Tool...
                 </>
               ) : (
                 <>
-                  <Zap className="h-5 w-5 mr-2" />
-                  Generate Tool
+                  <Zap className="h-6 w-6 mr-3" />
+                  Generate Tool with AI
                 </>
               )}
             </Button>
@@ -2407,40 +3447,79 @@ export default function CreateToolPage() {
 
       {step === "generating" && (
         <div className="h-[calc(100vh-73px)] flex items-center justify-center p-6">
-          <div className="w-full max-w-4xl space-y-8">
+          <div className="w-full max-w-5xl space-y-10">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6 relative">
-                <Sparkles className="h-10 w-10 text-primary animate-pulse" />
-                <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
+              <div className="inline-flex items-center justify-center w-24 h-24 bg-primary/10 rounded-full mb-8 relative">
+                <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+                <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
+                <div className="absolute inset-0 rounded-full border-4 border-primary/10 animate-pulse" />
               </div>
-              <h2 className="text-3xl font-bold text-foreground mb-2">Generating Your Tool</h2>
-              <p className="text-muted-foreground">AI is crafting your custom tool...</p>
+              <h2 className="text-4xl font-bold text-foreground mb-3">Generating Your Tool</h2>
+              <p className="text-muted-foreground text-lg">
+                Our AI is analyzing your requirements and crafting a custom solution...
+              </p>
             </div>
 
-            <Card className="bg-card border-border p-8">
-              <div className="space-y-6">
+            <Card className="bg-card border-border p-10 shadow-2xl">
+              <div className="space-y-8">
                 <div className="flex items-center justify-between">
-                  <span className="text-foreground font-medium">Progress</span>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-base px-4 py-1">
+                  <div>
+                    <span className="text-foreground font-semibold text-lg">Generation Progress</span>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {generationProgress < 30
+                        ? "Analyzing requirements..."
+                        : generationProgress < 60
+                          ? "Designing architecture..."
+                          : generationProgress < 90
+                            ? "Generating code..."
+                            : "Finalizing..."}
+                    </p>
+                  </div>
+                  <Badge className="bg-primary/10 text-primary border-primary/20 text-xl px-6 py-2 font-bold">
                     {generationProgress}%
                   </Badge>
                 </div>
 
-                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-muted rounded-full h-4 overflow-hidden shadow-inner">
                   <div
-                    className="h-full bg-primary transition-all duration-500 ease-out"
+                    className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out shadow-lg"
                     style={{ width: `${generationProgress}%` }}
                   />
                 </div>
 
-                <div className="bg-background rounded-lg p-6 h-96 overflow-y-auto font-mono text-sm space-y-1">
-                  {streamingLogs.map((log, index) => (
-                    <div key={index} className="text-muted-foreground">
-                      {log}
+                <Card className="bg-background border-border p-6 shadow-inner">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold text-foreground">Generation Logs</span>
                     </div>
-                  ))}
-                  <div ref={logsEndRef} />
-                </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {logs.length} events
+                    </Badge>
+                  </div>
+                  <ScrollArea className="h-96">
+                    <div className="font-mono text-sm space-y-2 pr-4">
+                      {logs.map((log) => (
+                        <div
+                          key={log.id}
+                          className={`flex items-start gap-3 p-2 rounded ${
+                            log.level === "error"
+                              ? "bg-red-500/10 text-red-500"
+                              : log.level === "success"
+                                ? "bg-emerald-500/10 text-emerald-500"
+                                : log.level === "warning"
+                                  ? "bg-yellow-500/10 text-yellow-500"
+                                  : "text-muted-foreground"
+                          }`}
+                        >
+                          <span className="text-xs opacity-60 flex-shrink-0">{log.timestamp.toLocaleTimeString()}</span>
+                          <span className="flex-1">{log.message}</span>
+                        </div>
+                      ))}
+                      <div ref={logsEndRef} />
+                    </div>
+                  </ScrollArea>
+                </Card>
               </div>
             </Card>
           </div>
@@ -2449,112 +3528,176 @@ export default function CreateToolPage() {
 
       {step === "preview" && result && (
         <div className={`flex ${isFullscreen ? "h-screen" : "h-[calc(100vh-73px)]"}`}>
+          {/* Left Sidebar - File Explorer */}
           <div
             className={`border-r border-border bg-card flex flex-col transition-all duration-300 ${
-              isSidebarCollapsed ? "w-12" : "w-80"
+              isSidebarCollapsed ? "w-14" : "w-96"
             }`}
           >
             {isSidebarCollapsed ? (
-              <div className="p-2">
-                <Button variant="ghost" size="sm" onClick={() => setIsSidebarCollapsed(false)} className="w-full">
-                  <ChevronRight className="h-4 w-4" />
+              <div className="p-3 flex flex-col items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="w-full h-10"
+                  title="Expand Sidebar"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+                <Separator />
+                <Button variant="ghost" size="sm" className="w-full h-10" title="Files">
+                  <FolderTree className="h-5 w-5" />
                 </Button>
               </div>
             ) : (
               <>
-                <div className="p-4 border-b border-border space-y-3">
+                <div className="p-5 border-b border-border space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">Files</h3>
-                      <p className="text-xs text-muted-foreground">{result.files.length} total</p>
+                      <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                        <FolderTree className="h-4 w-4" />
+                        Project Files
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {result.files.length} files • {selectedVersion || "v1"}
+                      </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsSidebarCollapsed(true)}
-                      className="h-7 w-7 p-0"
+                      className="h-8 w-8 p-0"
+                      title="Collapse Sidebar"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                   </div>
+
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       value={fileSearchQuery}
                       onChange={(e) => setFileSearchQuery(e.target.value)}
                       placeholder="Search files..."
-                      className="pl-9 h-9 bg-background"
+                      className="pl-10 h-10 bg-background border-border"
                     />
                   </div>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                  {filteredFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className={`group rounded-lg transition-colors ${
-                        selectedFile === file ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }`}
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={fileFilter === "all" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setFileFilter("all")}
+                      className="h-8 px-3 text-xs flex-1"
                     >
-                      <button
-                        onClick={() => setSelectedFile(file)}
-                        className="w-full text-left p-3 flex items-center gap-2"
-                      >
-                        <FileCode className="h-4 w-4 flex-shrink-0" />
-                        <span className="text-sm font-mono truncate flex-1">{file.name}</span>
-                        {selectedFile === file && <Check className="h-4 w-4 flex-shrink-0" />}
-                      </button>
-                      <div className="px-3 pb-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigator.clipboard.writeText(file.content)
-                            toast({ title: "Copied to clipboard" })
-                          }}
-                          className="h-6 px-2 text-xs"
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            downloadSingleFile(file)
-                          }}
-                          className="h-6 px-2 text-xs"
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Save
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                      All
+                    </Button>
+                    <Button
+                      variant={fileFilter === "components" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setFileFilter("components")}
+                      className="h-8 px-3 text-xs flex-1"
+                    >
+                      Components
+                    </Button>
+                    <Button
+                      variant={fileFilter === "pages" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setFileFilter("pages")}
+                      className="h-8 px-3 text-xs flex-1"
+                    >
+                      Pages
+                    </Button>
+                  </div>
                 </div>
+
+                <ScrollArea className="flex-1 p-3">
+                  <div className="space-y-1">
+                    {filteredFiles.length === 0 ? (
+                      <div className="text-center py-12">
+                        <FileCode className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground">No files found</p>
+                      </div>
+                    ) : (
+                      filteredFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className={`group rounded-lg transition-all ${
+                            selectedFile === file ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-muted/50"
+                          }`}
+                        >
+                          <button
+                            onClick={() => setSelectedFile(file)}
+                            className="w-full text-left p-3 flex items-center gap-3"
+                          >
+                            <FileCode className="h-4 w-4 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium font-mono truncate">{file.name}</p>
+                              <p className="text-xs opacity-70 mt-0.5">{file.content.split("\n").length} lines</p>
+                            </div>
+                            {selectedFile === file && <Check className="h-4 w-4 flex-shrink-0" />}
+                          </button>
+                          <div
+                            className={`px-3 pb-2 flex items-center gap-1 transition-all ${
+                              selectedFile === file ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            }`}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                navigator.clipboard.writeText(file.content)
+                                toast({ title: "Copied to clipboard" })
+                              }}
+                              className="h-7 px-2 text-xs"
+                            >
+                              <Copy className="h-3 w-3 mr-1" />
+                              Copy
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                downloadSingleFile(file)
+                              }}
+                              className="h-7 px-2 text-xs"
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Save
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </>
             )}
           </div>
 
+          {/* Center - Main Preview/Code Area */}
           <div className="flex-1 flex flex-col bg-background overflow-hidden">
-            {/* Preview/Code Area */}
             <div className="flex-1 flex overflow-hidden">
               {/* Preview Panel */}
               {(viewMode === "preview" || viewMode === "split") && result.demoUrl && (
                 <div
-                  className={`flex flex-col bg-muted ${viewMode === "split" ? "w-1/2 border-r border-border" : "flex-1"}`}
+                  className={`flex flex-col bg-muted/30 ${viewMode === "split" ? "w-1/2 border-r border-border" : "flex-1"}`}
                 >
-                  <div className="p-3 border-b border-border flex items-center justify-between bg-card">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-red-400" />
-                        <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                        <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                  <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm" />
+                        <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm" />
                       </div>
-                      <span className="text-xs text-muted-foreground font-mono truncate">{result.demoUrl}</span>
+                      <div className="flex-1 min-w-0 bg-background/50 rounded-lg px-3 py-1.5 border border-border">
+                        <span className="text-xs text-muted-foreground font-mono truncate block">{result.demoUrl}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2 ml-3">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -2563,34 +3706,40 @@ export default function CreateToolPage() {
                             iframeRef.current.src = result.demoUrl!
                           }
                         }}
-                        className="h-7 w-7 p-0"
+                        className="h-8 w-8 p-0"
+                        title="Refresh Preview"
                       >
-                        <RefreshCw className="h-3.5 w-3.5" />
+                        <RefreshCw className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => window.open(result.demoUrl!, "_blank")}
-                        className="h-7 w-7 p-0"
+                        className="h-8 w-8 p-0"
+                        title="Open in New Tab"
                       >
-                        <ExternalLink className="h-3.5 w-3.5" />
+                        <ExternalLink className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                  <div className="flex-1 relative overflow-hidden">
-                    <iframe
-                      ref={iframeRef}
-                      src={result.demoUrl}
-                      className="absolute inset-0 w-full h-full bg-white"
-                      title="Generated Tool Preview"
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                  <div className="flex-1 relative overflow-hidden flex items-center justify-center bg-gradient-to-br from-muted/20 to-muted/5">
+                    <div
+                      className="bg-white shadow-2xl rounded-lg overflow-hidden"
                       style={{
-                        transform: `scale(${iframeScale / 100})`,
-                        transformOrigin: "top left",
-                        width: `${(100 / iframeScale) * 100}%`,
-                        height: `${(100 / iframeScale) * 100}%`,
+                        width: deviceDimensions.width,
+                        height: deviceDimensions.height,
+                        maxWidth: "100%",
+                        maxHeight: "100%",
                       }}
-                    />
+                    >
+                      <iframe
+                        ref={iframeRef}
+                        src={result.demoUrl}
+                        className="w-full h-full"
+                        title="Generated Tool Preview"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -2598,9 +3747,18 @@ export default function CreateToolPage() {
               {/* Code Panel */}
               {(viewMode === "code" || viewMode === "split" || !result.demoUrl) && selectedFile && (
                 <div className={`flex flex-col ${viewMode === "split" && result.demoUrl ? "w-1/2" : "flex-1"}`}>
-                  <div className="p-3 border-b border-border flex items-center justify-between bg-card">
-                    <span className="text-sm font-mono text-foreground">{selectedFile.name}</span>
-                    <div className="flex items-center gap-1">
+                  <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-3">
+                      <FileCode className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold font-mono text-foreground">{selectedFile.name}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedFile.type}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {selectedFile.content.split("\n").length} lines
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -2608,56 +3766,349 @@ export default function CreateToolPage() {
                           navigator.clipboard.writeText(selectedFile.content)
                           toast({ title: "Copied to clipboard" })
                         }}
-                        className="h-7 px-2 text-xs"
+                        className="h-8 px-3 text-xs"
                       >
-                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        <Copy className="h-3.5 w-3.5 mr-1.5" />
                         Copy
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => downloadSingleFile(selectedFile)}
-                        className="h-7 px-2 text-xs"
+                        className="h-8 px-3 text-xs"
                       >
-                        <Download className="h-3.5 w-3.5 mr-1" />
+                        <Download className="h-3.5 w-3.5 mr-1.5" />
                         Download
                       </Button>
                     </div>
                   </div>
-                  <div className="flex-1 overflow-auto p-6 bg-background">
-                    <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-words leading-relaxed">
-                      <code>{selectedFile.content}</code>
-                    </pre>
-                  </div>
+                  <ScrollArea className="flex-1 bg-background">
+                    <div className="p-6">
+                      <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-words leading-relaxed">
+                        <code>{selectedFile.content}</code>
+                      </pre>
+                    </div>
+                  </ScrollArea>
                 </div>
               )}
             </div>
+          </div>
 
-            {showLogs && (
-              <div className="border-t border-border bg-card h-64 flex flex-col">
-                <div className="p-3 border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Settings className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-semibold text-foreground">Generation Logs</span>
+          <div className="w-96 border-l border-border bg-card flex flex-col">
+            <Tabs
+              value={rightPanelTab}
+              onValueChange={(v) => setRightPanelTab(v as any)}
+              className="flex-1 flex flex-col"
+            >
+              <div className="border-b border-border bg-card/50 backdrop-blur-sm">
+                <TabsList className="w-full grid grid-cols-4 h-12 bg-transparent p-1">
+                  <TabsTrigger value="logs" className="text-xs" title="Logs (⌘L)">
+                    <Terminal className="h-4 w-4 mr-1.5" />
+                    Logs
+                  </TabsTrigger>
+                  <TabsTrigger value="chat" className="text-xs" title="Chat (⌘K)">
+                    <MessageSquare className="h-4 w-4 mr-1.5" />
+                    Chat
+                  </TabsTrigger>
+                  <TabsTrigger value="versions" className="text-xs">
+                    <GitBranch className="h-4 w-4 mr-1.5" />
+                    Versions
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="text-xs">
+                    <BarChart3 className="h-4 w-4 mr-1.5" />
+                    Stats
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="logs" className="flex-1 flex flex-col m-0 overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold text-foreground">Generation Logs</span>
+                    </div>
                     <Badge variant="secondary" className="text-xs">
-                      {streamingLogs.length}
+                      {logs.length} events
                     </Badge>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setShowLogs(false)} className="h-7 w-7 p-0">
-                    <X className="h-4 w-4" />
-                  </Button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1 bg-background">
-                  {streamingLogs.map((log, index) => (
-                    <div key={index} className="text-muted-foreground">
-                      {log}
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-2">
+                    {logs.map((log) => (
+                      <div
+                        key={log.id}
+                        className={`p-3 rounded-lg border ${
+                          log.level === "error"
+                            ? "bg-red-500/10 border-red-500/20 text-red-500"
+                            : log.level === "success"
+                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+                              : log.level === "warning"
+                                ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
+                                : "bg-muted/50 border-border text-muted-foreground"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {log.level === "error" && <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+                          {log.level === "success" && <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+                          {log.level === "warning" && <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+                          {log.level === "info" && <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium">{log.message}</p>
+                            <p className="text-xs opacity-60 mt-1">{log.timestamp.toLocaleTimeString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={logsEndRef} />
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="chat" className="flex-1 flex flex-col m-0 overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Chat with AI</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Ask questions or request changes</p>
+                </div>
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-4">
+                    {chatHistory.length === 0 ? (
+                      <div className="text-center py-12">
+                        <MessageSquare className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground">No messages yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">Start a conversation with AI</p>
+                      </div>
+                    ) : (
+                      chatHistory.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[80%] rounded-lg p-3 ${
+                              msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                            }`}
+                          >
+                            <p className="text-sm">{msg.message}</p>
+                            <p className="text-xs opacity-60 mt-1">{msg.timestamp.toLocaleTimeString()}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+                </ScrollArea>
+                <div className="p-4 border-t border-border">
+                  <div className="flex gap-2">
+                    <Input
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSendMessage()
+                        }
+                      }}
+                      placeholder="Type a message..."
+                      className="flex-1 h-10 bg-background"
+                      disabled={isSendingMessage}
+                    />
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!chatMessage.trim() || isSendingMessage}
+                      size="sm"
+                      className="h-10 px-4"
+                    >
+                      {isSendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="versions" className="flex-1 flex flex-col m-0 overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <GitBranch className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Version History</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{versions.length} versions</p>
+                </div>
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-2">
+                    {versions.length === 0 ? (
+                      <div className="text-center py-12">
+                        <GitBranch className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground">No versions yet</p>
+                      </div>
+                    ) : (
+                      versions.map((version) => (
+                        <button
+                          key={version.id}
+                          onClick={() => setSelectedVersion(version.id)}
+                          className={`w-full text-left p-4 rounded-lg border transition-all ${
+                            selectedVersion === version.id
+                              ? "bg-primary/10 border-primary"
+                              : "bg-muted/50 border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-foreground">{version.name}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {version.filesCount} files • {version.timestamp.toLocaleString()}
+                              </p>
+                            </div>
+                            {selectedVersion === version.id && (
+                              <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="flex-1 flex flex-col m-0 overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Generation Stats</span>
+                  </div>
+                </div>
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-4">
+                    <Card className="bg-muted/50 border-border p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Files</p>
+                          <p className="text-2xl font-bold text-foreground mt-1">{result.files.length}</p>
+                        </div>
+                        <FileCode className="h-8 w-8 text-primary" />
+                      </div>
+                    </Card>
+
+                    <Card className="bg-muted/50 border-border p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Lines of Code</p>
+                          <p className="text-2xl font-bold text-foreground mt-1">
+                            {result.files.reduce((acc, f) => acc + f.content.split("\n").length, 0)}
+                          </p>
+                        </div>
+                        <Code2 className="h-8 w-8 text-emerald-500" />
+                      </div>
+                    </Card>
+
+                    <Card className="bg-muted/50 border-border p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Versions</p>
+                          <p className="text-2xl font-bold text-foreground mt-1">{versions.length}</p>
+                        </div>
+                        <GitBranch className="h-8 w-8 text-blue-500" />
+                      </div>
+                    </Card>
+
+                    <Card className="bg-muted/50 border-border p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Generation Time</p>
+                          <p className="text-2xl font-bold text-foreground mt-1">
+                            {logs.length > 0
+                              ? `${Math.round((logs[logs.length - 1].timestamp.getTime() - logs[0].timestamp.getTime()) / 1000)}s`
+                              : "0s"}
+                          </p>
+                        </div>
+                        <Clock className="h-8 w-8 text-orange-500" />
+                      </div>
+                    </Card>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground mb-3">File Breakdown</h4>
+                      <div className="space-y-2">
+                        {["tsx", "ts", "css", "json"].map((ext) => {
+                          const count = result.files.filter((f) => f.name.endsWith(`.${ext}`)).length
+                          if (count === 0) return null
+                          return (
+                            <div key={ext} className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">.{ext} files</span>
+                              <Badge variant="secondary">{count}</Badge>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  ))}
-                  <div ref={logsEndRef} />
-                </div>
-              </div>
-            )}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
           </div>
+        </div>
+      )}
+
+      {showRegenerationDialog && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+          <Card className="w-full max-w-2xl bg-card border-border shadow-2xl">
+            <div className="p-6 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Regenerate Tool</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Provide feedback to improve your tool</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowRegenerationDialog(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <Label htmlFor="feedback" className="text-sm font-semibold text-foreground mb-2 block">
+                  What would you like to improve?
+                </Label>
+                <Textarea
+                  id="feedback"
+                  value={regenerationFeedback}
+                  onChange={(e) => setRegenerationFeedback(e.target.value)}
+                  placeholder="E.g., Add a dark mode toggle, improve the layout, add more features..."
+                  rows={6}
+                  className="bg-background border-border text-foreground resize-none"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowRegenerationDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRegenerate}
+                disabled={!regenerationFeedback.trim() || isRegenerating}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {isRegenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Regenerate Tool
+                  </>
+                )}
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </div>
