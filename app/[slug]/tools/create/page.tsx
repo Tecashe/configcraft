@@ -1369,38 +1369,44 @@
 // }
 
 
-import type { Metadata, Viewport } from "next"
-import { Suspense } from "react"
-import EnhancedCreateToolInterface from "./CreateToolInterface"
+// import type { Metadata, Viewport } from "next"
+// import { Suspense } from "react"
+// import EnhancedCreateToolInterface from "./CreateToolInterface"
 
-interface CreateToolPageProps {
-  params: { slug: string }
-}
+// interface CreateToolPageProps {
+//   params: { slug: string }
+// }
 
-export const metadata: Metadata = {
-  title: "Create Business Tool - ConfigCraft",
-  description: "Generate professional business tools with AI-powered code generation",
-  keywords: ["AI", "tool generation", "business automation", "React", "TypeScript"],
-}
+// export const metadata: Metadata = {
+//   title: "Create Business Tool - ConfigCraft",
+//   description: "Generate professional business tools with AI-powered code generation",
+//   keywords: ["AI", "tool generation", "business automation", "React", "TypeScript"],
+// }
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#000000",
-}
+// export const viewport: Viewport = {
+//   width: "device-width",
+//   initialScale: 1,
+//   themeColor: "#000000",
+// }
 
-export default function CreateToolPage({ params }: CreateToolPageProps) {
-  return (
-    <div className="min-h-screen bg-background">
-      <Suspense
-        fallback={
-          <div className="min-h-screen bg-background flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
-          </div>
-        }
-      >
-        <EnhancedCreateToolInterface organizationSlug={params.slug} />
-      </Suspense>
-    </div>
-  )
+// export default function CreateToolPage({ params }: CreateToolPageProps) {
+//   return (
+//     <div className="min-h-screen bg-background">
+//       <Suspense
+//         fallback={
+//           <div className="min-h-screen bg-background flex items-center justify-center">
+//             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+//           </div>
+//         }
+//       >
+//         <EnhancedCreateToolInterface organizationSlug={params.slug} />
+//       </Suspense>
+//     </div>
+//   )
+// }
+
+import UltimateGenerationInterface from "@/components/create/ultimate-create-page"
+
+export default function CreateToolPage() {
+  return <UltimateGenerationInterface />
 }
