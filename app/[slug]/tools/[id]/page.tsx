@@ -425,352 +425,475 @@
 //   )
 // }
 
+// "use client"
+
+// import { useState, useEffect } from "react"
+// import { useParams } from "next/navigation"
+// import { motion, AnimatePresence } from "framer-motion"
+// import { Monitor, Code2, Download, Share2, ExternalLink, Command, PanelLeftClose, PanelLeft } from "lucide-react"
+// import { Button } from "@/components/ui/button"
+// import { useToast } from "@/hooks/use-toast"
+// import { CinematicBuilder } from "@/components/generation/cinematic-builder"
+// import { ResizablePanels } from "@/components/tool-viewer/resizable-panels"
+// import { AdvancedFileTree } from "@/components/tool-viewer/advanced-file-tree"
+// import { CodeMinimap } from "@/components/tool-viewer/code-minimap"
+// import { CommandPalette } from "@/components/tool-viewer/command-palette"
+// import {
+//   Breadcrumb,
+//   BreadcrumbItem,
+//   BreadcrumbLink,
+//   BreadcrumbList,
+//   BreadcrumbPage,
+//   BreadcrumbSeparator,
+// } from "@/components/ui/breadcrumb"
+
+// interface Tool {
+//   id: string
+//   name: string
+//   status: string
+//   previewUrl?: string
+//   files?: Array<{ name: string; content: string; type?: string; path: string }>
+// }
+
+// export default function ToolViewerPage() {
+//   const [tool, setTool] = useState<Tool | null>(null)
+//   const [loading, setLoading] = useState(true)
+//   const [selectedFile, setSelectedFile] = useState<{
+//     name: string
+//     content: string
+//     type?: string
+//     path?: string
+//   } | null>(null)
+//   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+//   const [activeView, setActiveView] = useState<"preview" | "code" | "split">("preview")
+//   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+//   const [currentLine, setCurrentLine] = useState(0)
+
+//   const params = useParams()
+//   const { toast } = useToast()
+//   const toolId = params?.id as string
+
+//   useEffect(() => {
+//     const handleKeyDown = (e: KeyboardEvent) => {
+//       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+//         e.preventDefault()
+//         setCommandPaletteOpen(true)
+//       }
+//       if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+//         e.preventDefault()
+//         setActiveView("preview")
+//       }
+//       if ((e.metaKey || e.ctrlKey) && e.key === "e") {
+//         e.preventDefault()
+//         setActiveView("code")
+//       }
+//       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+//         e.preventDefault()
+//         setActiveView("split")
+//       }
+//     }
+
+//     window.addEventListener("keydown", handleKeyDown)
+//     return () => window.removeEventListener("keydown", handleKeyDown)
+//   }, [])
+
+//   useEffect(() => {
+//     fetchTool()
+//   }, [toolId])
+
+//   useEffect(() => {
+//     if (tool?.files && tool.files.length > 0 && !selectedFile) {
+//       setSelectedFile(tool.files[0])
+//     }
+//   }, [tool?.files])
+
+//   const fetchTool = async () => {
+//     try {
+//       await new Promise((resolve) => setTimeout(resolve, 3000))
+
+//       setTool({
+//         id: toolId,
+//         name: "Customer Support Dashboard",
+//         status: "GENERATED",
+//         previewUrl: "https://v0.dev/chat/jYP8pRA7EFV",
+//         files: [
+//           {
+//             name: "page.tsx",
+//             path: "app/page.tsx",
+//             content: `'use client'\n\nimport { useState } from 'react'\nimport { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'\nimport { Button } from '@/components/ui/button'\n\nexport default function Dashboard() {\n  const [tickets, setTickets] = useState([])\n\n  return (\n    <div className="container mx-auto p-6">\n      <h1 className="text-3xl font-bold mb-6">Support Dashboard</h1>\n      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">\n        <Card>\n          <CardHeader>\n            <CardTitle>Open Tickets</CardTitle>\n          </CardHeader>\n          <CardContent>\n            <p className="text-4xl font-bold">24</p>\n          </CardContent>\n        </Card>\n      </div>\n    </div>\n  )\n}`,
+//             type: "typescript",
+//           },
+//           {
+//             name: "layout.tsx",
+//             path: "app/layout.tsx",
+//             content: `export default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode\n}) {\n  return (\n    <html lang="en">\n      <body>{children}</body>\n    </html>\n  )\n}`,
+//             type: "typescript",
+//           },
+//           {
+//             name: "globals.css",
+//             path: "app/globals.css",
+//             content: `@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n:root {\n  --background: 0 0% 100%;\n  --foreground: 224 71.4% 4.1%;\n}`,
+//             type: "css",
+//           },
+//         ],
+//       })
+//     } catch (error) {
+//       toast({ title: "Error loading tool", variant: "destructive" })
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   const handleCommandAction = (action: string) => {
+//     if (action.startsWith("open-file:")) {
+//       const filePath = action.replace("open-file:", "")
+//       const file = tool?.files?.find((f) => f.path === filePath)
+//       if (file) {
+//         setSelectedFile(file)
+//         setActiveView("code")
+//       }
+//     } else if (action === "preview") {
+//       setActiveView("preview")
+//     } else if (action === "code") {
+//       setActiveView("code")
+//     } else if (action === "download") {
+//       handleDownload()
+//     } else if (action === "share") {
+//       handleShare()
+//     } else if (action === "deploy") {
+//       toast({ title: "Deploy feature coming soon!" })
+//     }
+//   }
+
+//   const handleDownload = () => {
+//     toast({ title: "Downloading files..." })
+//   }
+
+//   const handleShare = () => {
+//     if (tool?.previewUrl) {
+//       navigator.clipboard.writeText(tool.previewUrl)
+//       toast({ title: "Link copied to clipboard" })
+//     }
+//   }
+
+//   if (loading) {
+//     return <CinematicBuilder />
+//   }
+
+//   if (!tool) {
+//     return (
+//       <div className="h-screen flex items-center justify-center bg-background">
+//         <div className="text-center">
+//           <h2 className="text-2xl font-semibold mb-2">Tool not found</h2>
+//           <p className="text-muted-foreground">The tool you're looking for doesn't exist.</p>
+//         </div>
+//       </div>
+//     )
+//   }
+
+//   const PreviewPanel = () => (
+//     <div className="h-full bg-muted/20 relative">
+//       {tool.previewUrl ? (
+//         <iframe
+//           src={tool.previewUrl}
+//           className="w-full h-full border-0"
+//           title="Tool Preview"
+//           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+//         />
+//       ) : (
+//         <div className="h-full flex items-center justify-center">
+//           <div className="text-center">
+//             <Monitor className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+//             <p className="text-muted-foreground">No preview available</p>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   )
+
+//   const CodePanel = () => (
+//     <div className="h-full flex">
+//       <div className="flex-1 overflow-auto bg-card">
+//         {selectedFile ? (
+//           <div className="p-6">
+//             <div className="flex items-center justify-between mb-4">
+//               <div>
+//                 <h3 className="font-mono text-sm text-muted-foreground">{selectedFile.path}</h3>
+//                 <p className="text-xs text-muted-foreground mt-1">{selectedFile.content.split("\n").length} lines</p>
+//               </div>
+//               <div className="flex gap-2">
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   onClick={() => {
+//                     navigator.clipboard.writeText(selectedFile.content)
+//                     toast({ title: "Code copied to clipboard" })
+//                   }}
+//                 >
+//                   Copy
+//                 </Button>
+//                 <Button variant="ghost" size="sm">
+//                   Download
+//                 </Button>
+//               </div>
+//             </div>
+//             <pre className="bg-muted/50 rounded-lg p-4 overflow-x-auto">
+//               <code className="text-sm font-mono">{selectedFile.content}</code>
+//             </pre>
+//           </div>
+//         ) : (
+//           <div className="h-full flex items-center justify-center">
+//             <div className="text-center">
+//               <Code2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+//               <p className="text-muted-foreground">Select a file to view</p>
+//             </div>
+//           </div>
+//         )}
+//       </div>
+//       {selectedFile && (
+//         <CodeMinimap content={selectedFile.content} currentLine={currentLine} onLineClick={setCurrentLine} />
+//       )}
+//     </div>
+//   )
+
+//   return (
+//     <div className="h-screen flex flex-col bg-background">
+//       <div className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4">
+//         <div className="flex items-center gap-4">
+//           <Breadcrumb>
+//             <BreadcrumbList>
+//               <BreadcrumbItem>
+//                 <BreadcrumbLink href="/tools">Tools</BreadcrumbLink>
+//               </BreadcrumbItem>
+//               <BreadcrumbSeparator />
+//               <BreadcrumbItem>
+//                 <BreadcrumbPage>{tool.name}</BreadcrumbPage>
+//               </BreadcrumbItem>
+//             </BreadcrumbList>
+//           </Breadcrumb>
+//         </div>
+
+//         <div className="flex items-center gap-2">
+//           <Button variant="ghost" size="sm" onClick={() => setCommandPaletteOpen(true)} className="gap-2">
+//             <Command className="h-4 w-4" />
+//             <span className="text-xs text-muted-foreground">⌘K</span>
+//           </Button>
+//           <Button variant="ghost" size="sm" onClick={handleDownload}>
+//             <Download className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="sm" onClick={handleShare}>
+//             <Share2 className="h-4 w-4" />
+//           </Button>
+//           {tool.previewUrl && (
+//             <Button variant="ghost" size="sm" asChild>
+//               <a href={tool.previewUrl} target="_blank" rel="noopener noreferrer">
+//                 <ExternalLink className="h-4 w-4" />
+//               </a>
+//             </Button>
+//           )}
+//         </div>
+//       </div>
+
+//       <div className="h-12 border-b border-border bg-card/30 flex items-center px-4 gap-2">
+//         <Button
+//           variant={activeView === "preview" ? "default" : "ghost"}
+//           size="sm"
+//           onClick={() => setActiveView("preview")}
+//           className="gap-2"
+//         >
+//           <Monitor className="h-4 w-4" />
+//           Preview
+//         </Button>
+//         <Button
+//           variant={activeView === "code" ? "default" : "ghost"}
+//           size="sm"
+//           onClick={() => setActiveView("code")}
+//           className="gap-2"
+//         >
+//           <Code2 className="h-4 w-4" />
+//           Code
+//         </Button>
+//         <Button
+//           variant={activeView === "split" ? "default" : "ghost"}
+//           size="sm"
+//           onClick={() => setActiveView("split")}
+//           className="gap-2"
+//         >
+//           <PanelLeft className="h-4 w-4" />
+//           Split
+//         </Button>
+
+//         {activeView !== "preview" && (
+//           <Button variant="ghost" size="sm" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="ml-auto">
+//             {sidebarCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+//           </Button>
+//         )}
+//       </div>
+
+//       <div className="flex-1 overflow-hidden flex">
+//         <AnimatePresence mode="wait">
+//           {activeView !== "preview" && !sidebarCollapsed && tool.files && (
+//             <motion.div
+//               initial={{ width: 0, opacity: 0 }}
+//               animate={{ width: 280, opacity: 1 }}
+//               exit={{ width: 0, opacity: 0 }}
+//               transition={{ duration: 0.2 }}
+//               className="border-r border-border bg-card/30 overflow-hidden"
+//             >
+//               <div className="p-4 border-b border-border">
+//                 <h3 className="text-sm font-semibold mb-1">Files</h3>
+//                 <p className="text-xs text-muted-foreground">{tool.files.length} files</p>
+//               </div>
+//               <div className="p-2 overflow-y-auto h-[calc(100%-73px)]">
+//                 <AdvancedFileTree
+//                   files={tool?.files}
+//                   selectedFile={selectedFile?.name || null}
+//                   onFileSelect={setSelectedFile}
+//                 />
+//               </div>
+//             </motion.div>
+//           )}
+//         </AnimatePresence>
+
+//         <div className="flex-1 overflow-hidden">
+//           {activeView === "preview" && <PreviewPanel />}
+//           {activeView === "code" && <CodePanel />}
+//           {activeView === "split" && (
+//             <ResizablePanels left={<PreviewPanel />} right={<CodePanel />} defaultLeftWidth={50} />
+//           )}
+//         </div>
+//       </div>
+
+//       <CommandPalette
+//         isOpen={commandPaletteOpen}
+//         onClose={() => setCommandPaletteOpen(false)}
+//         onAction={handleCommandAction}
+//         files={tool.files || []}
+//       />
+//     </div>
+//   )
+// }
+
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
-import { Monitor, Code2, Download, Share2, ExternalLink, Command, PanelLeftClose, PanelLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useParams, useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { CinematicBuilder } from "@/components/generation/cinematic-builder"
-import { ResizablePanels } from "@/components/tool-viewer/resizable-panels"
-import { AdvancedFileTree } from "@/components/tool-viewer/advanced-file-tree"
-import { CodeMinimap } from "@/components/tool-viewer/code-minimap"
-import { CommandPalette } from "@/components/tool-viewer/command-palette"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+import type { GeneratedFile, GenerationResult, ChatHistory, LogEntry, LogLevel } from "@/types" // Assuming these types are defined in a separate file
 
-interface Tool {
-  id: string
-  name: string
-  status: string
-  previewUrl?: string
-  files?: Array<{ name: string; content: string; type?: string; path: string }>
-}
-
-export default function ToolViewerPage() {
-  const [tool, setTool] = useState<Tool | null>(null)
+export default function ToolDetailPage() {
   const [loading, setLoading] = useState(true)
-  const [selectedFile, setSelectedFile] = useState<{
-    name: string
-    content: string
-    type?: string
-    path?: string
-  } | null>(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [activeView, setActiveView] = useState<"preview" | "code" | "split">("preview")
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
-  const [currentLine, setCurrentLine] = useState(0)
+  const [tool, setTool] = useState<any>(null)
+  const [toolName, setToolName] = useState("")
+  const [category, setCategory] = useState("dashboard")
+  const [requirements, setRequirements] = useState("")
+  const [selectedIntegrations, setSelectedIntegrations] = useState<any[]>([])
+  const [result, setResult] = useState<GenerationResult | null>(null)
+  const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
+  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([])
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [step, setStep] = useState("create")
+  const [viewMode, setViewMode] = useState("code")
+  const [currentToolId, setCurrentToolId] = useState("")
 
-  const params = useParams()
   const { toast } = useToast()
+  const params = useParams()
+  const router = useRouter()
+  const orgSlug = params?.slug as string
   const toolId = params?.id as string
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault()
-        setCommandPaletteOpen(true)
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
-        e.preventDefault()
-        setActiveView("preview")
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "e") {
-        e.preventDefault()
-        setActiveView("code")
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault()
-        setActiveView("split")
-      }
+    if (orgSlug && toolId) {
+      loadTool()
     }
+  }, [orgSlug, toolId])
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
-
-  useEffect(() => {
-    fetchTool()
-  }, [toolId])
-
-  useEffect(() => {
-    if (tool?.files && tool.files.length > 0 && !selectedFile) {
-      setSelectedFile(tool.files[0])
-    }
-  }, [tool?.files])
-
-  const fetchTool = async () => {
+  const loadTool = async () => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 3000))
+      const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}`)
+      if (!response.ok) {
+        throw new Error("Failed to load tool")
+      }
 
-      setTool({
-        id: toolId,
-        name: "Customer Support Dashboard",
-        status: "GENERATED",
-        previewUrl: "https://v0.dev/chat/jYP8pRA7EFV",
-        files: [
-          {
-            name: "page.tsx",
-            path: "app/page.tsx",
-            content: `'use client'\n\nimport { useState } from 'react'\nimport { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'\nimport { Button } from '@/components/ui/button'\n\nexport default function Dashboard() {\n  const [tickets, setTickets] = useState([])\n\n  return (\n    <div className="container mx-auto p-6">\n      <h1 className="text-3xl font-bold mb-6">Support Dashboard</h1>\n      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">\n        <Card>\n          <CardHeader>\n            <CardTitle>Open Tickets</CardTitle>\n          </CardHeader>\n          <CardContent>\n            <p className="text-4xl font-bold">24</p>\n          </CardContent>\n        </Card>\n      </div>\n    </div>\n  )\n}`,
-            type: "typescript",
-          },
-          {
-            name: "layout.tsx",
-            path: "app/layout.tsx",
-            content: `export default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode\n}) {\n  return (\n    <html lang="en">\n      <body>{children}</body>\n    </html>\n  )\n}`,
-            type: "typescript",
-          },
-          {
-            name: "globals.css",
-            path: "app/globals.css",
-            content: `@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n:root {\n  --background: 0 0% 100%;\n  --foreground: 224 71.4% 4.1%;\n}`,
-            type: "css",
-          },
-        ],
-      })
+      const toolData = await response.json()
+      setTool(toolData)
+
+      setToolName(toolData.name)
+      setCategory(toolData.category || "dashboard")
+      setRequirements(toolData.requirements || "")
+      setSelectedIntegrations(toolData.integrations || [])
+
+      if (toolData.chatSession) {
+        // Load files
+        const files: GeneratedFile[] = toolData.chatSession.files.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          path: f.name,
+          content: f.content,
+          type: f.type,
+          size: f.size || 0,
+          language: f.type,
+          createdAt: new Date(f.createdAt),
+          updatedAt: new Date(f.updatedAt),
+        }))
+
+        const generationResult: GenerationResult = {
+          success: true,
+          toolId: toolData.id,
+          chatSessionId: toolData.chatSession.id,
+          files,
+          previewUrl: toolData.previewUrl || undefined,
+          chatUrl: toolData.chatUrl || undefined,
+        }
+
+        setResult(generationResult)
+        if (files.length > 0) {
+          setSelectedFile(files[0])
+        }
+
+        // Load chat history
+        const chatMessages: ChatHistory[] = toolData.chatSession.messages.map((m: any) => ({
+          id: m.id,
+          message: m.content,
+          role: m.role,
+          timestamp: new Date(m.createdAt),
+        }))
+        setChatHistory(chatMessages)
+
+        // Load logs from generation
+        if (toolData.generationLogs && Array.isArray(toolData.generationLogs)) {
+          const loadedLogs: LogEntry[] = toolData.generationLogs.map((msg: string, i: number) => ({
+            id: `log-${i}`,
+            timestamp: new Date(toolData.createdAt),
+            level: "info" as LogLevel,
+            message: msg,
+          }))
+          setLogs(loadedLogs)
+        }
+
+        setStep("preview")
+        setViewMode(generationResult.previewUrl ? "preview" : "code")
+      }
+
+      setCurrentToolId(toolData.id)
     } catch (error) {
-      toast({ title: "Error loading tool", variant: "destructive" })
+      console.error("Failed to load tool:", error)
+      toast({ title: "Failed to load tool", variant: "destructive" })
+      router.push(`/${orgSlug}/tools`)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCommandAction = (action: string) => {
-    if (action.startsWith("open-file:")) {
-      const filePath = action.replace("open-file:", "")
-      const file = tool?.files?.find((f) => f.path === filePath)
-      if (file) {
-        setSelectedFile(file)
-        setActiveView("code")
-      }
-    } else if (action === "preview") {
-      setActiveView("preview")
-    } else if (action === "code") {
-      setActiveView("code")
-    } else if (action === "download") {
-      handleDownload()
-    } else if (action === "share") {
-      handleShare()
-    } else if (action === "deploy") {
-      toast({ title: "Deploy feature coming soon!" })
-    }
-  }
-
-  const handleDownload = () => {
-    toast({ title: "Downloading files..." })
-  }
-
-  const handleShare = () => {
-    if (tool?.previewUrl) {
-      navigator.clipboard.writeText(tool.previewUrl)
-      toast({ title: "Link copied to clipboard" })
-    }
-  }
-
   if (loading) {
-    return <CinematicBuilder />
-  }
-
-  if (!tool) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-2">Tool not found</h2>
-          <p className="text-muted-foreground">The tool you're looking for doesn't exist.</p>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-muted-foreground mx-auto" />
+          <p className="text-muted-foreground">Loading tool...</p>
         </div>
       </div>
     )
   }
-
-  const PreviewPanel = () => (
-    <div className="h-full bg-muted/20 relative">
-      {tool.previewUrl ? (
-        <iframe
-          src={tool.previewUrl}
-          className="w-full h-full border-0"
-          title="Tool Preview"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-        />
-      ) : (
-        <div className="h-full flex items-center justify-center">
-          <div className="text-center">
-            <Monitor className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">No preview available</p>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-
-  const CodePanel = () => (
-    <div className="h-full flex">
-      <div className="flex-1 overflow-auto bg-card">
-        {selectedFile ? (
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-mono text-sm text-muted-foreground">{selectedFile.path}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{selectedFile.content.split("\n").length} lines</p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(selectedFile.content)
-                    toast({ title: "Code copied to clipboard" })
-                  }}
-                >
-                  Copy
-                </Button>
-                <Button variant="ghost" size="sm">
-                  Download
-                </Button>
-              </div>
-            </div>
-            <pre className="bg-muted/50 rounded-lg p-4 overflow-x-auto">
-              <code className="text-sm font-mono">{selectedFile.content}</code>
-            </pre>
-          </div>
-        ) : (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <Code2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">Select a file to view</p>
-            </div>
-          </div>
-        )}
-      </div>
-      {selectedFile && (
-        <CodeMinimap content={selectedFile.content} currentLine={currentLine} onLineClick={setCurrentLine} />
-      )}
-    </div>
-  )
-
-  return (
-    <div className="h-screen flex flex-col bg-background">
-      <div className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/tools">Tools</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{tool.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setCommandPaletteOpen(true)} className="gap-2">
-            <Command className="h-4 w-4" />
-            <span className="text-xs text-muted-foreground">⌘K</span>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleDownload}>
-            <Download className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleShare}>
-            <Share2 className="h-4 w-4" />
-          </Button>
-          {tool.previewUrl && (
-            <Button variant="ghost" size="sm" asChild>
-              <a href={tool.previewUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="h-12 border-b border-border bg-card/30 flex items-center px-4 gap-2">
-        <Button
-          variant={activeView === "preview" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveView("preview")}
-          className="gap-2"
-        >
-          <Monitor className="h-4 w-4" />
-          Preview
-        </Button>
-        <Button
-          variant={activeView === "code" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveView("code")}
-          className="gap-2"
-        >
-          <Code2 className="h-4 w-4" />
-          Code
-        </Button>
-        <Button
-          variant={activeView === "split" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveView("split")}
-          className="gap-2"
-        >
-          <PanelLeft className="h-4 w-4" />
-          Split
-        </Button>
-
-        {activeView !== "preview" && (
-          <Button variant="ghost" size="sm" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="ml-auto">
-            {sidebarCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-          </Button>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-hidden flex">
-        <AnimatePresence mode="wait">
-          {activeView !== "preview" && !sidebarCollapsed && tool.files && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="border-r border-border bg-card/30 overflow-hidden"
-            >
-              <div className="p-4 border-b border-border">
-                <h3 className="text-sm font-semibold mb-1">Files</h3>
-                <p className="text-xs text-muted-foreground">{tool.files.length} files</p>
-              </div>
-              <div className="p-2 overflow-y-auto h-[calc(100%-73px)]">
-                <AdvancedFileTree
-                  files={tool?.files}
-                  selectedFile={selectedFile?.name || null}
-                  onFileSelect={setSelectedFile}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="flex-1 overflow-hidden">
-          {activeView === "preview" && <PreviewPanel />}
-          {activeView === "code" && <CodePanel />}
-          {activeView === "split" && (
-            <ResizablePanels left={<PreviewPanel />} right={<CodePanel />} defaultLeftWidth={50} />
-          )}
-        </div>
-      </div>
-
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-        onAction={handleCommandAction}
-        files={tool.files || []}
-      />
-    </div>
-  )
 }
-

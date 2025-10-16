@@ -735,6 +735,343 @@
 
 
 
+// "use client"
+
+// import { useState, useEffect } from "react"
+// import { useParams, useRouter } from "next/navigation"
+// import Link from "next/link"
+// import { Button } from "@/components/ui/button"
+// import { Card } from "@/components/ui/card"
+// import { Badge } from "@/components/ui/badge"
+// import { Input } from "@/components/ui/input"
+// import {
+//   Plus,
+//   Search,
+//   Eye,
+//   Globe,
+//   Trash2,
+//   AlertTriangle,
+//   CheckCircle,
+//   Clock,
+//   Loader2,
+//   Sparkles,
+//   Code2,
+//   Zap,
+//   TrendingUp,
+// } from "lucide-react"
+// import { useToast } from "@/hooks/use-toast"
+
+// interface Tool {
+//   id: string
+//   name: string
+//   description?: string
+//   category?: string
+//   status: string
+//   generationStatus: string
+//   createdAt: string
+//   updatedAt: string
+//   previewUrl?: string
+//   publishedUrl?: string
+//   generationError?: string
+// }
+
+// export default function ToolsPage() {
+//   const [tools, setTools] = useState<Tool[]>([])
+//   const [loading, setLoading] = useState(true)
+//   const [searchQuery, setSearchQuery] = useState("")
+//   const [statusFilter, setStatusFilter] = useState("all")
+//   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
+
+//   const { toast } = useToast()
+//   const params = useParams()
+//   const router = useRouter()
+//   const orgSlug = params?.slug as string
+
+//   useEffect(() => {
+//     if (orgSlug) {
+//       fetchTools()
+//     }
+//   }, [orgSlug])
+
+//   const fetchTools = async () => {
+//     try {
+//       const response = await fetch(`/api/organizations/${orgSlug}/tools`)
+//       if (response.ok) {
+//         const toolsData = await response.json()
+//         setTools(toolsData)
+//       }
+//     } catch (error) {
+//       console.error("Failed to fetch tools:", error)
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   const handleDeleteTool = async (toolId: string) => {
+//     if (!confirm("Delete this tool permanently?")) return
+
+//     try {
+//       const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}`, {
+//         method: "DELETE",
+//       })
+
+//       if (response.ok) {
+//         setTools(tools.filter((tool) => tool.id !== toolId))
+//         toast({ title: "Tool deleted successfully" })
+//       }
+//     } catch (error) {
+//       toast({ title: "Failed to delete tool", variant: "destructive" })
+//     }
+//   }
+
+//   const getStatusIcon = (status: string) => {
+//     switch (status) {
+//       case "PUBLISHED":
+//         return <CheckCircle className="h-4 w-4 text-emerald-400" />
+//       case "GENERATING":
+//         return <Loader2 className="h-4 w-4 text-purple-400 animate-spin" />
+//       case "ERROR":
+//         return <AlertTriangle className="h-4 w-4 text-red-400" />
+//       case "GENERATED":
+//         return <Zap className="h-4 w-4 text-blue-400" />
+//       default:
+//         return <Clock className="h-4 w-4 text-slate-400" />
+//     }
+//   }
+
+//   const filteredTools = tools.filter((tool) => {
+//     const matchesSearch =
+//       tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//       (tool.description && tool.description.toLowerCase().includes(searchQuery.toLowerCase()))
+//     const matchesStatus = statusFilter === "all" || tool.status.toLowerCase() === statusFilter.toLowerCase()
+//     return matchesSearch && matchesStatus
+//   })
+
+//   if (loading) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen bg-[#121212]">
+//         <div className="text-center space-y-4">
+//           <Loader2 className="h-12 w-12 animate-spin text-[#888888] mx-auto" />
+//           <p className="text-[#B0B0B0]">Loading your tools...</p>
+//         </div>
+//       </div>
+//     )
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-[#121212] text-[#E0E0E0]">
+//       <div className="border-b border-[#444444] bg-[#121212]/80 backdrop-blur-xl sticky top-0 z-10">
+//         <div className="max-w-7xl mx-auto px-6 py-6">
+//           <div className="flex items-center justify-between mb-6">
+//             <div>
+//               <h1 className="text-4xl font-bold text-[#E0E0E0] mb-2">Your Tools</h1>
+//               <p className="text-[#B0B0B0]">Build, manage, and deploy AI-powered tools</p>
+//             </div>
+//             <Link href={`/${orgSlug}/tools/create`}>
+//               <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212] h-12 px-6 text-base font-semibold">
+//                 <Plus className="h-5 w-5 mr-2" />
+//                 Create Tool
+//               </Button>
+//             </Link>
+//           </div>
+
+//           <div className="grid grid-cols-4 gap-4">
+//             <Card className="bg-[#1a1a1a] border-[#444444] p-4">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="text-[#B0B0B0] text-sm">Total Tools</p>
+//                   <p className="text-2xl font-bold text-[#E0E0E0] mt-1">{tools.length}</p>
+//                 </div>
+//                 <Code2 className="h-8 w-8 text-[#888888]" />
+//               </div>
+//             </Card>
+//             <Card className="bg-[#1a1a1a] border-[#444444] p-4">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="text-[#B0B0B0] text-sm">Published</p>
+//                   <p className="text-2xl font-bold text-emerald-400 mt-1">
+//                     {tools.filter((t) => t.status === "PUBLISHED").length}
+//                   </p>
+//                 </div>
+//                 <Globe className="h-8 w-8 text-emerald-400" />
+//               </div>
+//             </Card>
+//             <Card className="bg-[#1a1a1a] border-[#444444] p-4">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="text-[#B0B0B0] text-sm">Generating</p>
+//                   <p className="text-2xl font-bold text-purple-400 mt-1">
+//                     {tools.filter((t) => t.status === "GENERATING").length}
+//                   </p>
+//                 </div>
+//                 <Sparkles className="h-8 w-8 text-purple-400" />
+//               </div>
+//             </Card>
+//             <Card className="bg-[#1a1a1a] border-[#444444] p-4">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="text-[#B0B0B0] text-sm">This Month</p>
+//                   <p className="text-2xl font-bold text-blue-400 mt-1">
+//                     {tools.filter((t) => new Date(t.createdAt).getMonth() === new Date().getMonth()).length}
+//                   </p>
+//                 </div>
+//                 <TrendingUp className="h-8 w-8 text-blue-400" />
+//               </div>
+//             </Card>
+//           </div>
+//         </div>
+//       </div>
+
+//       <div className="max-w-7xl mx-auto px-6 py-8">
+//         <div className="flex gap-4 mb-8">
+//           <div className="relative flex-1">
+//             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#B0B0B0]" />
+//             <Input
+//               placeholder="Search tools by name or description..."
+//               value={searchQuery}
+//               onChange={(e) => setSearchQuery(e.target.value)}
+//               className="pl-12 h-12 bg-[#1a1a1a] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] focus:border-[#888888]"
+//             />
+//           </div>
+//           <select
+//             value={statusFilter}
+//             onChange={(e) => setStatusFilter(e.target.value)}
+//             className="h-12 px-4 rounded-md bg-[#1a1a1a] border border-[#444444] text-[#E0E0E0] focus:border-[#888888] focus:outline-none"
+//           >
+//             <option value="all">All Status</option>
+//             <option value="draft">Draft</option>
+//             <option value="generating">Generating</option>
+//             <option value="generated">Generated</option>
+//             <option value="published">Published</option>
+//             <option value="error">Error</option>
+//           </select>
+//         </div>
+
+//         {filteredTools.length > 0 ? (
+//           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+//             {filteredTools.map((tool) => (
+//               <Card
+//                 key={tool.id}
+//                 onMouseEnter={() => setHoveredTool(tool.id)}
+//                 onMouseLeave={() => setHoveredTool(null)}
+//                 className="bg-[#1a1a1a] border-[#444444] hover:border-[#888888] transition-all duration-300 overflow-hidden group cursor-pointer"
+//                 onClick={() => router.push(`/${orgSlug}/tools/${tool.id}`)}
+//               >
+//                 <div className="h-48 bg-[#0a0a0a] border-b border-[#444444] relative overflow-hidden">
+//                   {tool.previewUrl ? (
+//                     <iframe
+//                       src={tool.previewUrl}
+//                       className="w-full h-full pointer-events-none scale-50 origin-top-left"
+//                       style={{ width: "200%", height: "200%" }}
+//                       title={tool.name}
+//                     />
+//                   ) : (
+//                     <div className="flex items-center justify-center h-full">
+//                       <Code2 className="h-16 w-16 text-[#444444]" />
+//                     </div>
+//                   )}
+//                   <div
+//                     className={`absolute inset-0 bg-[#121212]/90 backdrop-blur-sm flex items-center justify-center gap-3 transition-opacity duration-300 ${
+//                       hoveredTool === tool.id ? "opacity-100" : "opacity-0"
+//                     }`}
+//                   >
+//                     <Button
+//                       size="sm"
+//                       className="bg-[#888888] hover:bg-[#666666] text-[#121212]"
+//                       onClick={(e) => {
+//                         e.stopPropagation()
+//                         router.push(`/${orgSlug}/tools/${tool.id}`)
+//                       }}
+//                     >
+//                       <Eye className="h-4 w-4 mr-2" />
+//                       View
+//                     </Button>
+//                     {tool.publishedUrl && (
+//                       <Button
+//                         size="sm"
+//                         variant="outline"
+//                         className="border-[#888888] text-[#E0E0E0] hover:bg-[#888888] hover:text-[#121212] bg-transparent"
+//                         onClick={(e) => {
+//                           e.stopPropagation()
+//                           window.open(tool.publishedUrl, "_blank")
+//                         }}
+//                       >
+//                         <Globe className="h-4 w-4" />
+//                       </Button>
+//                     )}
+//                   </div>
+//                 </div>
+
+//                 <div className="p-6">
+//                   <div className="flex items-start justify-between mb-3">
+//                     <div className="flex items-center gap-2">
+//                       {getStatusIcon(tool.status)}
+//                       <h3 className="text-lg font-semibold text-[#E0E0E0] line-clamp-1">{tool.name}</h3>
+//                     </div>
+//                     <button
+//                       onClick={(e) => {
+//                         e.stopPropagation()
+//                         handleDeleteTool(tool.id)
+//                       }}
+//                       className="text-[#B0B0B0] hover:text-red-400 transition-colors"
+//                     >
+//                       <Trash2 className="h-4 w-4" />
+//                     </button>
+//                   </div>
+
+//                   <p className="text-[#B0B0B0] text-sm line-clamp-2 mb-4">
+//                     {tool.description || "No description provided"}
+//                   </p>
+
+//                   <div className="flex items-center justify-between">
+//                     <Badge
+//                       className={`text-xs ${
+//                         tool.status === "PUBLISHED"
+//                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+//                           : tool.status === "GENERATING"
+//                             ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+//                             : tool.status === "ERROR"
+//                               ? "bg-red-500/10 text-red-400 border-red-500/20"
+//                               : "bg-[#444444]/10 text-[#B0B0B0] border-[#444444]/20"
+//                       }`}
+//                     >
+//                       {tool.status}
+//                     </Badge>
+//                     <span className="text-xs text-[#B0B0B0]">{new Date(tool.createdAt).toLocaleDateString()}</span>
+//                   </div>
+//                 </div>
+//               </Card>
+//             ))}
+//           </div>
+//         ) : (
+//           <Card className="bg-[#1a1a1a] border-[#444444]">
+//             <div className="flex flex-col items-center justify-center py-20">
+//               <div className="w-20 h-20 bg-[#444444]/20 rounded-full flex items-center justify-center mb-6">
+//                 <Sparkles className="h-10 w-10 text-[#888888]" />
+//               </div>
+//               <h3 className="text-2xl font-semibold text-[#E0E0E0] mb-2">
+//                 {searchQuery || statusFilter !== "all" ? "No tools found" : "No tools yet"}
+//               </h3>
+//               <p className="text-[#B0B0B0] text-center mb-8 max-w-md">
+//                 {searchQuery || statusFilter !== "all"
+//                   ? "Try adjusting your search or filter criteria."
+//                   : "Create your first AI-powered tool and watch it come to life."}
+//               </p>
+//               {!searchQuery && statusFilter === "all" && (
+//                 <Link href={`/${orgSlug}/tools/create`}>
+//                   <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212] h-12 px-8 text-base">
+//                     <Plus className="h-5 w-5 mr-2" />
+//                     Create Your First Tool
+//                   </Button>
+//                 </Link>
+//               )}
+//             </div>
+//           </Card>
+//         )}
+//       </div>
+//     </div>
+//   )
+// }
 "use client"
 
 import { useState, useEffect } from "react"
@@ -849,26 +1186,26 @@ export default function ToolsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#121212]">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-[#888888] mx-auto" />
-          <p className="text-[#B0B0B0]">Loading your tools...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-muted-foreground mx-auto" />
+          <p className="text-muted-foreground">Loading your tools...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] text-[#E0E0E0]">
-      <div className="border-b border-[#444444] bg-[#121212]/80 backdrop-blur-xl sticky top-0 z-10">
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-4xl font-bold text-[#E0E0E0] mb-2">Your Tools</h1>
-              <p className="text-[#B0B0B0]">Build, manage, and deploy AI-powered tools</p>
+              <h1 className="text-4xl font-bold text-foreground mb-2">Your Tools</h1>
+              <p className="text-muted-foreground">Build, manage, and deploy AI-powered tools</p>
             </div>
             <Link href={`/${orgSlug}/tools/create`}>
-              <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212] h-12 px-6 text-base font-semibold">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-6 text-base font-semibold">
                 <Plus className="h-5 w-5 mr-2" />
                 Create Tool
               </Button>
@@ -876,19 +1213,19 @@ export default function ToolsPage() {
           </div>
 
           <div className="grid grid-cols-4 gap-4">
-            <Card className="bg-[#1a1a1a] border-[#444444] p-4">
+            <Card className="bg-card border-border p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#B0B0B0] text-sm">Total Tools</p>
-                  <p className="text-2xl font-bold text-[#E0E0E0] mt-1">{tools.length}</p>
+                  <p className="text-muted-foreground text-sm">Total Tools</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{tools.length}</p>
                 </div>
-                <Code2 className="h-8 w-8 text-[#888888]" />
+                <Code2 className="h-8 w-8 text-muted-foreground" />
               </div>
             </Card>
-            <Card className="bg-[#1a1a1a] border-[#444444] p-4">
+            <Card className="bg-card border-border p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#B0B0B0] text-sm">Published</p>
+                  <p className="text-muted-foreground text-sm">Published</p>
                   <p className="text-2xl font-bold text-emerald-400 mt-1">
                     {tools.filter((t) => t.status === "PUBLISHED").length}
                   </p>
@@ -896,10 +1233,10 @@ export default function ToolsPage() {
                 <Globe className="h-8 w-8 text-emerald-400" />
               </div>
             </Card>
-            <Card className="bg-[#1a1a1a] border-[#444444] p-4">
+            <Card className="bg-card border-border p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#B0B0B0] text-sm">Generating</p>
+                  <p className="text-muted-foreground text-sm">Generating</p>
                   <p className="text-2xl font-bold text-purple-400 mt-1">
                     {tools.filter((t) => t.status === "GENERATING").length}
                   </p>
@@ -907,10 +1244,10 @@ export default function ToolsPage() {
                 <Sparkles className="h-8 w-8 text-purple-400" />
               </div>
             </Card>
-            <Card className="bg-[#1a1a1a] border-[#444444] p-4">
+            <Card className="bg-card border-border p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[#B0B0B0] text-sm">This Month</p>
+                  <p className="text-muted-foreground text-sm">This Month</p>
                   <p className="text-2xl font-bold text-blue-400 mt-1">
                     {tools.filter((t) => new Date(t.createdAt).getMonth() === new Date().getMonth()).length}
                   </p>
@@ -925,18 +1262,18 @@ export default function ToolsPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex gap-4 mb-8">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#B0B0B0]" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               placeholder="Search tools by name or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 h-12 bg-[#1a1a1a] border-[#444444] text-[#E0E0E0] placeholder-[#B0B0B0] focus:border-[#888888]"
+              className="pl-12 h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-primary"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-12 px-4 rounded-md bg-[#1a1a1a] border border-[#444444] text-[#E0E0E0] focus:border-[#888888] focus:outline-none"
+            className="h-12 px-4 rounded-md bg-card border border-border text-foreground focus:border-primary focus:outline-none"
           >
             <option value="all">All Status</option>
             <option value="draft">Draft</option>
@@ -954,10 +1291,10 @@ export default function ToolsPage() {
                 key={tool.id}
                 onMouseEnter={() => setHoveredTool(tool.id)}
                 onMouseLeave={() => setHoveredTool(null)}
-                className="bg-[#1a1a1a] border-[#444444] hover:border-[#888888] transition-all duration-300 overflow-hidden group cursor-pointer"
+                className="bg-card border-border hover:border-primary transition-all duration-300 overflow-hidden group cursor-pointer"
                 onClick={() => router.push(`/${orgSlug}/tools/${tool.id}`)}
               >
-                <div className="h-48 bg-[#0a0a0a] border-b border-[#444444] relative overflow-hidden">
+                <div className="h-48 bg-muted border-b border-border relative overflow-hidden">
                   {tool.previewUrl ? (
                     <iframe
                       src={tool.previewUrl}
@@ -967,17 +1304,17 @@ export default function ToolsPage() {
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full">
-                      <Code2 className="h-16 w-16 text-[#444444]" />
+                      <Code2 className="h-16 w-16 text-muted-foreground/30" />
                     </div>
                   )}
                   <div
-                    className={`absolute inset-0 bg-[#121212]/90 backdrop-blur-sm flex items-center justify-center gap-3 transition-opacity duration-300 ${
+                    className={`absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center gap-3 transition-opacity duration-300 ${
                       hoveredTool === tool.id ? "opacity-100" : "opacity-0"
                     }`}
                   >
                     <Button
                       size="sm"
-                      className="bg-[#888888] hover:bg-[#666666] text-[#121212]"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       onClick={(e) => {
                         e.stopPropagation()
                         router.push(`/${orgSlug}/tools/${tool.id}`)
@@ -990,7 +1327,7 @@ export default function ToolsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-[#888888] text-[#E0E0E0] hover:bg-[#888888] hover:text-[#121212] bg-transparent"
+                        className="border-border text-foreground hover:bg-primary hover:text-primary-foreground bg-transparent"
                         onClick={(e) => {
                           e.stopPropagation()
                           window.open(tool.publishedUrl, "_blank")
@@ -1006,20 +1343,20 @@ export default function ToolsPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(tool.status)}
-                      <h3 className="text-lg font-semibold text-[#E0E0E0] line-clamp-1">{tool.name}</h3>
+                      <h3 className="text-lg font-semibold text-foreground line-clamp-1">{tool.name}</h3>
                     </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         handleDeleteTool(tool.id)
                       }}
-                      className="text-[#B0B0B0] hover:text-red-400 transition-colors"
+                      className="text-muted-foreground hover:text-red-400 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
 
-                  <p className="text-[#B0B0B0] text-sm line-clamp-2 mb-4">
+                  <p className="text-muted-foreground text-sm line-clamp-2 mb-4">
                     {tool.description || "No description provided"}
                   </p>
 
@@ -1032,34 +1369,36 @@ export default function ToolsPage() {
                             ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                             : tool.status === "ERROR"
                               ? "bg-red-500/10 text-red-400 border-red-500/20"
-                              : "bg-[#444444]/10 text-[#B0B0B0] border-[#444444]/20"
+                              : "bg-muted text-muted-foreground border-border"
                       }`}
                     >
                       {tool.status}
                     </Badge>
-                    <span className="text-xs text-[#B0B0B0]">{new Date(tool.createdAt).toLocaleDateString()}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(tool.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               </Card>
             ))}
           </div>
         ) : (
-          <Card className="bg-[#1a1a1a] border-[#444444]">
+          <Card className="bg-card border-border">
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-20 h-20 bg-[#444444]/20 rounded-full flex items-center justify-center mb-6">
-                <Sparkles className="h-10 w-10 text-[#888888]" />
+              <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
+                <Sparkles className="h-10 w-10 text-muted-foreground" />
               </div>
-              <h3 className="text-2xl font-semibold text-[#E0E0E0] mb-2">
+              <h3 className="text-2xl font-semibold text-foreground mb-2">
                 {searchQuery || statusFilter !== "all" ? "No tools found" : "No tools yet"}
               </h3>
-              <p className="text-[#B0B0B0] text-center mb-8 max-w-md">
+              <p className="text-muted-foreground text-center mb-8 max-w-md">
                 {searchQuery || statusFilter !== "all"
                   ? "Try adjusting your search or filter criteria."
                   : "Create your first AI-powered tool and watch it come to life."}
               </p>
               {!searchQuery && statusFilter === "all" && (
                 <Link href={`/${orgSlug}/tools/create`}>
-                  <Button className="bg-[#888888] hover:bg-[#666666] text-[#121212] h-12 px-8 text-base">
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-8 text-base">
                     <Plus className="h-5 w-5 mr-2" />
                     Create Your First Tool
                   </Button>
