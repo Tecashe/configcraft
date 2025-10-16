@@ -462,9 +462,396 @@
 //   )
 // }
 
+// "use client"
+
+// import { useState } from "react"
+// import { useRouter } from "next/navigation"
+// import { useUser } from "@clerk/nextjs"
+// import { Button } from "@/components/ui/button"
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+// import { Input } from "@/components/ui/input"
+// import { Label } from "@/components/ui/label"
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+// import { Checkbox } from "@/components/ui/checkbox"
+// import { Textarea } from "@/components/ui/textarea"
+// import { ArrowRight, Building2, Users, Target, Zap, CheckCircle } from "lucide-react"
+// import { toast } from "@/hooks/use-toast"
+
+// const companySizes = [
+//   { value: "1-10", label: "1-10 employees" },
+//   { value: "11-50", label: "11-50 employees" },
+//   { value: "51-200", label: "51-200 employees" },
+//   { value: "201-1000", label: "201-1000 employees" },
+//   { value: "1000+", label: "1000+ employees" },
+// ]
+
+// const industries = [
+//   "Technology",
+//   "Healthcare",
+//   "Finance",
+//   "Education",
+//   "Retail",
+//   "Manufacturing",
+//   "Real Estate",
+//   "Marketing",
+//   "Consulting",
+//   "Other",
+// ]
+
+// const useCases = [
+//   "Project Management",
+//   "Customer Management",
+//   "Inventory Tracking",
+//   "Data Analysis",
+//   "Team Collaboration",
+//   "Process Automation",
+//   "Reporting & Analytics",
+//   "Other",
+// ]
+
+// const integrations = [
+//   { id: "slack", name: "Slack", description: "Team communication" },
+//   { id: "google", name: "Google Workspace", description: "Email and docs" },
+//   { id: "microsoft", name: "Microsoft 365", description: "Office suite" },
+//   { id: "salesforce", name: "Salesforce", description: "CRM platform" },
+//   { id: "hubspot", name: "HubSpot", description: "Marketing & sales" },
+//   { id: "zapier", name: "Zapier", description: "Automation" },
+// ]
+
+// export default function OnboardingPage() {
+//   const { user } = useUser()
+//   const router = useRouter()
+//   const [loading, setLoading] = useState(false)
+//   const [step, setStep] = useState(1)
+//   const [formData, setFormData] = useState({
+//     companyName: "",
+//     companySize: "",
+//     industry: "",
+//     primaryUseCase: "",
+//     selectedIntegrations: [] as string[],
+//     toolRequirements: "",
+//   })
+
+//   const handleInputChange = (field: string, value: string) => {
+//     setFormData((prev) => ({ ...prev, [field]: value }))
+//   }
+
+//   const handleIntegrationToggle = (integrationId: string) => {
+//     setFormData((prev) => ({
+//       ...prev,
+//       selectedIntegrations: prev.selectedIntegrations.includes(integrationId)
+//         ? prev.selectedIntegrations.filter((id) => id !== integrationId)
+//         : [...prev.selectedIntegrations, integrationId],
+//     }))
+//   }
+
+//   const handleSubmit = async () => {
+//     if (!formData.companyName.trim()) {
+//       toast({
+//         title: "Company name required",
+//         description: "Please enter your company name to continue.",
+//         variant: "destructive",
+//       })
+//       return
+//     }
+
+//     setLoading(true)
+//     try {
+//       const response = await fetch("/api/onboarding", {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify({
+//           companyName: formData.companyName.trim(),
+//           companySize: formData.companySize,
+//           industry: formData.industry,
+//           primaryUseCase: formData.primaryUseCase,
+//           integrations: formData.selectedIntegrations,
+//           toolRequirements: formData.toolRequirements,
+//         }),
+//       })
+
+//       const data = await response.json()
+
+//       if (!response.ok) {
+//         throw new Error(data.error || "Failed to complete onboarding")
+//       }
+
+//       toast({
+//         title: "Welcome to ConfigCraft!",
+//         description: "Your organization has been set up successfully.",
+//       })
+
+//       // Redirect to the organization dashboard
+//       router.push(`/${data.organization.slug}/dashboard`)
+//     } catch (error) {
+//       console.error("Onboarding error:", error)
+//       toast({
+//         title: "Setup failed",
+//         description: error instanceof Error ? error.message : "Please try again.",
+//         variant: "destructive",
+//       })
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   const nextStep = () => {
+//     if (step === 1 && !formData.companyName.trim()) {
+//       toast({
+//         title: "Company name required",
+//         description: "Please enter your company name to continue.",
+//         variant: "destructive",
+//       })
+//       return
+//     }
+//     setStep((prev) => Math.min(prev + 1, 4))
+//   }
+
+//   const prevStep = () => {
+//     setStep((prev) => Math.max(prev - 1, 1))
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+//       <div className="w-full max-w-2xl">
+//         {/* Header */}
+//         <div className="text-center mb-8">
+//           <div className="flex items-center justify-center space-x-3 mb-6">
+//             <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700">
+//               <span className="text-white text-lg font-bold">C</span>
+//             </div>
+//             <span className="text-2xl font-bold text-white">ConfigCraft</span>
+//           </div>
+//           <h1 className="text-3xl font-bold text-white mb-2">Welcome to ConfigCraft</h1>
+//           <p className="text-slate-400">Let's set up your organization and get you started</p>
+//         </div>
+
+//         {/* Progress Bar */}
+//         <div className="mb-8">
+//           <div className="flex items-center justify-between mb-2">
+//             <span className="text-sm text-slate-400">Step {step} of 4</span>
+//             <span className="text-sm text-slate-400">{Math.round((step / 4) * 100)}% complete</span>
+//           </div>
+//           <div className="w-full bg-slate-800 rounded-full h-2">
+//             <div
+//               className="bg-slate-600 h-2 rounded-full transition-all duration-300"
+//               style={{ width: `${(step / 4) * 100}%` }}
+//             />
+//           </div>
+//         </div>
+
+//         <Card className="bg-slate-800 border-slate-700">
+//           <CardHeader>
+//             <CardTitle className="text-white flex items-center">
+//               {step === 1 && (
+//                 <>
+//                   <Building2 className="w-5 h-5 mr-2" />
+//                   Company Information
+//                 </>
+//               )}
+//               {step === 2 && (
+//                 <>
+//                   <Users className="w-5 h-5 mr-2" />
+//                   Organization Details
+//                 </>
+//               )}
+//               {step === 3 && (
+//                 <>
+//                   <Target className="w-5 h-5 mr-2" />
+//                   Use Case & Goals
+//                 </>
+//               )}
+//               {step === 4 && (
+//                 <>
+//                   <Zap className="w-5 h-5 mr-2" />
+//                   Integrations
+//                 </>
+//               )}
+//             </CardTitle>
+//             <CardDescription className="text-slate-400">
+//               {step === 1 && "Tell us about your company"}
+//               {step === 2 && "Help us understand your organization"}
+//               {step === 3 && "What do you want to build?"}
+//               {step === 4 && "Connect your favorite tools"}
+//             </CardDescription>
+//           </CardHeader>
+//           <CardContent className="space-y-6">
+//             {step === 1 && (
+//               <div className="space-y-4">
+//                 <div>
+//                   <Label htmlFor="companyName" className="text-white">
+//                     Company Name *
+//                   </Label>
+//                   <Input
+//                     id="companyName"
+//                     placeholder="Enter your company name"
+//                     value={formData.companyName}
+//                     onChange={(e) => handleInputChange("companyName", e.target.value)}
+//                     className="bg-slate-900 border-slate-600 text-white placeholder-slate-400"
+//                   />
+//                 </div>
+//                 <div>
+//                   <Label htmlFor="companySize" className="text-white">
+//                     Company Size
+//                   </Label>
+//                   <Select
+//                     value={formData.companySize}
+//                     onValueChange={(value) => handleInputChange("companySize", value)}
+//                   >
+//                     <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+//                       <SelectValue placeholder="Select company size" />
+//                     </SelectTrigger>
+//                     <SelectContent className="bg-slate-800 border-slate-600">
+//                       {companySizes.map((size) => (
+//                         <SelectItem key={size.value} value={size.value} className="text-white hover:bg-slate-700">
+//                           {size.label}
+//                         </SelectItem>
+//                       ))}
+//                     </SelectContent>
+//                   </Select>
+//                 </div>
+//               </div>
+//             )}
+
+//             {step === 2 && (
+//               <div className="space-y-4">
+//                 <div>
+//                   <Label htmlFor="industry" className="text-white">
+//                     Industry
+//                   </Label>
+//                   <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
+//                     <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+//                       <SelectValue placeholder="Select your industry" />
+//                     </SelectTrigger>
+//                     <SelectContent className="bg-slate-800 border-slate-600">
+//                       {industries.map((industry) => (
+//                         <SelectItem key={industry} value={industry} className="text-white hover:bg-slate-700">
+//                           {industry}
+//                         </SelectItem>
+//                       ))}
+//                     </SelectContent>
+//                   </Select>
+//                 </div>
+//               </div>
+//             )}
+
+//             {step === 3 && (
+//               <div className="space-y-4">
+//                 <div>
+//                   <Label htmlFor="primaryUseCase" className="text-white">
+//                     Primary Use Case
+//                   </Label>
+//                   <Select
+//                     value={formData.primaryUseCase}
+//                     onValueChange={(value) => handleInputChange("primaryUseCase", value)}
+//                   >
+//                     <SelectTrigger className="bg-slate-900 border-slate-600 text-white">
+//                       <SelectValue placeholder="What's your main goal?" />
+//                     </SelectTrigger>
+//                     <SelectContent className="bg-slate-800 border-slate-600">
+//                       {useCases.map((useCase) => (
+//                         <SelectItem key={useCase} value={useCase} className="text-white hover:bg-slate-700">
+//                           {useCase}
+//                         </SelectItem>
+//                       ))}
+//                     </SelectContent>
+//                   </Select>
+//                 </div>
+//                 <div>
+//                   <Label htmlFor="toolRequirements" className="text-white">
+//                     Describe your ideal tool
+//                   </Label>
+//                   <Textarea
+//                     id="toolRequirements"
+//                     placeholder="Tell us what kind of business tool you'd like to build..."
+//                     value={formData.toolRequirements}
+//                     onChange={(e) => handleInputChange("toolRequirements", e.target.value)}
+//                     className="bg-slate-900 border-slate-600 text-white placeholder-slate-400"
+//                     rows={4}
+//                   />
+//                 </div>
+//               </div>
+//             )}
+
+//             {step === 4 && (
+//               <div className="space-y-4">
+//                 <div>
+//                   <Label className="text-white">Select integrations you'd like to use</Label>
+//                   <p className="text-sm text-slate-400 mb-4">You can add more integrations later</p>
+//                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+//                     {integrations.map((integration) => (
+//                       <div
+//                         key={integration.id}
+//                         className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+//                           formData.selectedIntegrations.includes(integration.id)
+//                             ? "border-slate-500 bg-slate-700"
+//                             : "border-slate-600 bg-slate-900 hover:bg-slate-800"
+//                         }`}
+//                         onClick={() => handleIntegrationToggle(integration.id)}
+//                       >
+//                         <div className="flex items-center space-x-3">
+//                           <Checkbox
+//                             checked={formData.selectedIntegrations.includes(integration.id)}
+//                             onChange={() => handleIntegrationToggle(integration.id)}
+//                             className="border-slate-500"
+//                           />
+//                           <div>
+//                             <p className="text-white font-medium">{integration.name}</p>
+//                             <p className="text-sm text-slate-400">{integration.description}</p>
+//                           </div>
+//                         </div>
+//                       </div>
+//                     ))}
+//                   </div>
+//                 </div>
+//               </div>
+//             )}
+
+//             <div className="flex justify-between pt-6">
+//               <Button
+//                 variant="outline"
+//                 onClick={prevStep}
+//                 disabled={step === 1}
+//                 className="border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
+//               >
+//                 Previous
+//               </Button>
+//               {step < 4 ? (
+//                 <Button onClick={nextStep} className="bg-slate-700 hover:bg-slate-600 text-white">
+//                   Next
+//                   <ArrowRight className="w-4 h-4 ml-2" />
+//                 </Button>
+//               ) : (
+//                 <Button
+//                   onClick={handleSubmit}
+//                   disabled={loading}
+//                   className="bg-slate-700 hover:bg-slate-600 text-white"
+//                 >
+//                   {loading ? "Setting up..." : "Complete Setup"}
+//                   <CheckCircle className="w-4 h-4 ml-2" />
+//                 </Button>
+//               )}
+//             </div>
+//           </CardContent>
+//         </Card>
+
+//         {/* User Info */}
+//         <div className="text-center mt-8">
+//           <p className="text-slate-400 text-sm">
+//             Setting up for {user?.firstName} {user?.lastName} ({user?.primaryEmailAddress?.emailAddress})
+//           </p>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
+
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -474,7 +861,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowRight, Building2, Users, Target, Zap, CheckCircle } from "lucide-react"
+import { ArrowRight, Building2, Users, Target, Zap, CheckCircle, Loader2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
 const companySizes = [
@@ -519,9 +906,10 @@ const integrations = [
 ]
 
 export default function OnboardingPage() {
-  const { user } = useUser()
+  const { user, isLoaded } = useUser()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(true)
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     companyName: "",
@@ -531,6 +919,40 @@ export default function OnboardingPage() {
     selectedIntegrations: [] as string[],
     toolRequirements: "",
   })
+
+  // ✅ CHECK IF USER ALREADY HAS AN ORGANIZATION ON MOUNT
+  useEffect(() => {
+    const checkExistingOrganization = async () => {
+      if (!isLoaded || !user) return
+
+      try {
+        setChecking(true)
+        const response = await fetch("/api/onboarding", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            companyName: "check", // Dummy value to trigger the check
+          }),
+        })
+
+        const data = await response.json()
+
+        if (response.ok && data.alreadyExists) {
+          // User already has an organization, redirect them
+          router.push(`/${data.organization.slug}/dashboard`)
+          return
+        }
+      } catch (error) {
+        console.error("Error checking existing organization:", error)
+      } finally {
+        setChecking(false)
+      }
+    }
+
+    checkExistingOrganization()
+  }, [isLoaded, user, router])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -578,6 +1000,16 @@ export default function OnboardingPage() {
         throw new Error(data.error || "Failed to complete onboarding")
       }
 
+      // Handle the case where organization already exists
+      if (data.alreadyExists) {
+        toast({
+          title: "Organization exists",
+          description: "Redirecting to your existing organization...",
+        })
+        router.push(`/${data.organization.slug}/dashboard`)
+        return
+      }
+
       toast({
         title: "Welcome to ConfigCraft!",
         description: "Your organization has been set up successfully.",
@@ -611,6 +1043,18 @@ export default function OnboardingPage() {
 
   const prevStep = () => {
     setStep((prev) => Math.max(prev - 1, 1))
+  }
+
+  // Show loading state while checking for existing organization
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-slate-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Checking your account...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
