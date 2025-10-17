@@ -3758,7 +3758,7 @@ export default function ToolDetailPage() {
           updatedAt: new Date(f.updatedAt),
         }))
 
-        console.log("[v0] Files mapped:", files.length)
+        console.log("[v0] Files mapped from chat session:", files.length)
 
         const generationResult: GenerationResult = {
           success: true,
@@ -3769,7 +3769,7 @@ export default function ToolDetailPage() {
           chatUrl: toolData.chatUrl || undefined,
         }
 
-        console.log("[v0] Generation result created:", generationResult)
+        console.log("[v0] Generation result created from chat session:", generationResult)
 
         setResult(generationResult)
         if (files.length > 0) {
@@ -3786,9 +3786,62 @@ export default function ToolDetailPage() {
 
         setStep("preview")
         setViewMode(generationResult.previewUrl ? "preview" : "code")
-        console.log("[v0] Step set to preview, viewMode:", generationResult.previewUrl ? "preview" : "code")
+        console.log("[v0] Step set to preview from chat session")
+      } else if (toolData.status === "GENERATED" || toolData.status === "PUBLISHED") {
+        console.log("[v0] No chat session but tool is generated, loading from files API")
+
+        // Try to load files from the files API
+        try {
+          const filesResponse = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}/files`)
+          if (filesResponse.ok) {
+            const filesData = await filesResponse.json()
+            console.log("[v0] Files loaded from API:", filesData.length)
+
+            if (filesData.length > 0) {
+              const files: GeneratedFile[] = filesData.map((f: any) => ({
+                id: f.id,
+                name: f.name,
+                path: f.name,
+                content: f.content,
+                type: f.type,
+                size: f.size || 0,
+                language: f.type,
+                createdAt: new Date(f.createdAt),
+                updatedAt: new Date(f.updatedAt),
+              }))
+
+              const generationResult: GenerationResult = {
+                success: true,
+                toolId: toolData.id,
+                files,
+                previewUrl: toolData.previewUrl || undefined,
+                chatUrl: toolData.chatUrl || undefined,
+              }
+
+              console.log("[v0] Generation result created from files API:", generationResult)
+
+              setResult(generationResult)
+              if (files.length > 0) {
+                setSelectedFile(files[0])
+              }
+
+              setStep("preview")
+              setViewMode(generationResult.previewUrl ? "preview" : "code")
+              console.log("[v0] Step set to preview from files API")
+            } else {
+              console.log("[v0] No files found in API")
+              setStep("configure")
+            }
+          } else {
+            console.log("[v0] Files API returned error:", filesResponse.status)
+            setStep("configure")
+          }
+        } catch (filesError) {
+          console.error("[v0] Failed to load files from API:", filesError)
+          setStep("configure")
+        }
       } else {
-        console.log("[v0] No chat session found, setting step to configure")
+        console.log("[v0] Tool not generated yet, setting step to configure")
         setStep("configure")
       }
 
