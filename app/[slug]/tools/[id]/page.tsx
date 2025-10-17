@@ -2569,6 +2569,1075 @@
 // }
 
 
+// "use client"
+
+// import { useState, useEffect } from "react"
+// import { useParams, useRouter } from "next/navigation"
+// import {
+//   Loader2,
+//   ChevronLeft,
+//   ChevronRight,
+//   Monitor,
+//   Tablet,
+//   Smartphone,
+//   Code2,
+//   MessageSquare,
+//   Clock,
+//   BarChart3,
+//   Send,
+//   Download,
+//   Copy,
+//   Check,
+//   Search,
+//   Maximize2,
+//   Minimize2,
+//   Terminal,
+//   FileCode,
+//   Sparkles,
+//   CheckCircle2,
+//   AlertCircle,
+//   Info,
+//   PanelRightClose,
+//   PanelRightOpen,
+//   FolderTree,
+//   ExternalLink,
+//   Rocket,
+// } from "lucide-react"
+// import { useToast } from "@/hooks/use-toast"
+// import { Button } from "@/components/ui/button"
+// import { Input } from "@/components/ui/input"
+// import { Textarea } from "@/components/ui/textarea"
+// import { Badge } from "@/components/ui/badge"
+// import { ScrollArea } from "@/components/ui/scroll-area"
+// import { Card } from "@/components/ui/card"
+// import { Separator } from "@/components/ui/separator"
+// import type { GeneratedFile, GenerationResult, ChatMessage, LogEntry, LogLevel } from "@/types"
+
+// export default function ToolDetailPage() {
+//   const [loading, setLoading] = useState(true)
+//   const [tool, setTool] = useState<any>(null)
+//   const [toolName, setToolName] = useState("")
+//   const [category, setCategory] = useState("dashboard")
+//   const [requirements, setRequirements] = useState("")
+//   const [selectedIntegrations, setSelectedIntegrations] = useState<any[]>([])
+//   const [result, setResult] = useState<GenerationResult | null>(null)
+//   const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
+//   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
+//   const [logs, setLogs] = useState<LogEntry[]>([])
+//   const [step, setStep] = useState("create")
+//   const [viewMode, setViewMode] = useState<"preview" | "code">("code")
+//   const [currentToolId, setCurrentToolId] = useState("")
+
+//   const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false)
+//   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+//   const [deviceMode, setDeviceMode] = useState<"desktop" | "tablet" | "mobile">("desktop")
+//   const [searchQuery, setSearchQuery] = useState("")
+//   const [fileFilter, setFileFilter] = useState("all")
+//   const [copiedFile, setCopiedFile] = useState<string | null>(null)
+//   const [isFullscreen, setIsFullscreen] = useState(false)
+//   const [chatMessage, setChatMessage] = useState("")
+//   const [isRegenerating, setIsRegenerating] = useState(false)
+//   const [rightSidebarTab, setRightSidebarTab] = useState<"chat" | "logs" | "versions" | "analytics">("chat")
+//   const [versions, setVersions] = useState<any[]>([])
+//   const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
+
+//   const { toast } = useToast()
+//   const params = useParams()
+//   const router = useRouter()
+//   const orgSlug = params?.slug as string
+//   const toolId = params?.id as string
+
+//   useEffect(() => {
+//     if (orgSlug && toolId) {
+//       loadTool()
+//     }
+//   }, [orgSlug, toolId])
+
+//   const loadTool = async () => {
+//     try {
+//       const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}`)
+
+//       if (!response.ok) {
+//         throw new Error("Failed to load tool")
+//       }
+
+//       const toolData = await response.json()
+
+//       setTool(toolData)
+//       setToolName(toolData.name)
+//       setCategory(toolData.category || "dashboard")
+//       setRequirements(toolData.requirements || "")
+//       setSelectedIntegrations(toolData.integrations || [])
+
+//       const latestChatSession = toolData.chatSessions?.[0]
+
+//       if (latestChatSession) {
+//         const files: GeneratedFile[] = latestChatSession.files.map((f: any) => ({
+//           id: f.id,
+//           name: f.name,
+//           path: f.name,
+//           content: f.content,
+//           type: f.type,
+//           size: f.size || 0,
+//           language: f.type,
+//           createdAt: new Date(f.createdAt),
+//           updatedAt: new Date(f.updatedAt),
+//         }))
+
+//         const generationResult: GenerationResult = {
+//           success: true,
+//           toolId: toolData.id,
+//           chatSessionId: latestChatSession.id,
+//           files,
+//           previewUrl: toolData.previewUrl || undefined,
+//           chatUrl: toolData.chatUrl || undefined,
+//         }
+
+//         setResult(generationResult)
+//         if (files.length > 0) {
+//           setSelectedFile(files[0])
+//         }
+
+//         const chatMessages: ChatMessage[] = latestChatSession.messages.map((m: any) => ({
+//           id: m.id,
+//           content: m.content,
+//           role: m.role,
+//           timestamp: new Date(m.createdAt),
+//         }))
+//         setChatHistory(chatMessages)
+
+//         setStep("preview")
+//         setViewMode(generationResult.previewUrl ? "preview" : "code")
+//       } else {
+//         setStep("configure")
+//       }
+
+//       setCurrentToolId(toolData.id)
+//     } catch (error) {
+//       console.error("[v0] Failed to load tool:", error)
+//       toast({ title: "Failed to load tool", variant: "destructive" })
+//       router.push(`/${orgSlug}/tools`)
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   const handleCopyCode = (content: string, fileId: string) => {
+//     navigator.clipboard.writeText(content)
+//     setCopiedFile(fileId)
+//     setTimeout(() => setCopiedFile(null), 2000)
+//     toast({ title: "Code copied to clipboard" })
+//   }
+
+//   const handleDownloadFile = (file: GeneratedFile) => {
+//     const blob = new Blob([file.content], { type: "text/plain" })
+//     const url = URL.createObjectURL(blob)
+//     const a = document.createElement("a")
+//     a.href = url
+//     a.download = file.name
+//     a.click()
+//     URL.revokeObjectURL(url)
+//   }
+
+//   const handleSendMessage = async () => {
+//     if (!chatMessage.trim() || !result) return
+
+//     setIsRegenerating(true)
+//     const userMessage: ChatMessage = {
+//       id: `user-${Date.now()}`,
+//       content: chatMessage,
+//       role: "user",
+//       timestamp: new Date(),
+//     }
+//     setChatHistory([...chatHistory, userMessage])
+//     setChatMessage("")
+
+//     try {
+//       // Simulate regeneration - replace with actual API call
+//       await new Promise((resolve) => setTimeout(resolve, 2000))
+
+//       const assistantMessage: ChatMessage = {
+//         id: `assistant-${Date.now()}`,
+//         content: "Tool enhanced successfully! The changes have been applied.",
+//         role: "assistant",
+//         timestamp: new Date(),
+//       }
+//       setChatHistory((prev) => [...prev, assistantMessage])
+
+//       toast({ title: "Tool enhanced successfully!" })
+//       await loadTool()
+//     } catch (error) {
+//       console.error("[v0] Regeneration failed:", error)
+//       toast({ title: "Failed to regenerate", variant: "destructive" })
+//     } finally {
+//       setIsRegenerating(false)
+//     }
+//   }
+
+//   const filteredFiles = (result?.files ?? []).filter((file) => {
+//     const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase())
+//     const matchesFilter =
+//       fileFilter === "all" ||
+//       (fileFilter === "components" && file.name.includes("components")) ||
+//       (fileFilter === "pages" && file.name.includes("app")) ||
+//       (fileFilter === "styles" && file.name.includes(".css"))
+//     return matchesSearch && matchesFilter
+//   })
+
+//   const getDeviceDimensions = () => {
+//     switch (deviceMode) {
+//       case "mobile":
+//         return { width: "375px", height: "667px" }
+//       case "tablet":
+//         return { width: "768px", height: "1024px" }
+//       default:
+//         return { width: "100%", height: "100%" }
+//     }
+//   }
+
+//   const deviceDimensions = getDeviceDimensions()
+
+//   const highlightCode = (code: string) => {
+//     const keywords = [
+//       "import",
+//       "export",
+//       "default",
+//       "from",
+//       "const",
+//       "let",
+//       "var",
+//       "function",
+//       "return",
+//       "if",
+//       "else",
+//       "for",
+//       "while",
+//       "class",
+//       "interface",
+//       "type",
+//       "async",
+//       "await",
+//       "try",
+//       "catch",
+//       "throw",
+//       "new",
+//       "this",
+//       "extends",
+//       "implements",
+//     ]
+
+//     let highlighted = code
+
+//     highlighted = highlighted.replace(
+//       /(['"`])((?:\\.|(?!\1)[^\\])*)\1/g,
+//       '<span class="text-emerald-400">$1$2$1</span>',
+//     )
+//     highlighted = highlighted.replace(/(\/\/.*$)/gm, '<span class="text-gray-500 italic">$1</span>')
+//     highlighted = highlighted.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="text-gray-500 italic">$1</span>')
+
+//     keywords.forEach((keyword) => {
+//       const regex = new RegExp(`\\b(${keyword})\\b`, "g")
+//       highlighted = highlighted.replace(regex, '<span class="text-purple-400 font-semibold">$1</span>')
+//     })
+
+//     highlighted = highlighted.replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>')
+//     highlighted = highlighted.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g, '<span class="text-yellow-400">$1</span>(')
+
+//     return highlighted
+//   }
+
+//   const getLogIcon = (level: LogLevel) => {
+//     switch (level) {
+//       case "error":
+//         return <AlertCircle className="h-4 w-4" />
+//       case "success":
+//         return <CheckCircle2 className="h-4 w-4" />
+//       case "warning":
+//         return <AlertCircle className="h-4 w-4" />
+//       default:
+//         return <Info className="h-4 w-4" />
+//     }
+//   }
+
+//   if (loading) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+//         <div className="text-center space-y-4">
+//           <Loader2 className="h-12 w-12 animate-spin text-gray-500 mx-auto" />
+//           <p className="text-gray-500">Loading tool...</p>
+//         </div>
+//       </div>
+//     )
+//   }
+
+//   return (
+//     <div className="h-screen flex flex-col bg-[#0a0a0a] overflow-hidden">
+//       {/* Header - Same as create page */}
+//       <div className="border-b border-white/10 bg-[#111111]/95 backdrop-blur-xl sticky top-0 z-50">
+//         <div className="max-w-[2400px] mx-auto px-6 py-4 flex items-center justify-between">
+//           <div className="flex items-center gap-4">
+//             <Button
+//               variant="ghost"
+//               size="sm"
+//               onClick={() => router.push(`/${orgSlug}/tools`)}
+//               className="text-gray-400 hover:text-white hover:bg-white/5"
+//             >
+//               <ChevronLeft className="h-4 w-4 mr-1" />
+//               Back
+//             </Button>
+//             <Separator orientation="vertical" className="h-6 bg-white/10" />
+//             <div className="flex items-center gap-3">
+//               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50" />
+//               <div>
+//                 <span className="text-sm font-semibold text-white">{toolName}</span>
+//                 {result && <p className="text-xs text-gray-500">{result.files?.length} files generated</p>}
+//               </div>
+//             </div>
+//           </div>
+
+//           {result && (
+//             <div className="flex items-center gap-3">
+//               {result.previewUrl && (
+//                 <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
+//                   <Button
+//                     variant={viewMode === "preview" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setViewMode("preview")}
+//                     className="h-9 px-4 text-xs"
+//                   >
+//                     <Monitor className="h-4 w-4 mr-2" />
+//                     Preview
+//                   </Button>
+//                   <Button
+//                     variant={viewMode === "code" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setViewMode("code")}
+//                     className="h-9 px-4 text-xs"
+//                   >
+//                     <Code2 className="h-4 w-4 mr-2" />
+//                     Code
+//                   </Button>
+//                 </div>
+//               )}
+
+//               {result.previewUrl && viewMode === "preview" && (
+//                 <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
+//                   <Button
+//                     variant={deviceMode === "desktop" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setDeviceMode("desktop")}
+//                     className="h-9 w-9 p-0"
+//                   >
+//                     <Monitor className="h-4 w-4" />
+//                   </Button>
+//                   <Button
+//                     variant={deviceMode === "tablet" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setDeviceMode("tablet")}
+//                     className="h-9 w-9 p-0"
+//                   >
+//                     <Tablet className="h-4 w-4" />
+//                   </Button>
+//                   <Button
+//                     variant={deviceMode === "mobile" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setDeviceMode("mobile")}
+//                     className="h-9 w-9 p-0"
+//                   >
+//                     <Smartphone className="h-4 w-4" />
+//                   </Button>
+//                 </div>
+//               )}
+
+//               <Separator orientation="vertical" className="h-6 bg-white/10" />
+
+//               <Button
+//                 variant="ghost"
+//                 size="sm"
+//                 onClick={() => setIsFullscreen(!isFullscreen)}
+//                 className="text-gray-400 hover:text-white hover:bg-white/5"
+//               >
+//                 {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+//               </Button>
+
+//               <Separator orientation="vertical" className="h-6 bg-white/10" />
+
+//               <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+//                 <Rocket className="h-4 w-4 mr-2" />
+//                 Deploy
+//               </Button>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       {/* Main Content - Same structure as create page */}
+//       {result && (
+//         <div className="flex-1 flex overflow-hidden">
+//           {/* Left Sidebar - File Explorer */}
+//           <div
+//             className={`border-r border-white/10 bg-[#111111] flex flex-col transition-all duration-300 ${
+//               isSidebarCollapsed ? "w-14" : "w-80"
+//             }`}
+//           >
+//             {isSidebarCollapsed ? (
+//               <div className="p-3 flex flex-col items-center gap-3">
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   onClick={() => setIsSidebarCollapsed(false)}
+//                   className="w-full h-10 text-gray-400 hover:text-white hover:bg-white/5"
+//                 >
+//                   <ChevronRight className="h-5 w-5" />
+//                 </Button>
+//                 <Separator className="bg-white/10" />
+//                 <Button variant="ghost" size="sm" className="w-full h-10 text-gray-400">
+//                   <FolderTree className="h-5 w-5" />
+//                 </Button>
+//               </div>
+//             ) : (
+//               <>
+//                 <div className="p-5 border-b border-white/10 space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <div>
+//                       <h3 className="text-base font-bold text-white flex items-center gap-2">
+//                         <FolderTree className="h-4 w-4" />
+//                         Project Files
+//                       </h3>
+//                       <p className="text-xs text-gray-500 mt-1">{result.files?.length} files</p>
+//                     </div>
+//                     <Button
+//                       variant="ghost"
+//                       size="sm"
+//                       onClick={() => setIsSidebarCollapsed(true)}
+//                       className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/5"
+//                     >
+//                       <ChevronLeft className="h-4 w-4" />
+//                     </Button>
+//                   </div>
+
+//                   <div className="relative">
+//                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+//                     <Input
+//                       value={searchQuery}
+//                       onChange={(e) => setSearchQuery(e.target.value)}
+//                       placeholder="Search files..."
+//                       className="pl-10 h-10 bg-white/5 border-white/10 text-white placeholder-gray-500"
+//                     />
+//                   </div>
+
+//                   <div className="flex items-center gap-2">
+//                     <Button
+//                       variant={fileFilter === "all" ? "secondary" : "ghost"}
+//                       size="sm"
+//                       onClick={() => setFileFilter("all")}
+//                       className="h-8 px-3 text-xs flex-1"
+//                     >
+//                       All
+//                     </Button>
+//                     <Button
+//                       variant={fileFilter === "components" ? "secondary" : "ghost"}
+//                       size="sm"
+//                       onClick={() => setFileFilter("components")}
+//                       className="h-8 px-3 text-xs flex-1"
+//                     >
+//                       Components
+//                     </Button>
+//                     <Button
+//                       variant={fileFilter === "pages" ? "secondary" : "ghost"}
+//                       size="sm"
+//                       onClick={() => setFileFilter("pages")}
+//                       className="h-8 px-3 text-xs flex-1"
+//                     >
+//                       Pages
+//                     </Button>
+//                   </div>
+//                 </div>
+
+//                 <ScrollArea className="flex-1 p-3">
+//                   <div className="space-y-1">
+//                     {filteredFiles.map((file) => (
+//                       <div
+//                         key={file.id}
+//                         className={`group rounded-lg transition-all ${
+//                           selectedFile?.id === file.id
+//                             ? "bg-blue-500/10 border border-blue-500/20"
+//                             : "hover:bg-white/5 border border-transparent"
+//                         }`}
+//                       >
+//                         <button
+//                           onClick={() => setSelectedFile(file)}
+//                           className="w-full text-left p-3 flex items-center gap-3"
+//                         >
+//                           <FileCode
+//                             className={`h-4 w-4 flex-shrink-0 ${selectedFile?.id === file.id ? "text-blue-500" : "text-gray-500"}`}
+//                           />
+//                           <div className="flex-1 min-w-0">
+//                             <p
+//                               className={`text-sm font-medium font-mono truncate ${selectedFile?.id === file.id ? "text-white" : "text-gray-400"}`}
+//                             >
+//                               {file.name}
+//                             </p>
+//                             <p className="text-xs text-gray-600 mt-0.5">{file.content.split("\n").length} lines</p>
+//                           </div>
+//                           {selectedFile?.id === file.id && <Check className="h-4 w-4 flex-shrink-0 text-blue-500" />}
+//                         </button>
+//                         <div
+//                           className={`px-3 pb-2 flex items-center gap-1 transition-all ${
+//                             selectedFile?.id === file.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+//                           }`}
+//                         >
+//                           <Button
+//                             variant="ghost"
+//                             size="sm"
+//                             onClick={(e) => {
+//                               e.stopPropagation()
+//                               handleCopyCode(file.content, file.id)
+//                             }}
+//                             className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/5"
+//                           >
+//                             {copiedFile === file.id ? (
+//                               <Check className="h-3 w-3 mr-1" />
+//                             ) : (
+//                               <Copy className="h-3 w-3 mr-1" />
+//                             )}
+//                             Copy
+//                           </Button>
+//                           <Button
+//                             variant="ghost"
+//                             size="sm"
+//                             onClick={(e) => {
+//                               e.stopPropagation()
+//                               handleDownloadFile(file)
+//                             }}
+//                             className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/5"
+//                           >
+//                             <Download className="h-3 w-3 mr-1" />
+//                             Save
+//                           </Button>
+//                         </div>
+//                       </div>
+//                     ))}
+//                   </div>
+//                 </ScrollArea>
+//               </>
+//             )}
+//           </div>
+
+//           {/* Center - Preview/Code Area */}
+//           <div className="flex-1 flex flex-col bg-[#0a0a0a] overflow-hidden relative">
+//             {isRegenerating && (
+//               <div className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-sm z-40 flex items-center justify-center">
+//                 <div className="w-full max-w-4xl px-8">
+//                   <div className="text-center mb-8">
+//                     <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-500/10 rounded-full mb-6 relative">
+//                       <Sparkles className="h-10 w-10 text-blue-500 animate-pulse" />
+//                       <div className="absolute inset-0 rounded-full border-4 border-blue-500/20 animate-ping" />
+//                     </div>
+//                     <h3 className="text-2xl font-bold text-white mb-2">Enhancing Your Tool</h3>
+//                     <p className="text-gray-400">AI is applying your requested changes...</p>
+//                   </div>
+
+//                   <div className="space-y-4">
+//                     <div className="h-12 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded-lg animate-pulse" />
+//                     <div className="grid grid-cols-3 gap-4">
+//                       <div
+//                         className="h-32 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent rounded-lg animate-pulse"
+//                         style={{ animationDelay: "0.1s" }}
+//                       />
+//                       <div
+//                         className="h-32 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent rounded-lg animate-pulse"
+//                         style={{ animationDelay: "0.2s" }}
+//                       />
+//                       <div
+//                         className="h-32 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent rounded-lg animate-pulse"
+//                         style={{ animationDelay: "0.3s" }}
+//                       />
+//                     </div>
+//                     <div
+//                       className="h-64 bg-gradient-to-b from-white/5 via-white/10 to-white/5 rounded-lg animate-pulse"
+//                       style={{ animationDelay: "0.4s" }}
+//                     />
+//                   </div>
+
+//                   <div className="mt-8 flex items-center justify-center gap-2">
+//                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0s" }} />
+//                     <div
+//                       className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+//                       style={{ animationDelay: "0.2s" }}
+//                     />
+//                     <div
+//                       className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+//                       style={{ animationDelay: "0.4s" }}
+//                     />
+//                   </div>
+//                 </div>
+//               </div>
+//             )}
+
+//             <div className="flex-1 flex overflow-hidden">
+//               {viewMode === "preview" && result.previewUrl ? (
+//                 <div className="flex-1 flex flex-col bg-[#0f0f0f]">
+//                   <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#111111]/50 backdrop-blur-sm">
+//                     <div className="flex items-center gap-3 flex-1 min-w-0">
+//                       <div className="flex items-center gap-2">
+//                         <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm" />
+//                         <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm" />
+//                         <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm" />
+//                       </div>
+//                       <div className="flex-1 min-w-0 bg-white/5 rounded-lg px-3 py-1.5 border border-white/10">
+//                         <span className="text-xs text-gray-500 font-mono truncate block">{result.previewUrl}</span>
+//                       </div>
+//                     </div>
+//                     <div className="flex items-center gap-2 ml-3">
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => window.open(result.previewUrl!, "_blank")}
+//                         className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/5"
+//                       >
+//                         <ExternalLink className="h-4 w-4" />
+//                       </Button>
+//                     </div>
+//                   </div>
+//                   <div className="flex-1 relative overflow-hidden flex items-center justify-center bg-gradient-to-br from-white/5 to-transparent p-8">
+//                     <div
+//                       className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300"
+//                       style={{
+//                         width: deviceDimensions.width,
+//                         height: deviceDimensions.height,
+//                         maxWidth: "100%",
+//                         maxHeight: "100%",
+//                       }}
+//                     >
+//                       <iframe
+//                         src={result.previewUrl}
+//                         className="w-full h-full"
+//                         title="Generated Tool Preview"
+//                         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+//                       />
+//                     </div>
+//                   </div>
+//                 </div>
+//               ) : (
+//                 <div className="flex-1 flex flex-col">
+//                   <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#111111]/50 backdrop-blur-sm">
+//                     <div className="flex items-center gap-3">
+//                       <FileCode className="h-4 w-4 text-blue-500" />
+//                       <span className="text-sm font-semibold font-mono text-white">
+//                         {selectedFile?.name || "No file selected"}
+//                       </span>
+//                       {selectedFile && (
+//                         <>
+//                           <Badge variant="secondary" className="text-xs bg-white/5 text-gray-400">
+//                             {selectedFile.type}
+//                           </Badge>
+//                           <Badge variant="outline" className="text-xs border-white/10 text-gray-500">
+//                             {selectedFile.content.split("\n").length} lines
+//                           </Badge>
+//                         </>
+//                       )}
+//                     </div>
+//                     <div className="flex items-center gap-2">
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => {
+//                           if (selectedFile) {
+//                             handleCopyCode(selectedFile.content, selectedFile.id)
+//                           }
+//                         }}
+//                         className="h-8 px-3 text-xs text-gray-400 hover:text-white hover:bg-white/5"
+//                         disabled={!selectedFile}
+//                       >
+//                         {copiedFile === selectedFile?.id ? (
+//                           <Check className="h-3.5 w-3.5 mr-1.5" />
+//                         ) : (
+//                           <Copy className="h-3.5 w-3.5 mr-1.5" />
+//                         )}
+//                         Copy
+//                       </Button>
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => selectedFile && handleDownloadFile(selectedFile)}
+//                         className="h-8 px-3 text-xs text-gray-400 hover:text-white hover:bg-white/5"
+//                         disabled={!selectedFile}
+//                       >
+//                         <Download className="h-3.5 w-3.5 mr-1.5" />
+//                         Download
+//                       </Button>
+//                     </div>
+//                   </div>
+//                   <ScrollArea className="flex-1 bg-[#1e1e1e]">
+//                     {selectedFile ? (
+//                       <div className="p-6">
+//                         <pre className="text-sm font-mono leading-relaxed">
+//                           {selectedFile.content.split("\n").map((line, i) => (
+//                             <div key={i} className="flex">
+//                               <span className="text-gray-600 select-none w-12 text-right pr-4 flex-shrink-0">
+//                                 {i + 1}
+//                               </span>
+//                               <code
+//                                 className="flex-1"
+//                                 dangerouslySetInnerHTML={{
+//                                   __html: highlightCode(line),
+//                                 }}
+//                               />
+//                             </div>
+//                           ))}
+//                         </pre>
+//                       </div>
+//                     ) : (
+//                       <div className="flex items-center justify-center h-full">
+//                         <div className="text-center">
+//                           <FileCode className="h-16 w-16 text-gray-700 mx-auto mb-4" />
+//                           <p className="text-gray-500">Select a file to view its code</p>
+//                         </div>
+//                       </div>
+//                     )}
+//                   </ScrollArea>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+
+//           {/* Right Sidebar - Enhanced (same as create page) */}
+//           <div
+//             className={`border-l border-white/10 bg-[#111111] flex flex-col transition-all duration-300 ${
+//               isRightSidebarCollapsed ? "w-14" : "w-[420px]"
+//             }`}
+//           >
+//             {isRightSidebarCollapsed ? (
+//               <div className="p-3 flex flex-col items-center gap-3">
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   onClick={() => setIsRightSidebarCollapsed(false)}
+//                   className="w-full h-10 text-gray-400 hover:text-white hover:bg-white/5"
+//                 >
+//                   <PanelRightOpen className="h-5 w-5" />
+//                 </Button>
+//                 <Separator className="bg-white/10" />
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   className="w-full h-10 text-gray-400"
+//                   onClick={() => {
+//                     setIsRightSidebarCollapsed(false)
+//                     setRightSidebarTab("chat")
+//                   }}
+//                 >
+//                   <MessageSquare className="h-5 w-5" />
+//                 </Button>
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   className="w-full h-10 text-gray-400"
+//                   onClick={() => {
+//                     setIsRightSidebarCollapsed(false)
+//                     setRightSidebarTab("logs")
+//                   }}
+//                 >
+//                   <Terminal className="h-5 w-5" />
+//                 </Button>
+//               </div>
+//             ) : (
+//               <div className="flex flex-col h-full">
+//                 <div className="border-b border-white/10 bg-[#111111]/50 backdrop-blur-sm flex-shrink-0">
+//                   <div className="flex items-center justify-between px-4 py-3">
+//                     <div className="flex items-center gap-2 flex-1">
+//                       <Button
+//                         variant={rightSidebarTab === "chat" ? "secondary" : "ghost"}
+//                         size="sm"
+//                         onClick={() => setRightSidebarTab("chat")}
+//                         className="h-9 px-4 text-xs"
+//                       >
+//                         <MessageSquare className="h-4 w-4 mr-2" />
+//                         Chat
+//                       </Button>
+//                       <Button
+//                         variant={rightSidebarTab === "logs" ? "secondary" : "ghost"}
+//                         size="sm"
+//                         onClick={() => setRightSidebarTab("logs")}
+//                         className="h-9 px-4 text-xs"
+//                       >
+//                         <Terminal className="h-4 w-4 mr-2" />
+//                         Logs
+//                       </Button>
+//                       <Button
+//                         variant={rightSidebarTab === "analytics" ? "secondary" : "ghost"}
+//                         size="sm"
+//                         onClick={() => setRightSidebarTab("analytics")}
+//                         className="h-9 px-4 text-xs"
+//                       >
+//                         <BarChart3 className="h-4 w-4 mr-2" />
+//                         Stats
+//                       </Button>
+//                     </div>
+//                     <Button
+//                       variant="ghost"
+//                       size="sm"
+//                       onClick={() => setIsRightSidebarCollapsed(true)}
+//                       className="h-8 w-8 p-0 ml-2 text-gray-400 hover:text-white hover:bg-white/5"
+//                     >
+//                       <PanelRightClose className="h-4 w-4" />
+//                     </Button>
+//                   </div>
+//                 </div>
+
+//                 <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+//                   {rightSidebarTab === "chat" && (
+//                     <>
+//                       <div className="p-5 border-b border-white/10 flex-shrink-0">
+//                         <div className="flex items-center gap-3 mb-2">
+//                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+//                             <Sparkles className="h-5 w-5 text-white" />
+//                           </div>
+//                           <div>
+//                             <h3 className="text-sm font-semibold text-white">AI Assistant</h3>
+//                             <p className="text-xs text-gray-500">Ready to enhance your tool</p>
+//                           </div>
+//                         </div>
+//                       </div>
+
+//                       <ScrollArea className="flex-1 min-h-0">
+//                         <div className="p-5 space-y-4">
+//                           {chatHistory.length === 0 ? (
+//                             <div className="text-center py-12">
+//                               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-4">
+//                                 <MessageSquare className="h-8 w-8 text-blue-500" />
+//                               </div>
+//                               <p className="text-sm text-white font-medium mb-1">Start a conversation</p>
+//                               <p className="text-xs text-gray-500">Ask AI to improve or modify your tool</p>
+//                             </div>
+//                           ) : (
+//                             chatHistory.map((msg) => (
+//                               <div
+//                                 key={msg.id}
+//                                 className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+//                               >
+//                                 {msg.role === "assistant" && (
+//                                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+//                                     <Sparkles className="h-4 w-4 text-white" />
+//                                   </div>
+//                                 )}
+//                                 <div
+//                                   className={`max-w-[75%] rounded-2xl p-4 ${
+//                                     msg.role === "user"
+//                                       ? "bg-blue-600 text-white"
+//                                       : "bg-white/5 text-gray-300 border border-white/10"
+//                                   }`}
+//                                 >
+//                                   <p className="text-sm leading-relaxed">{msg.content}</p>
+//                                   <p className="text-xs opacity-60 mt-2">{msg.timestamp.toLocaleTimeString()}</p>
+//                                 </div>
+//                               </div>
+//                             ))
+//                           )}
+//                         </div>
+//                       </ScrollArea>
+
+//                       <div className="p-5 border-t border-white/10 flex-shrink-0 bg-[#0f0f0f]">
+//                         <div className="space-y-3">
+//                           <Textarea
+//                             value={chatMessage}
+//                             onChange={(e) => setChatMessage(e.target.value)}
+//                             onKeyDown={(e) => {
+//                               if (e.key === "Enter" && !e.shiftKey) {
+//                                 e.preventDefault()
+//                                 handleSendMessage()
+//                               }
+//                             }}
+//                             placeholder="Describe what you want to improve...&#10;&#10;Examples:&#10;• Add a dark mode toggle&#10;• Make the layout more responsive&#10;• Add animation to the buttons"
+//                             className="min-h-[120px] max-h-[200px] bg-white/5 border-white/10 text-white placeholder-gray-500 resize-none text-sm leading-relaxed"
+//                             disabled={isRegenerating}
+//                           />
+//                           <Button
+//                             onClick={handleSendMessage}
+//                             disabled={!chatMessage.trim() || isRegenerating}
+//                             size="sm"
+//                             className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+//                           >
+//                             {isRegenerating ? (
+//                               <>
+//                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+//                                 Enhancing Tool...
+//                               </>
+//                             ) : (
+//                               <>
+//                                 <Send className="h-4 w-4 mr-2" />
+//                                 Enhance Tool
+//                               </>
+//                             )}
+//                           </Button>
+//                         </div>
+//                       </div>
+//                     </>
+//                   )}
+
+//                   {rightSidebarTab === "logs" && (
+//                     <>
+//                       <div className="p-5 border-b border-white/10 flex-shrink-0">
+//                         <div className="flex items-center justify-between">
+//                           <div className="flex items-center gap-2">
+//                             <Terminal className="h-4 w-4 text-gray-500" />
+//                             <span className="text-sm font-semibold text-white">Generation Logs</span>
+//                           </div>
+//                           <Badge variant="secondary" className="text-xs bg-white/5 text-gray-400">
+//                             {logs.length} events
+//                           </Badge>
+//                         </div>
+//                       </div>
+//                       <ScrollArea className="flex-1 min-h-0">
+//                         <div className="p-5 space-y-3">
+//                           {logs.length === 0 ? (
+//                             <div className="text-center py-12">
+//                               <Terminal className="h-12 w-12 text-gray-700 mx-auto mb-3" />
+//                               <p className="text-sm text-gray-500">No logs yet</p>
+//                             </div>
+//                           ) : (
+//                             logs.map((log) => (
+//                               <div
+//                                 key={log.id}
+//                                 className={`p-4 rounded-xl border ${
+//                                   log.level === "error"
+//                                     ? "bg-red-500/10 border-red-500/20"
+//                                     : log.level === "success"
+//                                       ? "bg-emerald-500/10 border-emerald-500/20"
+//                                       : log.level === "warning"
+//                                         ? "bg-yellow-500/10 border-yellow-500/20"
+//                                         : "bg-white/5 border-white/10"
+//                                 }`}
+//                               >
+//                                 <div className="flex items-start gap-3">
+//                                   <span
+//                                     className={`flex-shrink-0 mt-0.5 ${
+//                                       log.level === "error"
+//                                         ? "text-red-400"
+//                                         : log.level === "success"
+//                                           ? "text-emerald-400"
+//                                           : log.level === "warning"
+//                                             ? "text-yellow-400"
+//                                             : "text-gray-400"
+//                                     }`}
+//                                   >
+//                                     {getLogIcon(log.level)}
+//                                   </span>
+//                                   <div className="flex-1 min-w-0">
+//                                     <p
+//                                       className={`text-sm font-medium ${
+//                                         log.level === "error"
+//                                           ? "text-red-400"
+//                                           : log.level === "success"
+//                                             ? "text-emerald-400"
+//                                             : log.level === "warning"
+//                                               ? "text-yellow-400"
+//                                               : "text-gray-300"
+//                                       }`}
+//                                     >
+//                                       {log.message}
+//                                     </p>
+//                                     <p className="text-xs text-gray-600 mt-1.5">{log.timestamp.toLocaleTimeString()}</p>
+//                                   </div>
+//                                 </div>
+//                               </div>
+//                             ))
+//                           )}
+//                         </div>
+//                       </ScrollArea>
+//                     </>
+//                   )}
+
+//                   {rightSidebarTab === "analytics" && (
+//                     <>
+//                       <div className="p-5 border-b border-white/10 flex-shrink-0">
+//                         <div className="flex items-center gap-2">
+//                           <BarChart3 className="h-4 w-4 text-gray-500" />
+//                           <span className="text-sm font-semibold text-white">Generation Stats</span>
+//                         </div>
+//                       </div>
+//                       <ScrollArea className="flex-1 min-h-0">
+//                         <div className="p-5 space-y-4">
+//                           <Card className="bg-white/5 border-white/10 p-5">
+//                             <div className="flex items-center justify-between">
+//                               <div>
+//                                 <p className="text-xs text-gray-500 mb-1">Total Files</p>
+//                                 <p className="text-3xl font-bold text-white">{result.files?.length}</p>
+//                               </div>
+//                               <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+//                                 <FileCode className="h-6 w-6 text-blue-500" />
+//                               </div>
+//                             </div>
+//                           </Card>
+
+//                           <Card className="bg-white/5 border-white/10 p-5">
+//                             <div className="flex items-center justify-between">
+//                               <div>
+//                                 <p className="text-xs text-gray-500 mb-1">Lines of Code</p>
+//                                 <p className="text-3xl font-bold text-white">
+//                                   {result.files?.reduce((acc, f) => acc + f.content.split("\n").length, 0)}
+//                                 </p>
+//                               </div>
+//                               <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+//                                 <Code2 className="h-6 w-6 text-emerald-500" />
+//                               </div>
+//                             </div>
+//                           </Card>
+
+//                           <Card className="bg-white/5 border-white/10 p-5">
+//                             <div className="flex items-center justify-between">
+//                               <div>
+//                                 <p className="text-xs text-gray-500 mb-1">Created</p>
+//                                 <p className="text-lg font-bold text-white">
+//                                   {tool?.createdAt ? new Date(tool.createdAt).toLocaleDateString() : "N/A"}
+//                                 </p>
+//                               </div>
+//                               <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+//                                 <Clock className="h-6 w-6 text-purple-500" />
+//                               </div>
+//                             </div>
+//                           </Card>
+
+//                           <Separator className="bg-white/10" />
+
+//                           <div>
+//                             <h4 className="text-sm font-semibold text-white mb-3">File Types</h4>
+//                             <div className="space-y-2">
+//                               {Object.entries(
+//                                 (result.files ?? []).reduce(
+//                                   (acc, file) => {
+//                                     const ext = file.name.split(".").pop() || "other"
+//                                     acc[ext] = (acc[ext] || 0) + 1
+//                                     return acc
+//                                   },
+//                                   {} as Record<string, number>,
+//                                 ),
+//                               ).map(([type, count]) => (
+//                                 <div key={type} className="flex items-center justify-between">
+//                                   <span className="text-sm text-gray-400 font-mono">.{type}</span>
+//                                   <Badge variant="secondary" className="bg-white/5 text-gray-400">
+//                                     {count}
+//                                   </Badge>
+//                                 </div>
+//                               ))}
+//                             </div>
+//                           </div>
+//                         </div>
+//                       </ScrollArea>
+//                     </>
+//                   )}
+//                 </div>
+//               </div>
+//             )}
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   )
+// }
+
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -2648,20 +3717,24 @@ export default function ToolDetailPage() {
   const toolId = params?.id as string
 
   useEffect(() => {
+    console.log("[v0] Component mounted, orgSlug:", orgSlug, "toolId:", toolId)
     if (orgSlug && toolId) {
       loadTool()
     }
   }, [orgSlug, toolId])
 
   const loadTool = async () => {
+    console.log("[v0] Loading tool...")
     try {
       const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}`)
+      console.log("[v0] API response status:", response.status)
 
       if (!response.ok) {
         throw new Error("Failed to load tool")
       }
 
       const toolData = await response.json()
+      console.log("[v0] Tool data loaded:", toolData)
 
       setTool(toolData)
       setToolName(toolData.name)
@@ -2670,6 +3743,7 @@ export default function ToolDetailPage() {
       setSelectedIntegrations(toolData.integrations || [])
 
       const latestChatSession = toolData.chatSessions?.[0]
+      console.log("[v0] Latest chat session:", latestChatSession)
 
       if (latestChatSession) {
         const files: GeneratedFile[] = latestChatSession.files.map((f: any) => ({
@@ -2684,6 +3758,8 @@ export default function ToolDetailPage() {
           updatedAt: new Date(f.updatedAt),
         }))
 
+        console.log("[v0] Files mapped:", files.length)
+
         const generationResult: GenerationResult = {
           success: true,
           toolId: toolData.id,
@@ -2692,6 +3768,8 @@ export default function ToolDetailPage() {
           previewUrl: toolData.previewUrl || undefined,
           chatUrl: toolData.chatUrl || undefined,
         }
+
+        console.log("[v0] Generation result created:", generationResult)
 
         setResult(generationResult)
         if (files.length > 0) {
@@ -2708,7 +3786,9 @@ export default function ToolDetailPage() {
 
         setStep("preview")
         setViewMode(generationResult.previewUrl ? "preview" : "code")
+        console.log("[v0] Step set to preview, viewMode:", generationResult.previewUrl ? "preview" : "code")
       } else {
+        console.log("[v0] No chat session found, setting step to configure")
         setStep("configure")
       }
 
@@ -2719,6 +3799,7 @@ export default function ToolDetailPage() {
       router.push(`/${orgSlug}/tools`)
     } finally {
       setLoading(false)
+      console.log("[v0] Loading complete")
     }
   }
 
@@ -2865,6 +3946,20 @@ export default function ToolDetailPage() {
         <div className="text-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-gray-500 mx-auto" />
           <p className="text-gray-500">Loading tool...</p>
+        </div>
+      </div>
+    )
+  }
+
+  console.log("[v0] Rendering, result:", result, "step:", step)
+
+  if (!result) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+          <p className="text-gray-500">No generation result found</p>
+          <Button onClick={() => router.push(`/${orgSlug}/tools`)}>Back to Tools</Button>
         </div>
       </div>
     )

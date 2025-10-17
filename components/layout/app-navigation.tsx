@@ -595,11 +595,6 @@ export function AppNavigation({
     }
   }, [organizations, orgSlug])
 
-  // Sidebar is always collapsed by default, expands on hover
-  useEffect(() => {
-    setSidebarCollapsed(true)
-  }, [])
-
   const fetchOrganizations = async () => {
     try {
       const response = await fetch("/api/organizations")
@@ -729,7 +724,7 @@ export function AppNavigation({
       {/* Desktop Navigation */}
       <div
         className={cn(
-          "hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ease-in-out z-50",
+          "hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ease-in-out z-40",
           isExpanded ? "lg:w-[280px]" : "lg:w-16",
         )}
         onMouseEnter={() => setSidebarHovered(true)}
@@ -853,8 +848,8 @@ function OrganizationSelector({
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="w-full h-10 p-0 focus-ring hover:bg-accent/50 transition-all duration-200">
-            <Avatar className="h-8 w-8 ring-2 ring-primary/20 transition-all duration-200 hover:ring-primary/40">
+          <Button variant="ghost" className="w-full h-10 p-0 focus-ring">
+            <Avatar className="h-8 w-8 ring-2 ring-primary/20">
               <AvatarImage src={currentOrganization?.logoUrl || undefined} />
               <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
                 {currentOrganization?.name.substring(0, 2).toUpperCase() || "CC"}

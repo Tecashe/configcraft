@@ -117,16 +117,24 @@ export function AppLayout({ children }: AppLayoutProps) {
       <main
         className={cn(
           "transition-all duration-300 ease-in-out min-h-screen",
-          "lg:pl-16", // Sidebar is always 64px (16 * 4px = 64px) on desktop
+          "lg:pl-16", // Sidebar is always 64px (16 * 4px = 64px) on desktop, content starts after it
         )}
       >
         {/* Mobile-safe content wrapper */}
         <div className="mobile-safe-area">
           {/* Content with minimal padding for maximum space */}
-          <div className="p-4 sm:p-6 lg:p-8 max-w-full">{children}</div>
+          <div
+            className={cn(
+              pathname?.includes("/tools/") && !pathname?.endsWith("/tools")
+                ? "" // No padding for tool detail pages
+                : "p-4 sm:p-6 lg:p-8", // Normal padding for other pages
+              "max-w-full",
+            )}
+          >
+            {children}
+          </div>
         </div>
       </main>
     </div>
   )
 }
-
