@@ -778,9 +778,35 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Code2,
+  Eye,
+  Settings,
+  MessageSquare,
+  Clock,
+  BarChart3,
+  Send,
+  Download,
+  Copy,
+  Check,
+  Search,
+  Maximize2,
+  Minimize2,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import type { GeneratedFile, GenerationResult, ChatHistory, LogEntry, LogLevel } from "@/types" // Assuming these types are defined in a separate file
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { GeneratedFile, GenerationResult, ChatMessage, LogEntry, LogLevel } from "@/types" // Assuming these types are defined in a separate file
 
 export default function ToolDetailPage() {
   const [loading, setLoading] = useState(true)
@@ -791,11 +817,22 @@ export default function ToolDetailPage() {
   const [selectedIntegrations, setSelectedIntegrations] = useState<any[]>([])
   const [result, setResult] = useState<GenerationResult | null>(null)
   const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
-  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([])
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [step, setStep] = useState("create")
   const [viewMode, setViewMode] = useState("code")
   const [currentToolId, setCurrentToolId] = useState("")
+
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true)
+  const [isFileExplorerOpen, setIsFileExplorerOpen] = useState(true)
+  const [deviceMode, setDeviceMode] = useState<"desktop" | "tablet" | "mobile">("desktop")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [fileFilter, setFileFilter] = useState("all")
+  const [copiedFile, setCopiedFile] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [chatMessage, setChatMessage] = useState("")
+  const [isRegenerating, setIsRegenerating] = useState(false)
+  const [rightSidebarTab, setRightSidebarTab] = useState("logs")
 
   const { toast } = useToast()
   const params = useParams()
@@ -804,6 +841,7 @@ export default function ToolDetailPage() {
   const toolId = params?.id as string
 
   useEffect(() => {
+    console.log("[v0] Tool detail page mounted", { orgSlug, toolId })
     if (orgSlug && toolId) {
       loadTool()
     }
@@ -811,12 +849,18 @@ export default function ToolDetailPage() {
 
   const loadTool = async () => {
     try {
+      console.log("[v0] Loading tool...", { orgSlug, toolId })
       const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}`)
+
+      console.log("[v0] Response status:", response.status)
+
       if (!response.ok) {
         throw new Error("Failed to load tool")
       }
 
       const toolData = await response.json()
+      console.log("[v0] Tool data loaded:", toolData)
+
       setTool(toolData)
 
       setToolName(toolData.name)
@@ -824,9 +868,13 @@ export default function ToolDetailPage() {
       setRequirements(toolData.requirements || "")
       setSelectedIntegrations(toolData.integrations || [])
 
-      if (toolData.chatSession) {
+      const latestChatSession = toolData.chatSessions?.[0] // Get the first (most recent) chat session
+
+      if (latestChatSession) {
+        console.log("[v0] Loading files from chat session:", latestChatSession.id)
+
         // Load files
-        const files: GeneratedFile[] = toolData.chatSession.files.map((f: any) => ({
+        const files: GeneratedFile[] = latestChatSession.files.map((f: any) => ({
           id: f.id,
           name: f.name,
           path: f.name,
@@ -838,10 +886,12 @@ export default function ToolDetailPage() {
           updatedAt: new Date(f.updatedAt),
         }))
 
+        console.log("[v0] Loaded files:", files.length)
+
         const generationResult: GenerationResult = {
           success: true,
           toolId: toolData.id,
-          chatSessionId: toolData.chatSession.id,
+          chatSessionId: latestChatSession.id,
           files,
           previewUrl: toolData.previewUrl || undefined,
           chatUrl: toolData.chatUrl || undefined,
@@ -853,15 +903,17 @@ export default function ToolDetailPage() {
         }
 
         // Load chat history
-        const chatMessages: ChatHistory[] = toolData.chatSession.messages.map((m: any) => ({
+        const chatMessages: ChatMessage[] = latestChatSession.messages.map((m: any) => ({
           id: m.id,
-          message: m.content,
+          content: m.content,
           role: m.role,
           timestamp: new Date(m.createdAt),
         }))
         setChatHistory(chatMessages)
 
-        // Load logs from generation
+        console.log("[v0] Loaded chat messages:", chatMessages.length)
+
+        // Load logs from generation (if available)
         if (toolData.generationLogs && Array.isArray(toolData.generationLogs)) {
           const loadedLogs: LogEntry[] = toolData.generationLogs.map((msg: string, i: number) => ({
             id: `log-${i}`,
@@ -874,16 +926,160 @@ export default function ToolDetailPage() {
 
         setStep("preview")
         setViewMode(generationResult.previewUrl ? "preview" : "code")
+        console.log("[v0] Set step to preview, viewMode:", generationResult.previewUrl ? "preview" : "code")
+      } else {
+        console.log("[v0] No chat sessions found for this tool")
+        // Tool exists but hasn't been generated yet
+        setStep("configure")
       }
 
       setCurrentToolId(toolData.id)
     } catch (error) {
-      console.error("Failed to load tool:", error)
+      console.error("[v0] Failed to load tool:", error)
       toast({ title: "Failed to load tool", variant: "destructive" })
       router.push(`/${orgSlug}/tools`)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCopyCode = (content: string, fileId: string) => {
+    navigator.clipboard.writeText(content)
+    setCopiedFile(fileId)
+    setTimeout(() => setCopiedFile(null), 2000)
+    toast({ title: "Code copied to clipboard" })
+  }
+
+  const handleDownloadFile = (file: GeneratedFile) => {
+    const blob = new Blob([file.content], { type: "text/plain" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = file.name
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || !result) return
+
+    setIsRegenerating(true)
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      content: chatMessage,
+      role: "user",
+      timestamp: new Date(),
+    }
+    setChatHistory([...chatHistory, userMessage])
+    setChatMessage("")
+
+    try {
+      const response = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feedback: chatMessage,
+          chatSessionId: result.chatSessionId,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to regenerate")
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split("\n")
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = JSON.parse(line.slice(6))
+
+              if (data.type === "log") {
+                setLogs((prev) => [
+                  ...prev,
+                  {
+                    id: `log-${Date.now()}`,
+                    timestamp: new Date(),
+                    level: data.level || "info",
+                    message: data.message,
+                  },
+                ])
+              } else if (data.type === "file") {
+                // Update files
+              } else if (data.type === "complete") {
+                await loadTool()
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[v0] Regeneration failed:", error)
+      toast({ title: "Failed to regenerate", variant: "destructive" })
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
+  const filteredFiles = (result?.files ?? []).filter((file) => {
+    const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesFilter =
+      fileFilter === "all" ||
+      (fileFilter === "components" && file.name.includes("components")) ||
+      (fileFilter === "pages" && file.name.includes("app")) ||
+      (fileFilter === "styles" && file.name.includes(".css"))
+    return matchesSearch && matchesFilter
+  })
+
+  const getDeviceWidth = () => {
+    switch (deviceMode) {
+      case "mobile":
+        return "375px"
+      case "tablet":
+        return "768px"
+      default:
+        return "100%"
+    }
+  }
+
+  const renderCodeWithSyntax = (code: string) => {
+    const lines = code.split("\n")
+    return (
+      <div className="font-mono text-sm">
+        {lines.map((line, i) => {
+          let coloredLine = line
+          // Keywords
+          coloredLine = coloredLine.replace(
+            /\b(const|let|var|function|return|if|else|for|while|import|export|default|from|async|await|class|extends|interface|type|enum)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          // Strings
+          coloredLine = coloredLine.replace(/(["'`])(.*?)\1/g, '<span class="text-green-400">$1$2$1</span>')
+          // Comments
+          coloredLine = coloredLine.replace(/(\/\/.*$|\/\*[\s\S]*?\*\/)/g, '<span class="text-gray-500">$1</span>')
+          // Functions
+          coloredLine = coloredLine.replace(
+            /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g,
+            '<span class="text-blue-400">$1</span>(',
+          )
+          // Numbers
+          coloredLine = coloredLine.replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>')
+
+          return (
+            <div key={i} className="flex">
+              <span className="text-gray-600 select-none w-12 text-right pr-4">{i + 1}</span>
+              <span dangerouslySetInnerHTML={{ __html: coloredLine || "&nbsp;" }} />
+            </div>
+          )
+        })}
+      </div>
+    )
   }
 
   if (loading) {
@@ -896,4 +1092,409 @@ export default function ToolDetailPage() {
       </div>
     )
   }
+
+  console.log("[v0] Rendering tool detail page", { step, hasResult: !!result, hasFiles: result?.files?.length })
+
+  return (
+    <div className="h-screen flex flex-col bg-[#0a0a0a] text-white overflow-hidden">
+      {/* Header */}
+      <div className="h-14 border-b border-white/10 flex items-center justify-between px-4 bg-[#111111]">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(`/${orgSlug}/tools`)}
+            className="text-gray-400 hover:text-white"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <div className="h-6 w-px bg-white/10" />
+          <h1 className="text-sm font-medium">{toolName || "Untitled Tool"}</h1>
+          <Badge variant="secondary" className="text-xs">
+            {tool?.status || "DRAFT"}
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {result?.previewUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open(result.previewUrl!, "_blank")}
+              className="text-gray-400 hover:text-white"
+            >
+              Open in v0
+            </Button>
+          )}
+          <Button variant="default" size="sm">
+            Publish
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar - File Explorer */}
+        <div
+          className={`${
+            isFileExplorerOpen ? "w-64" : "w-0"
+          } border-r border-white/10 bg-[#0f0f0f] transition-all duration-300 overflow-hidden flex flex-col`}
+        >
+          <div className="h-12 border-b border-white/10 flex items-center justify-between px-3">
+            <span className="text-sm font-medium">Files</span>
+            <Button variant="ghost" size="sm" onClick={() => setIsFileExplorerOpen(false)} className="h-7 w-7 p-0">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="p-2 space-y-2 border-b border-white/10">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+              <Input
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 pl-8 bg-white/5 border-white/10 text-sm"
+              />
+            </div>
+            <div className="flex gap-1">
+              {["all", "components", "pages", "styles"].map((filter) => (
+                <Button
+                  key={filter}
+                  variant={fileFilter === filter ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setFileFilter(filter)}
+                  className="h-7 text-xs flex-1"
+                >
+                  {filter}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {filteredFiles.map((file) => (
+                <button
+                  key={file.id}
+                  onClick={() => setSelectedFile(file)}
+                  className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                    selectedFile?.id === file.id
+                      ? "bg-white/10 text-white"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="truncate">{file.name}</span>
+                    <span className="text-xs text-gray-600 ml-2">{(file.size / 1024).toFixed(1)}kb</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Toggle File Explorer Button */}
+        {!isFileExplorerOpen && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsFileExplorerOpen(true)}
+            className="absolute left-0 top-20 h-8 w-8 p-0 rounded-r-md rounded-l-none border border-l-0 border-white/10 bg-[#0f0f0f]"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+
+        {/* Center - Preview/Code Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Toolbar */}
+          <div className="h-12 border-b border-white/10 flex items-center justify-between px-4 bg-[#0f0f0f]">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "preview" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("preview")}
+                disabled={!result?.previewUrl}
+                className="h-8"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Preview
+              </Button>
+              <Button
+                variant={viewMode === "code" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("code")}
+                className="h-8"
+              >
+                <Code2 className="h-4 w-4 mr-2" />
+                Code
+              </Button>
+
+              {viewMode === "preview" && result?.previewUrl && (
+                <>
+                  <div className="h-6 w-px bg-white/10 mx-2" />
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant={deviceMode === "desktop" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setDeviceMode("desktop")}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Monitor className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={deviceMode === "tablet" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setDeviceMode("tablet")}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Tablet className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={deviceMode === "mobile" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setDeviceMode("mobile")}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Smartphone className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {selectedFile && viewMode === "code" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopyCode(selectedFile.content, selectedFile.id)}
+                    className="h-8"
+                  >
+                    {copiedFile === selectedFile.id ? (
+                      <Check className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Copy className="h-4 w-4 mr-2" />
+                    )}
+                    Copy
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDownloadFile(selectedFile)} className="h-8">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="h-8 w-8 p-0">
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 overflow-hidden bg-[#0a0a0a]">
+            {isRegenerating ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <div className="relative w-24 h-24 mx-auto">
+                    <div
+                      className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-spin"
+                      style={{ animationDuration: "3s" }}
+                    />
+                    <div className="absolute inset-2 rounded-full bg-[#0a0a0a]" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium">Enhancing your tool...</p>
+                    <p className="text-sm text-gray-500 mt-1">This may take a moment</p>
+                  </div>
+                </div>
+              </div>
+            ) : viewMode === "preview" && result?.previewUrl ? (
+              <div className="h-full flex items-center justify-center p-4">
+                <div
+                  className="bg-white rounded-lg shadow-2xl overflow-hidden transition-all duration-300"
+                  style={{ width: getDeviceWidth(), height: "100%", maxHeight: "calc(100vh - 200px)" }}
+                >
+                  <iframe src={result.previewUrl} className="w-full h-full" title="Preview" />
+                </div>
+              </div>
+            ) : viewMode === "code" && selectedFile ? (
+              <ScrollArea className="h-full">
+                <div className="p-6">{renderCodeWithSyntax(selectedFile.content)}</div>
+              </ScrollArea>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <Code2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Select a file to view its contents</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Sidebar */}
+        <div
+          className={`${
+            isRightSidebarOpen ? "w-80" : "w-0"
+          } border-l border-white/10 bg-[#0f0f0f] transition-all duration-300 overflow-hidden flex flex-col`}
+        >
+          <div className="h-12 border-b border-white/10 flex items-center justify-between px-3">
+            <Tabs value={rightSidebarTab} onValueChange={setRightSidebarTab} className="flex-1">
+              <TabsList className="grid w-full grid-cols-4 h-9">
+                <TabsTrigger value="logs" className="text-xs">
+                  <Settings className="h-3.5 w-3.5 mr-1" />
+                  Logs
+                </TabsTrigger>
+                <TabsTrigger value="chat" className="text-xs">
+                  <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                  Chat
+                </TabsTrigger>
+                <TabsTrigger value="versions" className="text-xs">
+                  <Clock className="h-3.5 w-3.5 mr-1" />
+                  Versions
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="text-xs">
+                  <BarChart3 className="h-3.5 w-3.5 mr-1" />
+                  Stats
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button variant="ghost" size="sm" onClick={() => setIsRightSidebarOpen(false)} className="h-7 w-7 p-0 ml-2">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            <Tabs value={rightSidebarTab} className="h-full flex flex-col">
+              <TabsContent value="logs" className="flex-1 m-0 overflow-hidden flex flex-col">
+                <ScrollArea className="flex-1">
+                  <div className="p-3 space-y-2">
+                    {logs.map((log) => (
+                      <div key={log.id} className="text-xs space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600">{log.timestamp.toLocaleTimeString()}</span>
+                          <Badge variant={log.level === "error" ? "destructive" : "secondary"} className="text-xs h-5">
+                            {log.level}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-300">{log.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="chat" className="flex-1 m-0 overflow-hidden flex flex-col">
+                <ScrollArea className="flex-1">
+                  <div className="p-3 space-y-3">
+                    {chatHistory.map((chat) => (
+                      <div key={chat.id} className={`text-sm ${chat.role === "user" ? "text-right" : "text-left"}`}>
+                        <div
+                          className={`inline-block max-w-[85%] p-3 rounded-lg ${
+                            chat.role === "user" ? "bg-purple-600 text-white" : "bg-white/5 text-gray-300"
+                          }`}
+                        >
+                          {chat.content}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">{chat.timestamp.toLocaleTimeString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+
+                <div className="p-3 border-t border-white/10">
+                  <div className="flex gap-2">
+                    <Textarea
+                      placeholder="Describe how to improve this tool..."
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      className="min-h-[80px] bg-white/5 border-white/10 resize-none"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSendMessage()
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!chatMessage.trim() || isRegenerating}
+                    className="w-full mt-2"
+                    size="sm"
+                  >
+                    {isRegenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Enhancing...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Enhance Tool
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="versions" className="flex-1 m-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-3 space-y-2">
+                    <div className="text-sm text-gray-500 text-center py-8">Version history coming soon</div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="flex-1 m-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-3 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Total Files</span>
+                        <span className="font-medium">{result?.files?.length ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Total Size</span>
+                        <span className="font-medium">
+                          {((result?.files?.reduce((acc, f) => acc + f.size, 0) ?? 0) / 1024).toFixed(1)}kb
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Created</span>
+                        <span className="font-medium">
+                          {tool?.createdAt ? new Date(tool.createdAt).toLocaleDateString() : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Last Updated</span>
+                        <span className="font-medium">
+                          {tool?.updatedAt ? new Date(tool.updatedAt).toLocaleDateString() : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+
+        {/* Toggle Right Sidebar Button */}
+        {!isRightSidebarOpen && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsRightSidebarOpen(true)}
+            className="absolute right-0 top-20 h-8 w-8 p-0 rounded-l-md rounded-r-none border border-r-0 border-white/10 bg-[#0f0f0f]"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  )
 }
