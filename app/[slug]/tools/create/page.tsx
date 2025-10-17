@@ -9516,6 +9516,1841 @@
 // }
 
 
+// "use client"
+
+// import { useState, useEffect, useRef } from "react"
+// import { useParams, useRouter } from "next/navigation"
+// import { Button } from "@/components/ui/button"
+// import { Card } from "@/components/ui/card"
+// import { Input } from "@/components/ui/input"
+// import { Textarea } from "@/components/ui/textarea"
+// import { Label } from "@/components/ui/label"
+// import { Badge } from "@/components/ui/badge"
+// import { Separator } from "@/components/ui/separator"
+// import { ScrollArea } from "@/components/ui/scroll-area"
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// import {
+//   Sparkles,
+//   Rocket,
+//   Download,
+//   Loader2,
+//   ExternalLink,
+//   Copy,
+//   ChevronLeft,
+//   Zap,
+//   Database,
+//   CreditCard,
+//   Mail,
+//   Brain,
+//   FileCode,
+//   Maximize2,
+//   Minimize2,
+//   Code2,
+//   Monitor,
+//   SplitSquareHorizontal,
+//   Search,
+//   Check,
+//   ChevronRight,
+//   RefreshCw,
+//   X,
+//   MessageSquare,
+//   GitBranch,
+//   BarChart3,
+//   Clock,
+//   RotateCcw,
+//   FolderTree,
+//   Terminal,
+//   Smartphone,
+//   Tablet,
+//   Laptop,
+//   CheckCircle2,
+//   AlertCircle,
+//   Info,
+//   Send,
+//   PanelRightClose,
+//   PanelRightOpen,
+// } from "lucide-react"
+// import { v0ServiceAdvanced, type StreamEvent } from "@/lib/v0-service-advanced"
+// import { vercelDeployment } from "@/lib/vercel-deployments"
+// import { useToast } from "@/hooks/use-toast"
+
+// interface GeneratedFile {
+//   name: string
+//   content: string
+//   type: string
+//   path?: string
+// }
+
+// interface GenerationResult {
+//   chatId: string
+//   demoUrl: string | null
+//   webUrl: string
+//   files: GeneratedFile[]
+// }
+
+// type ViewMode = "preview" | "code" | "split"
+// type DeviceMode = "desktop" | "tablet" | "mobile"
+// type LogLevel = "info" | "success" | "warning" | "error"
+
+// interface LogEntry {
+//   id: string
+//   timestamp: Date
+//   level: LogLevel
+//   message: string
+//   details?: string
+// }
+
+// interface ChatHistory {
+//   id: string
+//   message: string
+//   role: "user" | "assistant"
+//   timestamp: Date
+// }
+
+// interface Version {
+//   id: string
+//   name: string
+//   timestamp: Date
+//   filesCount: number
+// }
+
+// export default function CreateToolPage() {
+//   const [step, setStep] = useState<"configure" | "generating" | "preview">("configure")
+//   const [isGenerating, setIsGenerating] = useState(false)
+//   const [isDeploying, setIsDeploying] = useState(false)
+//   const [generationProgress, setGenerationProgress] = useState(0)
+//   const [result, setResult] = useState<GenerationResult | null>(null)
+//   const [selectedFile, setSelectedFile] = useState<GeneratedFile | null>(null)
+//   const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null)
+
+//   const [viewMode, setViewMode] = useState<ViewMode>("preview")
+//   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop")
+//   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+//   const [isFullscreen, setIsFullscreen] = useState(false)
+//   const [fileSearchQuery, setFileSearchQuery] = useState("")
+//   const [showLogs, setShowLogs] = useState(true)
+//   const [showChat, setShowChat] = useState(false)
+//   const [showVersions, setShowVersions] = useState(false)
+//   const [showAnalytics, setShowAnalytics] = useState(false)
+//   const [iframeScale, setIframeScale] = useState(100)
+//   const [logs, setLogs] = useState<LogEntry[]>([])
+//   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([])
+//   const [versions, setVersions] = useState<Version[]>([])
+//   const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
+//   const [chatMessage, setChatMessage] = useState("")
+//   const [isSendingMessage, setIsSendingMessage] = useState(false)
+//   const [fileFilter, setFileFilter] = useState<string>("all")
+//   const [isRegenerating, setIsRegenerating] = useState(false)
+//   const [regenerationFeedback, setRegenerationFeedback] = useState("")
+//   const [showRegenerationDialog, setShowRegenerationDialog] = useState(false)
+//   const [rightPanelTab, setRightPanelTab] = useState<"logs" | "chat" | "versions" | "analytics">("logs")
+
+//   const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false)
+//   const [isEnhancing, setIsEnhancing] = useState(false)
+
+//   // Form state
+//   const [toolName, setToolName] = useState("")
+//   const [category, setCategory] = useState("dashboard")
+//   const [requirements, setRequirements] = useState("")
+//   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([])
+
+//   const [currentToolId, setCurrentToolId] = useState<string | null>(null)
+
+//   const { toast } = useToast()
+//   const params = useParams()
+//   const router = useRouter()
+//   const orgSlug = params?.slug as string
+//   const logsEndRef = useRef<HTMLDivElement>(null)
+//   const iframeRef = useRef<HTMLIFrameElement>(null)
+//   const chatEndRef = useRef<HTMLDivElement>(null)
+
+//   useEffect(() => {
+//     logsEndRef.current?.scrollIntoView({ behavior: "smooth" })
+//   }, [logs])
+
+//   useEffect(() => {
+//     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
+//   }, [chatHistory])
+
+//   useEffect(() => {
+//     const handleKeyPress = (e: KeyboardEvent) => {
+//       if (step !== "preview") return
+
+//       if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
+//         e.preventDefault()
+//         setIsFullscreen(!isFullscreen)
+//       }
+//       if (e.key === "l" && (e.metaKey || e.ctrlKey)) {
+//         e.preventDefault()
+//         setRightPanelTab("logs")
+//       }
+//       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+//         e.preventDefault()
+//         setRightPanelTab("chat")
+//       }
+//       if (e.key === "1" && (e.metaKey || e.ctrlKey)) {
+//         e.preventDefault()
+//         setViewMode("preview")
+//       }
+//       if (e.key === "2" && (e.metaKey || e.ctrlKey)) {
+//         e.preventDefault()
+//         setViewMode("code")
+//       }
+//       if (e.key === "3" && (e.metaKey || e.ctrlKey)) {
+//         e.preventDefault()
+//         setViewMode("split")
+//       }
+//     }
+
+//     window.addEventListener("keydown", handleKeyPress)
+//     return () => window.removeEventListener("keydown", handleKeyPress)
+//   }, [step, isFullscreen])
+
+//   const addLog = (message: string, level: LogLevel = "info", details?: string) => {
+//     const newLog: LogEntry = {
+//       id: Math.random().toString(36).substr(2, 9),
+//       timestamp: new Date(),
+//       level,
+//       message,
+//       details,
+//     }
+//     setLogs((prev) => [...prev, newLog])
+//   }
+
+//   const handleGenerate = async () => {
+//     if (!toolName || !requirements) {
+//       toast({ title: "Please fill in tool name and requirements", variant: "destructive" })
+//       return
+//     }
+
+//     setIsGenerating(true)
+//     setGenerationProgress(0)
+//     setLogs([])
+//     setStep("generating")
+
+//     try {
+//       addLog("Creating tool record...", "info")
+//       const createResponse = await fetch(`/api/organizations/${orgSlug}/tools`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           name: toolName,
+//           description: requirements.substring(0, 200),
+//           category,
+//           requirements,
+//           integrations: selectedIntegrations,
+//         }),
+//       })
+
+//       if (!createResponse.ok) {
+//         throw new Error("Failed to create tool record")
+//       }
+
+//       const createdTool = await createResponse.json()
+//       setCurrentToolId(createdTool.id)
+//       addLog("Tool record created successfully", "success")
+
+//       addLog("Initializing AI generation engine...", "info")
+//       setGenerationProgress(5)
+
+//       const response = await v0ServiceAdvanced.generateToolWithStreaming(
+//         {
+//           toolName,
+//           category,
+//           requirements,
+//           organizationSlug: orgSlug,
+//           userEmail: "user@example.com",
+//           integrations: selectedIntegrations,
+//           attachments: [],
+//           chatPrivacy: "private",
+//         },
+//         (event: StreamEvent) => {
+//           if (event.type === "chunk") {
+//             addLog(event.data.message, "info")
+//             setGenerationProgress((prev) => Math.min(prev + 5, 95))
+//           } else if (event.type === "complete") {
+//             addLog("Generation complete!", "success")
+//             setGenerationProgress(100)
+//           } else if (event.type === "error") {
+//             addLog(`Error: ${event.data.error}`, "error")
+//           }
+//         },
+//       )
+
+//       const latestVersion = (response as any).latestVersion
+//       const files: GeneratedFile[] =
+//         latestVersion?.files?.map((file: any) => ({
+//           name: file.name || file.path || "unnamed",
+//           content: file.content || file.data || "",
+//           type: file.type || file.language || "typescript",
+//           path: file.path,
+//         })) || []
+
+//       const generationResult: GenerationResult = {
+//         chatId: response.id,
+//         demoUrl: latestVersion?.demoUrl || null,
+//         webUrl: (response as any).webUrl || "",
+//         files,
+//       }
+
+//       setResult(generationResult)
+//       if (files.length > 0) {
+//         setSelectedFile(files[0])
+//       }
+
+//       addLog("Saving generation results...", "info")
+//       await fetch(`/api/organizations/${orgSlug}/tools/${createdTool.id}`, {
+//         method: "PATCH",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           status: "GENERATED",
+//           generationStatus: "completed",
+//           v0ChatId: response.id,
+//           previewUrl: latestVersion?.demoUrl,
+//         }),
+//       })
+
+//       addLog("Saving files to database...", "info")
+//       await fetch(`/api/organizations/${orgSlug}/tools/${createdTool.id}/files`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           files: files.map((f) => ({
+//             path: f.path || f.name,
+//             content: f.content,
+//             type: f.type,
+//           })),
+//         }),
+//       })
+
+//       const initialVersion: Version = {
+//         id: "v1",
+//         name: "Initial Generation",
+//         timestamp: new Date(),
+//         filesCount: files.length,
+//       }
+//       setVersions([initialVersion])
+//       setSelectedVersion("v1")
+
+//       addLog(`Generated ${files.length} files successfully!`, "success")
+//       addLog("All data saved to database!", "success")
+//       setStep("preview")
+//       setViewMode(generationResult.demoUrl ? "preview" : "code")
+//       toast({ title: "Tool generated and saved successfully!" })
+
+//       // setTimeout(() => {
+//       //   router.push(`/${orgSlug}/tools/${createdTool.id}`)
+//       // }, 2000)
+//     } catch (error) {
+//       addLog(`Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
+//       toast({ title: "Generation failed", description: "Please try again", variant: "destructive" })
+
+//       if (currentToolId) {
+//         await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}`, {
+//           method: "PATCH",
+//           headers: { "Content-Type": "application/json" },
+//           body: JSON.stringify({
+//             status: "ERROR",
+//             generationStatus: "error",
+//             generationError: error instanceof Error ? error.message : "Unknown error",
+//           }),
+//         })
+//       }
+//     } finally {
+//       setIsGenerating(false)
+//     }
+//   }
+
+//   const handleRegenerate = async () => {
+//     if (!result || !regenerationFeedback.trim()) {
+//       toast({ title: "Please provide feedback for regeneration", variant: "destructive" })
+//       return
+//     }
+
+//     setIsRegenerating(true)
+//     setShowRegenerationDialog(false)
+//     addLog("Starting regeneration with feedback...", "info")
+
+//     try {
+//       const response = await v0ServiceAdvanced.continueChat(
+//         result.chatId,
+//         `Please improve the tool based on this feedback: ${regenerationFeedback}`,
+//         (event: StreamEvent) => {
+//           if (event.type === "chunk") {
+//             addLog(event.data.message, "info")
+//           }
+//         },
+//       )
+
+//       const latestVersion = (response as any).latestVersion
+//       const files: GeneratedFile[] =
+//         latestVersion?.files?.map((file: any) => ({
+//           name: file.name || file.path || "unnamed",
+//           content: file.content || file.data || "",
+//           type: file.type || file.language || "typescript",
+//           path: file.path,
+//         })) || []
+
+//       const updatedResult: GenerationResult = {
+//         ...result,
+//         files,
+//         demoUrl: latestVersion?.demoUrl || result.demoUrl,
+//       }
+
+//       setResult(updatedResult)
+//       if (files.length > 0) {
+//         setSelectedFile(files[0])
+//       }
+
+//       const newVersion: Version = {
+//         id: `v${versions.length + 1}`,
+//         name: `Regeneration ${versions.length}`,
+//         timestamp: new Date(),
+//         filesCount: files.length,
+//       }
+//       setVersions((prev) => [...prev, newVersion])
+//       setSelectedVersion(newVersion.id)
+
+//       addLog("Regeneration complete!", "success")
+//       setRegenerationFeedback("")
+//       toast({ title: "Tool regenerated successfully!" })
+//     } catch (error) {
+//       addLog(`Regeneration failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
+//       toast({ title: "Regeneration failed", variant: "destructive" })
+//     } finally {
+//       setIsRegenerating(false)
+//     }
+//   }
+
+//   const handleSendMessage = async () => {
+//     if (!chatMessage.trim() || !result || !currentToolId) return
+
+//     const userMessage: ChatHistory = {
+//       id: Math.random().toString(36).substr(2, 9),
+//       message: chatMessage,
+//       role: "user",
+//       timestamp: new Date(),
+//     }
+//     setChatHistory((prev) => [...prev, userMessage])
+//     const currentMessage = chatMessage
+//     setChatMessage("")
+//     setIsSendingMessage(true)
+//     setIsEnhancing(true) // Show enhancement loading
+
+//     try {
+//       await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}/messages`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           role: "user",
+//           content: currentMessage,
+//         }),
+//       })
+
+//       addLog(`Enhancing tool based on: "${currentMessage}"`, "info")
+
+//       const response = await v0ServiceAdvanced.continueChat(result.chatId, currentMessage, (event: StreamEvent) => {
+//         if (event.type === "chunk") {
+//           addLog(event.data.message, "info")
+//         }
+//       })
+
+//       const latestVersion = (response as any).latestVersion
+//       const files: GeneratedFile[] =
+//         latestVersion?.files?.map((file: any) => ({
+//           name: file.name || file.path || "unnamed",
+//           content: file.content || file.data || "",
+//           type: file.type || file.language || "typescript",
+//           path: file.path,
+//         })) || []
+
+//       const updatedResult: GenerationResult = {
+//         ...result,
+//         files,
+//         demoUrl: latestVersion?.demoUrl || result.demoUrl,
+//       }
+
+//       setResult(updatedResult)
+//       if (files.length > 0) {
+//         setSelectedFile(files[0])
+//       }
+
+//       await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}/files`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           files: files.map((f) => ({
+//             path: f.path || f.name,
+//             content: f.content,
+//             type: f.type,
+//           })),
+//         }),
+//       })
+
+//       await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}`, {
+//         method: "PATCH",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           previewUrl: latestVersion?.demoUrl,
+//         }),
+//       })
+
+//       const newVersion: Version = {
+//         id: `v${versions.length + 1}`,
+//         name: `Enhancement ${versions.length}`,
+//         timestamp: new Date(),
+//         filesCount: files.length,
+//       }
+//       setVersions((prev) => [...prev, newVersion])
+//       setSelectedVersion(newVersion.id)
+
+//       const assistantMessage: ChatHistory = {
+//         id: Math.random().toString(36).substr(2, 9),
+//         message: "Tool enhanced successfully! The changes have been applied.",
+//         role: "assistant",
+//         timestamp: new Date(),
+//       }
+//       setChatHistory((prev) => [...prev, assistantMessage])
+
+//       await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}/messages`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           role: "assistant",
+//           content: assistantMessage.message,
+//         }),
+//       })
+
+//       addLog("Enhancement complete!", "success")
+//       toast({ title: "Tool enhanced and saved successfully!" })
+//     } catch (error) {
+//       const errorMessage: ChatHistory = {
+//         id: Math.random().toString(36).substr(2, 9),
+//         message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+//         role: "assistant",
+//         timestamp: new Date(),
+//       }
+//       setChatHistory((prev) => [...prev, errorMessage])
+//       addLog(`Enhancement failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
+//     } finally {
+//       setIsSendingMessage(false)
+//       setIsEnhancing(false) // Hide enhancement loading
+//     }
+//   }
+
+//   const handleDeploy = async () => {
+//     if (!result || result.files.length === 0) {
+//       toast({ title: "No files to deploy", variant: "destructive" })
+//       return
+//     }
+
+//     setIsDeploying(true)
+//     addLog("Starting deployment to Vercel...", "info")
+
+//     try {
+//       const deploymentResult = await vercelDeployment.deployToVercel({
+//         projectName: toolName.toLowerCase().replace(/\s+/g, "-"),
+//         files: result.files.map((file) => ({
+//           path: file.path || file.name,
+//           content: file.content,
+//         })),
+//       })
+
+//       if (deploymentResult.success) {
+//         setDeploymentUrl(deploymentResult.url || null)
+//         addLog(`Deployed successfully! URL: ${deploymentResult.url}`, "success")
+//         toast({ title: "Deployed successfully!", description: deploymentResult.url })
+//       } else {
+//         addLog(`Deployment failed: ${deploymentResult.error}`, "error")
+//         toast({ title: "Deployment failed", variant: "destructive" })
+//       }
+//     } catch (error) {
+//       addLog(`Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
+//       toast({ title: "Deployment error", variant: "destructive" })
+//     } finally {
+//       setIsDeploying(false)
+//     }
+//   }
+
+//   const downloadFiles = () => {
+//     if (!result) return
+
+//     result.files.forEach((file) => {
+//       const blob = new Blob([file.content], { type: "text/plain" })
+//       const url = URL.createObjectURL(blob)
+//       const a = document.createElement("a")
+//       a.href = url
+//       a.download = file.name
+//       a.click()
+//       URL.revokeObjectURL(url)
+//     })
+
+//     toast({ title: `Downloaded ${result.files.length} files` })
+//   }
+
+//   const downloadSingleFile = (file: GeneratedFile) => {
+//     const blob = new Blob([file.content], { type: "text/plain" })
+//     const url = URL.createObjectURL(blob)
+//     const a = document.createElement("a")
+//     a.href = url
+//     a.download = file.name
+//     a.click()
+//     URL.revokeObjectURL(url)
+//     toast({ title: `Downloaded ${file.name}` })
+//   }
+
+//   const copyAllCode = () => {
+//     if (!result) return
+//     const allCode = result.files.map((f) => `// ${f.name}\n${f.content}`).join("\n\n")
+//     navigator.clipboard.writeText(allCode)
+//     toast({ title: "All code copied to clipboard" })
+//   }
+
+//   const filteredFiles =
+//     result?.files.filter((file) => {
+//       const matchesSearch = file.name.toLowerCase().includes(fileSearchQuery.toLowerCase())
+//       if (fileFilter === "all") return matchesSearch
+//       if (fileFilter === "components") return matchesSearch && file.name.includes("component")
+//       if (fileFilter === "pages") return matchesSearch && file.name.includes("page")
+//       if (fileFilter === "styles") return matchesSearch && (file.name.includes(".css") || file.name.includes("style"))
+//       return matchesSearch
+//     }) || []
+
+//   const integrationOptions = [
+//     { id: "supabase", name: "Supabase", icon: Database, color: "emerald" },
+//     { id: "stripe", name: "Stripe", icon: CreditCard, color: "purple" },
+//     { id: "openai", name: "OpenAI", icon: Brain, color: "blue" },
+//     { id: "resend", name: "Resend", icon: Mail, color: "orange" },
+//   ]
+
+//   const getDeviceDimensions = () => {
+//     switch (deviceMode) {
+//       case "mobile":
+//         return { width: "375px", height: "667px" }
+//       case "tablet":
+//         return { width: "768px", height: "1024px" }
+//       default:
+//         return { width: "100%", height: "100%" }
+//     }
+//   }
+
+//   const deviceDimensions = getDeviceDimensions()
+
+//   const highlightCode = (code: string, language: string) => {
+//     const keywords = [
+//       "import",
+//       "export",
+//       "default",
+//       "from",
+//       "const",
+//       "let",
+//       "var",
+//       "function",
+//       "return",
+//       "if",
+//       "else",
+//       "for",
+//       "while",
+//       "class",
+//       "interface",
+//       "type",
+//       "async",
+//       "await",
+//       "try",
+//       "catch",
+//       "throw",
+//       "new",
+//       "this",
+//       "extends",
+//       "implements",
+//       "public",
+//       "private",
+//       "protected",
+//       "static",
+//       "readonly",
+//     ]
+
+//     const types = ["string", "number", "boolean", "void", "any", "unknown", "never"]
+
+//     let highlighted = code
+
+//     // Highlight strings
+//     highlighted = highlighted.replace(
+//       /(['"`])((?:\\.|(?!\1)[^\\])*)\1/g,
+//       '<span class="text-emerald-400">$1$2$1</span>',
+//     )
+
+//     // Highlight comments
+//     highlighted = highlighted.replace(/(\/\/.*$)/gm, '<span class="text-gray-500 italic">$1</span>')
+//     highlighted = highlighted.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="text-gray-500 italic">$1</span>')
+
+//     // Highlight keywords
+//     keywords.forEach((keyword) => {
+//       const regex = new RegExp(`\\b(${keyword})\\b`, "g")
+//       highlighted = highlighted.replace(regex, '<span class="text-purple-400 font-semibold">$1</span>')
+//     })
+
+//     // Highlight types
+//     types.forEach((type) => {
+//       const regex = new RegExp(`\\b(${type})\\b`, "g")
+//       highlighted = highlighted.replace(regex, '<span class="text-blue-400">$1</span>')
+//     })
+
+//     // Highlight numbers
+//     highlighted = highlighted.replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>')
+
+//     // Highlight functions
+//     highlighted = highlighted.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g, '<span class="text-yellow-400">$1</span>(')
+
+//     return highlighted
+//   }
+
+//   return (
+//     <div className={`min-h-screen bg-background ${isFullscreen ? "fixed inset-0 z-50" : ""}`}>
+//       <div className="border-b border-border bg-card/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
+//         <div className="max-w-[2400px] mx-auto px-6 py-3 flex items-center justify-between">
+//           <div className="flex items-center gap-4">
+//             {!isFullscreen && (
+//               <>
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   onClick={() => router.push(`/${orgSlug}/tools`)}
+//                   className="text-muted-foreground hover:text-foreground"
+//                 >
+//                   <ChevronLeft className="h-4 w-4 mr-1" />
+//                   Back
+//                 </Button>
+//                 <Separator orientation="vertical" className="h-6" />
+//               </>
+//             )}
+//             <div className="flex items-center gap-3">
+//               <div
+//                 className={`w-2.5 h-2.5 rounded-full transition-all ${
+//                   step === "configure"
+//                     ? "bg-muted-foreground"
+//                     : step === "generating"
+//                       ? "bg-primary animate-pulse shadow-lg shadow-primary/50"
+//                       : "bg-emerald-500 shadow-lg shadow-emerald-500/50"
+//                 }`}
+//               />
+//               <div>
+//                 <span className="text-sm font-semibold text-foreground">
+//                   {step === "configure" ? "Configure Tool" : step === "generating" ? "Generating..." : toolName}
+//                 </span>
+//                 {step === "preview" && result && (
+//                   <p className="text-xs text-muted-foreground">{result.files.length} files generated</p>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+
+//           {step === "preview" && result && (
+//             <div className="flex items-center gap-3">
+//               {result.demoUrl && (
+//                 <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border">
+//                   <Button
+//                     variant={viewMode === "preview" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setViewMode("preview")}
+//                     className="h-8 px-3 text-xs"
+//                     title="Preview Only (⌘1)"
+//                   >
+//                     <Monitor className="h-3.5 w-3.5 mr-1.5" />
+//                     Preview
+//                   </Button>
+//                   <Button
+//                     variant={viewMode === "code" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setViewMode("code")}
+//                     className="h-8 px-3 text-xs"
+//                     title="Code Only (⌘2)"
+//                   >
+//                     <Code2 className="h-3.5 w-3.5 mr-1.5" />
+//                     Code
+//                   </Button>
+//                   <Button
+//                     variant={viewMode === "split" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setViewMode("split")}
+//                     className="h-8 px-3 text-xs"
+//                     title="Split View (⌘3)"
+//                   >
+//                     <SplitSquareHorizontal className="h-3.5 w-3.5 mr-1.5" />
+//                     Split
+//                   </Button>
+//                 </div>
+//               )}
+
+//               {result.demoUrl && (viewMode === "preview" || viewMode === "split") && (
+//                 <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border">
+//                   <Button
+//                     variant={deviceMode === "desktop" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setDeviceMode("desktop")}
+//                     className="h-8 w-8 p-0"
+//                     title="Desktop View"
+//                   >
+//                     <Laptop className="h-3.5 w-3.5" />
+//                   </Button>
+//                   <Button
+//                     variant={deviceMode === "tablet" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setDeviceMode("tablet")}
+//                     className="h-8 w-8 p-0"
+//                     title="Tablet View"
+//                   >
+//                     <Tablet className="h-3.5 w-3.5" />
+//                   </Button>
+//                   <Button
+//                     variant={deviceMode === "mobile" ? "secondary" : "ghost"}
+//                     size="sm"
+//                     onClick={() => setDeviceMode("mobile")}
+//                     className="h-8 w-8 p-0"
+//                     title="Mobile View"
+//                   >
+//                     <Smartphone className="h-3.5 w-3.5" />
+//                   </Button>
+//                 </div>
+//               )}
+
+//               <Separator orientation="vertical" className="h-6" />
+
+//               <Button
+//                 variant="ghost"
+//                 size="sm"
+//                 onClick={() => setShowRegenerationDialog(true)}
+//                 disabled={isRegenerating}
+//                 className="text-muted-foreground hover:text-foreground"
+//               >
+//                 {isRegenerating ? (
+//                   <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+//                 ) : (
+//                   <RotateCcw className="h-4 w-4 mr-1.5" />
+//                 )}
+//                 Regenerate
+//               </Button>
+
+//               <Button
+//                 variant="ghost"
+//                 size="sm"
+//                 onClick={copyAllCode}
+//                 className="text-muted-foreground hover:text-foreground"
+//               >
+//                 <Copy className="h-4 w-4 mr-1.5" />
+//                 Copy All
+//               </Button>
+
+//               <Button
+//                 variant="ghost"
+//                 size="sm"
+//                 onClick={downloadFiles}
+//                 className="text-muted-foreground hover:text-foreground"
+//               >
+//                 <Download className="h-4 w-4 mr-1.5" />
+//                 Download
+//               </Button>
+
+//               <Button
+//                 variant="ghost"
+//                 size="sm"
+//                 onClick={() => setIsFullscreen(!isFullscreen)}
+//                 className="text-muted-foreground hover:text-foreground"
+//                 title="Fullscreen (⌘F)"
+//               >
+//                 {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+//               </Button>
+
+//               <Separator orientation="vertical" className="h-6" />
+
+//               <Button
+//                 size="sm"
+//                 onClick={handleDeploy}
+//                 disabled={isDeploying}
+//                 className="bg-primary hover:bg-primary/90"
+//               >
+//                 {isDeploying ? (
+//                   <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+//                 ) : (
+//                   <Rocket className="h-4 w-4 mr-1.5" />
+//                 )}
+//                 Deploy to Vercel
+//               </Button>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       {step === "configure" && (
+//         <div className="max-w-6xl mx-auto px-6 py-16">
+//           <div className="text-center mb-16">
+//             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-3xl mb-8 relative">
+//               <Sparkles className="h-10 w-10 text-primary" />
+//               <div className="absolute inset-0 rounded-3xl bg-primary/10 animate-pulse" />
+//             </div>
+//             <h1 className="text-5xl font-bold text-foreground mb-4 text-balance">Create Your Business Tool</h1>
+//             <p className="text-muted-foreground text-xl text-pretty max-w-2xl mx-auto">
+//               Describe your vision and watch AI transform it into a production-ready application
+//             </p>
+//           </div>
+
+//           <div className="space-y-8">
+//             <Card className="bg-card border-border p-10 shadow-lg">
+//               <div className="space-y-8">
+//                 <div>
+//                   <Label htmlFor="toolName" className="text-lg font-semibold text-foreground mb-4 block">
+//                     Tool Name
+//                   </Label>
+//                   <Input
+//                     id="toolName"
+//                     value={toolName}
+//                     onChange={(e) => setToolName(e.target.value)}
+//                     placeholder="e.g., Customer Support Dashboard, Inventory Manager, Analytics Platform"
+//                     className="h-14 bg-background border-border text-foreground placeholder-muted-foreground text-base"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <Label htmlFor="category" className="text-lg font-semibold text-foreground mb-4 block">
+//                     Category
+//                   </Label>
+//                   <select
+//                     id="category"
+//                     value={category}
+//                     onChange={(e) => setCategory(e.target.value)}
+//                     className="w-full h-14 px-4 rounded-lg bg-background border border-border text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-base"
+//                   >
+//                     <option value="dashboard">Dashboard & Analytics</option>
+//                     <option value="form">Forms & Data Collection</option>
+//                     <option value="landing-page">Landing Page</option>
+//                     <option value="admin-panel">Admin Panel</option>
+//                     <option value="e-commerce">E-commerce</option>
+//                     <option value="crm">CRM & Sales</option>
+//                     <option value="project-management">Project Management</option>
+//                     <option value="inventory">Inventory Management</option>
+//                   </select>
+//                 </div>
+
+//                 <div>
+//                   <Label htmlFor="requirements" className="text-lg font-semibold text-foreground mb-4 block">
+//                     Detailed Requirements
+//                   </Label>
+//                   <Textarea
+//                     id="requirements"
+//                     value={requirements}
+//                     onChange={(e) => setRequirements(e.target.value)}
+//                     placeholder="Describe your tool in detail:&#10;• What features do you need?&#10;• Who will use it?&#10;• What data will it display?&#10;• Any specific design preferences?&#10;• Integration requirements?"
+//                     rows={12}
+//                     className="bg-background border-border text-foreground placeholder-muted-foreground resize-none text-base leading-relaxed"
+//                   />
+//                   <div className="flex items-center justify-between mt-3">
+//                     <p className="text-sm text-muted-foreground">{requirements.length} characters</p>
+//                     <p className="text-xs text-muted-foreground">Tip: More detail = better results</p>
+//                   </div>
+//                 </div>
+//               </div>
+//             </Card>
+
+//             <Card className="bg-card border-border p-10 shadow-lg">
+//               <Label className="text-lg font-semibold text-foreground mb-6 block">
+//                 Integrations <span className="text-muted-foreground font-normal text-base">(Optional)</span>
+//               </Label>
+//               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+//                 {integrationOptions.map((integration) => {
+//                   const Icon = integration.icon
+//                   const isSelected = selectedIntegrations.includes(integration.id)
+//                   return (
+//                     <button
+//                       key={integration.id}
+//                       onClick={() => {
+//                         setSelectedIntegrations((prev) =>
+//                           prev.includes(integration.id)
+//                             ? prev.filter((i) => i !== integration.id)
+//                             : [...prev, integration.id],
+//                         )
+//                       }}
+//                       className={`relative p-8 rounded-2xl border-2 transition-all ${
+//                         isSelected
+//                           ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
+//                           : "border-border bg-background hover:border-primary/50 hover:shadow-md"
+//                       }`}
+//                     >
+//                       {isSelected && (
+//                         <div className="absolute top-3 right-3">
+//                           <CheckCircle2 className="h-5 w-5 text-primary" />
+//                         </div>
+//                       )}
+//                       <Icon
+//                         className={`h-10 w-10 mx-auto mb-4 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
+//                       />
+//                       <p
+//                         className={`text-base font-semibold ${isSelected ? "text-foreground" : "text-muted-foreground"}`}
+//                       >
+//                         {integration.name}
+//                       </p>
+//                     </button>
+//                   )
+//                 })}
+//               </div>
+//             </Card>
+
+//             <Button
+//               onClick={handleGenerate}
+//               disabled={isGenerating || !toolName || !requirements}
+//               className="w-full h-16 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:shadow-primary/40"
+//             >
+//               {isGenerating ? (
+//                 <>
+//                   <Loader2 className="h-6 w-6 mr-3 animate-spin" />
+//                   Generating Your Tool...
+//                 </>
+//               ) : (
+//                 <>
+//                   <Zap className="h-6 w-6 mr-3" />
+//                   Generate Tool with AI
+//                 </>
+//               )}
+//             </Button>
+//           </div>
+//         </div>
+//       )}
+
+//       {step === "generating" && (
+//         <div className="h-[calc(100vh-73px)] flex items-center justify-center p-6">
+//           <div className="w-full max-w-5xl space-y-10">
+//             <div className="text-center">
+//               <div className="inline-flex items-center justify-center w-24 h-24 bg-primary/10 rounded-full mb-8 relative">
+//                 <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+//                 <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
+//                 <div className="absolute inset-0 rounded-full border-4 border-primary/10 animate-pulse" />
+//               </div>
+//               <h2 className="text-4xl font-bold text-foreground mb-3">Generating Your Tool</h2>
+//               <p className="text-muted-foreground text-lg">
+//                 Our AI is analyzing your requirements and crafting a custom solution...
+//               </p>
+//             </div>
+
+//             <Card className="bg-card border-border p-10 shadow-2xl">
+//               <div className="space-y-8">
+//                 <div className="flex items-center justify-between">
+//                   <div>
+//                     <span className="text-foreground font-semibold text-lg">Generation Progress</span>
+//                     <p className="text-sm text-muted-foreground mt-1">
+//                       {generationProgress < 30
+//                         ? "Analyzing requirements..."
+//                         : generationProgress < 60
+//                           ? "Designing architecture..."
+//                           : generationProgress < 90
+//                             ? "Generating code..."
+//                             : "Finalizing..."}
+//                     </p>
+//                   </div>
+//                   <Badge className="bg-primary/10 text-primary border-primary/20 text-xl px-6 py-2 font-bold">
+//                     {generationProgress}%
+//                   </Badge>
+//                 </div>
+
+//                 <div className="w-full bg-muted rounded-full h-4 overflow-hidden shadow-inner">
+//                   <div
+//                     className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out shadow-lg"
+//                     style={{ width: `${generationProgress}%` }}
+//                   />
+//                 </div>
+
+//                 <Card className="bg-background border-border p-6 shadow-inner">
+//                   <div className="flex items-center justify-between mb-4">
+//                     <div className="flex items-center gap-2">
+//                       <Terminal className="h-4 w-4 text-muted-foreground" />
+//                       <span className="text-sm font-semibold text-foreground">Generation Logs</span>
+//                     </div>
+//                     <Badge variant="secondary" className="text-xs">
+//                       {logs.length} events
+//                     </Badge>
+//                   </div>
+//                   <ScrollArea className="h-96">
+//                     <div className="font-mono text-sm space-y-2 pr-4">
+//                       {logs.map((log) => (
+//                         <div
+//                           key={log.id}
+//                           className={`flex items-start gap-3 p-2 rounded ${
+//                             log.level === "error"
+//                               ? "bg-red-500/10 text-red-500"
+//                               : log.level === "success"
+//                                 ? "bg-emerald-500/10 text-emerald-500"
+//                                 : log.level === "warning"
+//                                   ? "bg-yellow-500/10 text-yellow-500"
+//                                   : "text-muted-foreground"
+//                           }`}
+//                         >
+//                           <span className="text-xs opacity-60 flex-shrink-0">{log.timestamp.toLocaleTimeString()}</span>
+//                           <span className="flex-1">{log.message}</span>
+//                         </div>
+//                       ))}
+//                       <div ref={logsEndRef} />
+//                     </div>
+//                   </ScrollArea>
+//                 </Card>
+//               </div>
+//             </Card>
+//           </div>
+//         </div>
+//       )}
+
+//       {step === "preview" && result && (
+//         <div className={`flex ${isFullscreen ? "h-screen" : "h-[calc(100vh-73px)]"}`}>
+//           {/* Left Sidebar - File Explorer */}
+//           <div
+//             className={`border-r border-border bg-card flex flex-col transition-all duration-300 ${
+//               isSidebarCollapsed ? "w-14" : "w-96"
+//             }`}
+//           >
+//             {isSidebarCollapsed ? (
+//               <div className="p-3 flex flex-col items-center gap-3">
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   onClick={() => setIsSidebarCollapsed(false)}
+//                   className="w-full h-10"
+//                   title="Expand Sidebar"
+//                 >
+//                   <ChevronRight className="h-5 w-5" />
+//                 </Button>
+//                 <Separator />
+//                 <Button variant="ghost" size="sm" className="w-full h-10" title="Files">
+//                   <FolderTree className="h-5 w-5" />
+//                 </Button>
+//               </div>
+//             ) : (
+//               <>
+//                 <div className="p-5 border-b border-border space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <div>
+//                       <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+//                         <FolderTree className="h-4 w-4" />
+//                         Project Files
+//                       </h3>
+//                       <p className="text-xs text-muted-foreground mt-1">
+//                         {result.files.length} files • {selectedVersion || "v1"}
+//                       </p>
+//                     </div>
+//                     <Button
+//                       variant="ghost"
+//                       size="sm"
+//                       onClick={() => setIsSidebarCollapsed(true)}
+//                       className="h-8 w-8 p-0"
+//                       title="Collapse Sidebar"
+//                     >
+//                       <ChevronLeft className="h-4 w-4" />
+//                     </Button>
+//                   </div>
+
+//                   <div className="relative">
+//                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+//                     <Input
+//                       value={fileSearchQuery}
+//                       onChange={(e) => setFileSearchQuery(e.target.value)}
+//                       placeholder="Search files..."
+//                       className="pl-10 h-10 bg-background border-border"
+//                     />
+//                   </div>
+
+//                   <div className="flex items-center gap-2">
+//                     <Button
+//                       variant={fileFilter === "all" ? "secondary" : "ghost"}
+//                       size="sm"
+//                       onClick={() => setFileFilter("all")}
+//                       className="h-8 px-3 text-xs flex-1"
+//                     >
+//                       All
+//                     </Button>
+//                     <Button
+//                       variant={fileFilter === "components" ? "secondary" : "ghost"}
+//                       size="sm"
+//                       onClick={() => setFileFilter("components")}
+//                       className="h-8 px-3 text-xs flex-1"
+//                     >
+//                       Components
+//                     </Button>
+//                     <Button
+//                       variant={fileFilter === "pages" ? "secondary" : "ghost"}
+//                       size="sm"
+//                       onClick={() => setFileFilter("pages")}
+//                       className="h-8 px-3 text-xs flex-1"
+//                     >
+//                       Pages
+//                     </Button>
+//                   </div>
+//                 </div>
+
+//                 <ScrollArea className="flex-1 p-3">
+//                   <div className="space-y-1">
+//                     {filteredFiles.length === 0 ? (
+//                       <div className="text-center py-12">
+//                         <FileCode className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+//                         <p className="text-sm text-muted-foreground">No files found</p>
+//                       </div>
+//                     ) : (
+//                       filteredFiles.map((file, index) => (
+//                         <div
+//                           key={index}
+//                           className={`group rounded-lg transition-all ${
+//                             selectedFile === file ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-muted/50"
+//                           }`}
+//                         >
+//                           <button
+//                             onClick={() => setSelectedFile(file)}
+//                             className="w-full text-left p-3 flex items-center gap-3"
+//                           >
+//                             <FileCode className="h-4 w-4 flex-shrink-0" />
+//                             <div className="flex-1 min-w-0">
+//                               <p className="text-sm font-medium font-mono truncate">{file.name}</p>
+//                               <p className="text-xs opacity-70 mt-0.5">{file.content.split("\n").length} lines</p>
+//                             </div>
+//                             {selectedFile === file && <Check className="h-4 w-4 flex-shrink-0" />}
+//                           </button>
+//                           <div
+//                             className={`px-3 pb-2 flex items-center gap-1 transition-all ${
+//                               selectedFile === file ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+//                             }`}
+//                           >
+//                             <Button
+//                               variant="ghost"
+//                               size="sm"
+//                               onClick={(e) => {
+//                                 e.stopPropagation()
+//                                 navigator.clipboard.writeText(file.content)
+//                                 toast({ title: "Copied to clipboard" })
+//                               }}
+//                               className="h-7 px-2 text-xs"
+//                             >
+//                               <Copy className="h-3 w-3 mr-1" />
+//                               Copy
+//                             </Button>
+//                             <Button
+//                               variant="ghost"
+//                               size="sm"
+//                               onClick={(e) => {
+//                                 e.stopPropagation()
+//                                 downloadSingleFile(file)
+//                               }}
+//                               className="h-7 px-2 text-xs"
+//                             >
+//                               <Download className="h-3 w-3 mr-1" />
+//                               Save
+//                             </Button>
+//                           </div>
+//                         </div>
+//                       ))
+//                     )}
+//                   </div>
+//                 </ScrollArea>
+//               </>
+//             )}
+//           </div>
+
+//           {/* Center - Main Preview/Code Area */}
+//           <div className="flex-1 flex flex-col bg-background overflow-hidden">
+//             {isEnhancing && (
+//               <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-40 flex items-center justify-center">
+//                 <div className="w-full max-w-4xl px-8">
+//                   <div className="text-center mb-8">
+//                     <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6 relative">
+//                       <Sparkles className="h-10 w-10 text-primary animate-pulse" />
+//                       <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
+//                     </div>
+//                     <h3 className="text-2xl font-bold text-foreground mb-2">Enhancing Your Tool</h3>
+//                     <p className="text-muted-foreground">AI is applying your requested changes...</p>
+//                   </div>
+
+//                   <div className="space-y-4">
+//                     <div className="h-12 bg-gradient-to-r from-muted via-muted/50 to-muted rounded-lg animate-pulse" />
+//                     <div className="grid grid-cols-3 gap-4">
+//                       <div
+//                         className="h-32 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-lg animate-pulse"
+//                         style={{ animationDelay: "0.1s" }}
+//                       />
+//                       <div
+//                         className="h-32 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent rounded-lg animate-pulse"
+//                         style={{ animationDelay: "0.2s" }}
+//                       />
+//                       <div
+//                         className="h-32 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent rounded-lg animate-pulse"
+//                         style={{ animationDelay: "0.3s" }}
+//                       />
+//                     </div>
+//                     <div
+//                       className="h-64 bg-gradient-to-b from-muted via-muted/30 to-muted rounded-lg animate-pulse"
+//                       style={{ animationDelay: "0.4s" }}
+//                     />
+//                     <div className="grid grid-cols-2 gap-4">
+//                       <div
+//                         className="h-24 bg-gradient-to-r from-muted via-muted/50 to-muted rounded-lg animate-pulse"
+//                         style={{ animationDelay: "0.5s" }}
+//                       />
+//                       <div
+//                         className="h-24 bg-gradient-to-r from-muted via-muted/50 to-muted rounded-lg animate-pulse"
+//                         style={{ animationDelay: "0.6s" }}
+//                       />
+//                     </div>
+//                   </div>
+
+//                   <div className="mt-8 flex items-center justify-center gap-2">
+//                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0s" }} />
+//                     <div
+//                       className="w-2 h-2 bg-primary rounded-full animate-bounce"
+//                       style={{ animationDelay: "0.2s" }}
+//                     />
+//                     <div
+//                       className="w-2 h-2 bg-primary rounded-full animate-bounce"
+//                       style={{ animationDelay: "0.4s" }}
+//                     />
+//                   </div>
+//                 </div>
+//               </div>
+//             )}
+
+//             <div className="flex-1 flex overflow-hidden">
+//               {viewMode === "preview" && result.demoUrl ? (
+//                 <div className="flex-1 flex flex-col bg-muted/30">
+//                   <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-sm">
+//                     <div className="flex items-center gap-3 flex-1 min-w-0">
+//                       <div className="flex items-center gap-2">
+//                         <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm" />
+//                         <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm" />
+//                         <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm" />
+//                       </div>
+//                       <div className="flex-1 min-w-0 bg-background/50 rounded-lg px-3 py-1.5 border border-border">
+//                         <span className="text-xs text-muted-foreground font-mono truncate block">{result.demoUrl}</span>
+//                       </div>
+//                     </div>
+//                     <div className="flex items-center gap-2 ml-3">
+//                       <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border mr-2">
+//                         <Button
+//                           variant={deviceMode === "desktop" ? "secondary" : "ghost"}
+//                           size="sm"
+//                           onClick={() => setDeviceMode("desktop")}
+//                           className="h-7 w-7 p-0"
+//                           title="Desktop View"
+//                         >
+//                           <Laptop className="h-3.5 w-3.5" />
+//                         </Button>
+//                         <Button
+//                           variant={deviceMode === "tablet" ? "secondary" : "ghost"}
+//                           size="sm"
+//                           onClick={() => setDeviceMode("tablet")}
+//                           className="h-7 w-7 p-0"
+//                           title="Tablet View"
+//                         >
+//                           <Tablet className="h-3.5 w-3.5" />
+//                         </Button>
+//                         <Button
+//                           variant={deviceMode === "mobile" ? "secondary" : "ghost"}
+//                           size="sm"
+//                           onClick={() => setDeviceMode("mobile")}
+//                           className="h-7 w-7 p-0"
+//                           title="Mobile View"
+//                         >
+//                           <Smartphone className="h-3.5 w-3.5" />
+//                         </Button>
+//                       </div>
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => {
+//                           if (iframeRef.current) {
+//                             iframeRef.current.src = result.demoUrl!
+//                           }
+//                         }}
+//                         className="h-8 w-8 p-0"
+//                         title="Refresh Preview"
+//                       >
+//                         <RefreshCw className="h-4 w-4" />
+//                       </Button>
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => window.open(result.demoUrl!, "_blank")}
+//                         className="h-8 w-8 p-0"
+//                         title="Open in New Tab"
+//                       >
+//                         <ExternalLink className="h-4 w-4" />
+//                       </Button>
+//                     </div>
+//                   </div>
+//                   <div className="flex-1 relative overflow-hidden flex items-center justify-center bg-gradient-to-br from-muted/20 to-muted/5 p-8">
+//                     <div
+//                       className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300"
+//                       style={{
+//                         width: deviceDimensions.width,
+//                         height: deviceDimensions.height,
+//                         maxWidth: "100%",
+//                         maxHeight: "100%",
+//                       }}
+//                     >
+//                       <iframe
+//                         ref={iframeRef}
+//                         src={result.demoUrl}
+//                         className="w-full h-full"
+//                         title="Generated Tool Preview"
+//                         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+//                       />
+//                     </div>
+//                   </div>
+//                 </div>
+//               ) : (
+//                 <div className="flex-1 flex flex-col">
+//                   <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-sm">
+//                     <div className="flex items-center gap-3">
+//                       <FileCode className="h-4 w-4 text-primary" />
+//                       <span className="text-sm font-semibold font-mono text-foreground">
+//                         {selectedFile?.name || "No file selected"}
+//                       </span>
+//                       {selectedFile && (
+//                         <>
+//                           <Badge variant="secondary" className="text-xs">
+//                             {selectedFile.type}
+//                           </Badge>
+//                           <Badge variant="outline" className="text-xs">
+//                             {selectedFile.content.split("\n").length} lines
+//                           </Badge>
+//                         </>
+//                       )}
+//                     </div>
+//                     <div className="flex items-center gap-2">
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => {
+//                           if (selectedFile) {
+//                             navigator.clipboard.writeText(selectedFile.content)
+//                             toast({ title: "Copied to clipboard" })
+//                           }
+//                         }}
+//                         className="h-8 px-3 text-xs"
+//                         disabled={!selectedFile}
+//                       >
+//                         <Copy className="h-3.5 w-3.5 mr-1.5" />
+//                         Copy
+//                       </Button>
+//                       <Button
+//                         variant="ghost"
+//                         size="sm"
+//                         onClick={() => selectedFile && downloadSingleFile(selectedFile)}
+//                         className="h-8 px-3 text-xs"
+//                         disabled={!selectedFile}
+//                       >
+//                         <Download className="h-3.5 w-3.5 mr-1.5" />
+//                         Download
+//                       </Button>
+//                     </div>
+//                   </div>
+//                   <ScrollArea className="flex-1 bg-[#1e1e1e]">
+//                     {selectedFile ? (
+//                       <div className="p-6">
+//                         <pre className="text-sm font-mono leading-relaxed">
+//                           {selectedFile.content.split("\n").map((line, i) => (
+//                             <div key={i} className="flex">
+//                               <span className="text-gray-600 select-none w-12 text-right pr-4 flex-shrink-0">
+//                                 {i + 1}
+//                               </span>
+//                               <code
+//                                 className="flex-1"
+//                                 dangerouslySetInnerHTML={{
+//                                   __html: highlightCode(line, selectedFile.type),
+//                                 }}
+//                               />
+//                             </div>
+//                           ))}
+//                         </pre>
+//                       </div>
+//                     ) : (
+//                       <div className="flex items-center justify-center h-full">
+//                         <div className="text-center">
+//                           <FileCode className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+//                           <p className="text-muted-foreground">Select a file to view its code</p>
+//                         </div>
+//                       </div>
+//                     )}
+//                   </ScrollArea>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+
+//           <div
+//             className={`border-l border-border bg-card flex flex-col transition-all duration-300 ${
+//               isRightSidebarCollapsed ? "w-14" : "w-96"
+//             }`}
+//           >
+//             {isRightSidebarCollapsed ? (
+//               <div className="p-3 flex flex-col items-center gap-3">
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   onClick={() => setIsRightSidebarCollapsed(false)}
+//                   className="w-full h-10"
+//                   title="Expand Panel"
+//                 >
+//                   <PanelRightOpen className="h-5 w-5" />
+//                 </Button>
+//                 <Separator />
+//                 <Button variant="ghost" size="sm" className="w-full h-10" title="Logs">
+//                   <Terminal className="h-5 w-5" />
+//                 </Button>
+//                 <Button variant="ghost" size="sm" className="w-full h-10" title="Chat">
+//                   <MessageSquare className="h-5 w-5" />
+//                 </Button>
+//                 <Button variant="ghost" size="sm" className="w-full h-10" title="Versions">
+//                   <GitBranch className="h-5 w-5" />
+//                 </Button>
+//                 <Button variant="ghost" size="sm" className="w-full h-10" title="Stats">
+//                   <BarChart3 className="h-5 w-5" />
+//                 </Button>
+//               </div>
+//             ) : (
+//               <Tabs
+//                 value={rightPanelTab}
+//                 onValueChange={(v) => setRightPanelTab(v as any)}
+//                 className="flex-1 flex flex-col h-full"
+//               >
+//                 <div className="border-b border-border bg-card/50 backdrop-blur-sm flex-shrink-0">
+//                   <div className="flex items-center justify-between px-3 py-2">
+//                     <TabsList className="grid grid-cols-4 h-10 bg-transparent p-0 gap-1 flex-1">
+//                       <TabsTrigger value="logs" className="text-xs h-9" title="Logs (⌘L)">
+//                         <Terminal className="h-4 w-4 mr-1.5" />
+//                         Logs
+//                       </TabsTrigger>
+//                       <TabsTrigger value="chat" className="text-xs h-9" title="Chat (⌘K)">
+//                         <MessageSquare className="h-4 w-4 mr-1.5" />
+//                         Chat
+//                       </TabsTrigger>
+//                       <TabsTrigger value="versions" className="text-xs h-9">
+//                         <GitBranch className="h-4 w-4 mr-1.5" />
+//                         Versions
+//                       </TabsTrigger>
+//                       <TabsTrigger value="analytics" className="text-xs h-9">
+//                         <BarChart3 className="h-4 w-4 mr-1.5" />
+//                         Stats
+//                       </TabsTrigger>
+//                     </TabsList>
+//                     <Button
+//                       variant="ghost"
+//                       size="sm"
+//                       onClick={() => setIsRightSidebarCollapsed(true)}
+//                       className="h-8 w-8 p-0 ml-2"
+//                       title="Collapse Panel"
+//                     >
+//                       <PanelRightClose className="h-4 w-4" />
+//                     </Button>
+//                   </div>
+//                 </div>
+
+//                 <TabsContent value="logs" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
+//                   <div className="p-4 border-b border-border flex-shrink-0">
+//                     <div className="flex items-center justify-between">
+//                       <div className="flex items-center gap-2">
+//                         <Terminal className="h-4 w-4 text-muted-foreground" />
+//                         <span className="text-sm font-semibold text-foreground">Generation Logs</span>
+//                       </div>
+//                       <Badge variant="secondary" className="text-xs">
+//                         {logs.length} events
+//                       </Badge>
+//                     </div>
+//                   </div>
+//                   <ScrollArea className="flex-1 min-h-0">
+//                     <div className="p-4 space-y-2">
+//                       {logs.map((log) => (
+//                         <div
+//                           key={log.id}
+//                           className={`p-3 rounded-lg border ${
+//                             log.level === "error"
+//                               ? "bg-red-500/10 border-red-500/20 text-red-500"
+//                               : log.level === "success"
+//                                 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+//                                 : log.level === "warning"
+//                                   ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
+//                                   : "bg-muted/50 border-border text-muted-foreground"
+//                           }`}
+//                         >
+//                           <div className="flex items-start gap-2">
+//                             {log.level === "error" && <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+//                             {log.level === "success" && <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+//                             {log.level === "warning" && <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+//                             {log.level === "info" && <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+//                             <div className="flex-1 min-w-0">
+//                               <p className="text-xs font-medium">{log.message}</p>
+//                               <p className="text-xs opacity-60 mt-1">{log.timestamp.toLocaleTimeString()}</p>
+//                             </div>
+//                           </div>
+//                         </div>
+//                       ))}
+//                       <div ref={logsEndRef} />
+//                     </div>
+//                   </ScrollArea>
+//                 </TabsContent>
+
+//                 <TabsContent value="chat" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
+//                   <div className="p-4 border-b border-border flex-shrink-0">
+//                     <div className="flex items-center gap-2">
+//                       <MessageSquare className="h-4 w-4 text-muted-foreground" />
+//                       <span className="text-sm font-semibold text-foreground">Chat with AI</span>
+//                     </div>
+//                     <p className="text-xs text-muted-foreground mt-1">Request changes or improvements</p>
+//                   </div>
+//                   <ScrollArea className="flex-1 min-h-0">
+//                     <div className="p-4 space-y-4">
+//                       {chatHistory.length === 0 ? (
+//                         <div className="text-center py-12">
+//                           <MessageSquare className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+//                           <p className="text-sm text-muted-foreground">No messages yet</p>
+//                           <p className="text-xs text-muted-foreground mt-1">Start a conversation with AI</p>
+//                         </div>
+//                       ) : (
+//                         chatHistory.map((msg) => (
+//                           <div
+//                             key={msg.id}
+//                             className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+//                           >
+//                             <div
+//                               className={`max-w-[85%] rounded-lg p-3 ${
+//                                 msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+//                               }`}
+//                             >
+//                               <p className="text-sm leading-relaxed">{msg.message}</p>
+//                               <p className="text-xs opacity-60 mt-1.5">{msg.timestamp.toLocaleTimeString()}</p>
+//                             </div>
+//                           </div>
+//                         ))
+//                       )}
+//                       <div ref={chatEndRef} />
+//                     </div>
+//                   </ScrollArea>
+//                   <div className="p-4 border-t border-border flex-shrink-0">
+//                     <div className="flex gap-2">
+//                       <Textarea
+//                         value={chatMessage}
+//                         onChange={(e) => setChatMessage(e.target.value)}
+//                         onKeyDown={(e) => {
+//                           if (e.key === "Enter" && !e.shiftKey) {
+//                             e.preventDefault()
+//                             handleSendMessage()
+//                           }
+//                         }}
+//                         placeholder="Describe what you want to improve..."
+//                         className="flex-1 min-h-[80px] max-h-[120px] bg-background resize-none"
+//                         disabled={isSendingMessage}
+//                       />
+//                     </div>
+//                     <Button
+//                       onClick={handleSendMessage}
+//                       disabled={!chatMessage.trim() || isSendingMessage}
+//                       size="sm"
+//                       className="w-full mt-2 h-9"
+//                     >
+//                       {isSendingMessage ? (
+//                         <>
+//                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+//                           Enhancing...
+//                         </>
+//                       ) : (
+//                         <>
+//                           <Send className="h-4 w-4 mr-2" />
+//                           Enhance Tool
+//                         </>
+//                       )}
+//                     </Button>
+//                   </div>
+//                 </TabsContent>
+
+//                 <TabsContent value="versions" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
+//                   <div className="p-4 border-b border-border flex-shrink-0">
+//                     <div className="flex items-center gap-2">
+//                       <GitBranch className="h-4 w-4 text-muted-foreground" />
+//                       <span className="text-sm font-semibold text-foreground">Version History</span>
+//                     </div>
+//                     <p className="text-xs text-muted-foreground mt-1">{versions.length} versions</p>
+//                   </div>
+//                   <ScrollArea className="flex-1 min-h-0">
+//                     <div className="p-4 space-y-2">
+//                       {versions.length === 0 ? (
+//                         <div className="text-center py-12">
+//                           <GitBranch className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+//                           <p className="text-sm text-muted-foreground">No versions yet</p>
+//                         </div>
+//                       ) : (
+//                         versions.map((version) => (
+//                           <button
+//                             key={version.id}
+//                             onClick={() => setSelectedVersion(version.id)}
+//                             className={`w-full text-left p-4 rounded-lg border transition-all ${
+//                               selectedVersion === version.id
+//                                 ? "bg-primary/10 border-primary"
+//                                 : "bg-muted/50 border-border hover:border-primary/50"
+//                             }`}
+//                           >
+//                             <div className="flex items-start justify-between">
+//                               <div className="flex-1">
+//                                 <p className="text-sm font-semibold text-foreground">{version.name}</p>
+//                                 <p className="text-xs text-muted-foreground mt-1">
+//                                   {version.filesCount} files • {version.timestamp.toLocaleString()}
+//                                 </p>
+//                               </div>
+//                               {selectedVersion === version.id && (
+//                                 <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+//                               )}
+//                             </div>
+//                           </button>
+//                         ))
+//                       )}
+//                     </div>
+//                   </ScrollArea>
+//                 </TabsContent>
+
+//                 <TabsContent value="analytics" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
+//                   <div className="p-4 border-b border-border flex-shrink-0">
+//                     <div className="flex items-center gap-2">
+//                       <BarChart3 className="h-4 w-4 text-muted-foreground" />
+//                       <span className="text-sm font-semibold text-foreground">Generation Stats</span>
+//                     </div>
+//                   </div>
+//                   <ScrollArea className="flex-1 min-h-0">
+//                     <div className="p-4 space-y-4">
+//                       <Card className="bg-muted/50 border-border p-4">
+//                         <div className="flex items-center justify-between">
+//                           <div>
+//                             <p className="text-xs text-muted-foreground">Total Files</p>
+//                             <p className="text-2xl font-bold text-foreground mt-1">{result.files.length}</p>
+//                           </div>
+//                           <FileCode className="h-8 w-8 text-primary" />
+//                         </div>
+//                       </Card>
+
+//                       <Card className="bg-muted/50 border-border p-4">
+//                         <div className="flex items-center justify-between">
+//                           <div>
+//                             <p className="text-xs text-muted-foreground">Lines of Code</p>
+//                             <p className="text-2xl font-bold text-foreground mt-1">
+//                               {result.files.reduce((acc, f) => acc + f.content.split("\n").length, 0)}
+//                             </p>
+//                           </div>
+//                           <Code2 className="h-8 w-8 text-emerald-500" />
+//                         </div>
+//                       </Card>
+
+//                       <Card className="bg-muted/50 border-border p-4">
+//                         <div className="flex items-center justify-between">
+//                           <div>
+//                             <p className="text-xs text-muted-foreground">Versions</p>
+//                             <p className="text-2xl font-bold text-foreground mt-1">{versions.length}</p>
+//                           </div>
+//                           <GitBranch className="h-8 w-8 text-blue-500" />
+//                         </div>
+//                       </Card>
+
+//                       <Card className="bg-muted/50 border-border p-4">
+//                         <div className="flex items-center justify-between">
+//                           <div>
+//                             <p className="text-xs text-muted-foreground">Generation Time</p>
+//                             <p className="text-2xl font-bold text-foreground mt-1">
+//                               {logs.length > 0
+//                                 ? `${Math.round((logs[logs.length - 1].timestamp.getTime() - logs[0].timestamp.getTime()) / 1000)}s`
+//                                 : "0s"}
+//                             </p>
+//                           </div>
+//                           <Clock className="h-8 w-8 text-orange-500" />
+//                         </div>
+//                       </Card>
+
+//                       <Separator />
+
+//                       <div>
+//                         <h4 className="text-sm font-semibold text-foreground mb-3">File Breakdown</h4>
+//                         <div className="space-y-2">
+//                           {["tsx", "ts", "css", "json"].map((ext) => {
+//                             const count = result.files.filter((f) => f.name.endsWith(`.${ext}`)).length
+//                             if (count === 0) return null
+//                             return (
+//                               <div key={ext} className="flex items-center justify-between text-sm">
+//                                 <span className="text-muted-foreground">.{ext} files</span>
+//                                 <Badge variant="secondary">{count}</Badge>
+//                               </div>
+//                             )
+//                           })}
+//                         </div>
+//                       </div>
+//                     </div>
+//                   </ScrollArea>
+//                 </TabsContent>
+//               </Tabs>
+//             )}
+//           </div>
+//         </div>
+//       )}
+
+//       {showRegenerationDialog && (
+//         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+//           <Card className="w-full max-w-2xl bg-card border-border shadow-2xl">
+//             <div className="p-6 border-b border-border">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <h3 className="text-lg font-bold text-foreground">Regenerate Tool</h3>
+//                   <p className="text-sm text-muted-foreground mt-1">Provide feedback to improve your tool</p>
+//                 </div>
+//                 <Button
+//                   variant="ghost"
+//                   size="sm"
+//                   onClick={() => setShowRegenerationDialog(false)}
+//                   className="h-8 w-8 p-0"
+//                 >
+//                   <X className="h-4 w-4" />
+//                 </Button>
+//               </div>
+//             </div>
+//             <div className="p-6 space-y-4">
+//               <div>
+//                 <Label htmlFor="feedback" className="text-sm font-semibold text-foreground mb-2 block">
+//                   What would you like to improve?
+//                 </Label>
+//                 <Textarea
+//                   id="feedback"
+//                   value={regenerationFeedback}
+//                   onChange={(e) => setRegenerationFeedback(e.target.value)}
+//                   placeholder="E.g., Add a dark mode toggle, improve the layout, add more features..."
+//                   rows={6}
+//                   className="bg-background border-border text-foreground resize-none"
+//                 />
+//               </div>
+//             </div>
+//             <div className="p-6 border-t border-border flex items-center justify-end gap-3">
+//               <Button variant="outline" onClick={() => setShowRegenerationDialog(false)}>
+//                 Cancel
+//               </Button>
+//               <Button
+//                 onClick={handleRegenerate}
+//                 disabled={!regenerationFeedback.trim() || isRegenerating}
+//                 className="bg-primary hover:bg-primary/90"
+//               >
+//                 {isRegenerating ? (
+//                   <>
+//                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+//                     Regenerating...
+//                   </>
+//                 ) : (
+//                   <>
+//                     <RotateCcw className="h-4 w-4 mr-2" />
+//                     Regenerate Tool
+//                   </>
+//                 )}
+//               </Button>
+//             </div>
+//           </Card>
+//         </div>
+//       )}
+//     </div>
+//   )
+// }
+
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -9528,7 +11363,6 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Sparkles,
   Rocket,
@@ -9547,7 +11381,6 @@ import {
   Minimize2,
   Code2,
   Monitor,
-  SplitSquareHorizontal,
   Search,
   Check,
   ChevronRight,
@@ -9588,7 +11421,7 @@ interface GenerationResult {
   files: GeneratedFile[]
 }
 
-type ViewMode = "preview" | "code" | "split"
+type ViewMode = "preview" | "code"
 type DeviceMode = "desktop" | "tablet" | "mobile"
 type LogLevel = "info" | "success" | "warning" | "error"
 
@@ -9628,11 +11461,6 @@ export default function CreateToolPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fileSearchQuery, setFileSearchQuery] = useState("")
-  const [showLogs, setShowLogs] = useState(true)
-  const [showChat, setShowChat] = useState(false)
-  const [showVersions, setShowVersions] = useState(false)
-  const [showAnalytics, setShowAnalytics] = useState(false)
-  const [iframeScale, setIframeScale] = useState(100)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([])
   const [versions, setVersions] = useState<Version[]>([])
@@ -9643,7 +11471,7 @@ export default function CreateToolPage() {
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [regenerationFeedback, setRegenerationFeedback] = useState("")
   const [showRegenerationDialog, setShowRegenerationDialog] = useState(false)
-  const [rightPanelTab, setRightPanelTab] = useState<"logs" | "chat" | "versions" | "analytics">("logs")
+  const [rightPanelTab, setRightPanelTab] = useState<"logs" | "chat" | "versions" | "analytics">("chat")
 
   const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false)
   const [isEnhancing, setIsEnhancing] = useState(false)
@@ -9680,14 +11508,6 @@ export default function CreateToolPage() {
         e.preventDefault()
         setIsFullscreen(!isFullscreen)
       }
-      if (e.key === "l" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        setRightPanelTab("logs")
-      }
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        setRightPanelTab("chat")
-      }
       if (e.key === "1" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setViewMode("preview")
@@ -9695,10 +11515,6 @@ export default function CreateToolPage() {
       if (e.key === "2" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setViewMode("code")
-      }
-      if (e.key === "3" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        setViewMode("split")
       }
     }
 
@@ -9837,10 +11653,6 @@ export default function CreateToolPage() {
       setStep("preview")
       setViewMode(generationResult.demoUrl ? "preview" : "code")
       toast({ title: "Tool generated and saved successfully!" })
-
-      // setTimeout(() => {
-      //   router.push(`/${orgSlug}/tools/${createdTool.id}`)
-      // }, 2000)
     } catch (error) {
       addLog(`Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
       toast({ title: "Generation failed", description: "Please try again", variant: "destructive" })
@@ -9861,67 +11673,6 @@ export default function CreateToolPage() {
     }
   }
 
-  const handleRegenerate = async () => {
-    if (!result || !regenerationFeedback.trim()) {
-      toast({ title: "Please provide feedback for regeneration", variant: "destructive" })
-      return
-    }
-
-    setIsRegenerating(true)
-    setShowRegenerationDialog(false)
-    addLog("Starting regeneration with feedback...", "info")
-
-    try {
-      const response = await v0ServiceAdvanced.continueChat(
-        result.chatId,
-        `Please improve the tool based on this feedback: ${regenerationFeedback}`,
-        (event: StreamEvent) => {
-          if (event.type === "chunk") {
-            addLog(event.data.message, "info")
-          }
-        },
-      )
-
-      const latestVersion = (response as any).latestVersion
-      const files: GeneratedFile[] =
-        latestVersion?.files?.map((file: any) => ({
-          name: file.name || file.path || "unnamed",
-          content: file.content || file.data || "",
-          type: file.type || file.language || "typescript",
-          path: file.path,
-        })) || []
-
-      const updatedResult: GenerationResult = {
-        ...result,
-        files,
-        demoUrl: latestVersion?.demoUrl || result.demoUrl,
-      }
-
-      setResult(updatedResult)
-      if (files.length > 0) {
-        setSelectedFile(files[0])
-      }
-
-      const newVersion: Version = {
-        id: `v${versions.length + 1}`,
-        name: `Regeneration ${versions.length}`,
-        timestamp: new Date(),
-        filesCount: files.length,
-      }
-      setVersions((prev) => [...prev, newVersion])
-      setSelectedVersion(newVersion.id)
-
-      addLog("Regeneration complete!", "success")
-      setRegenerationFeedback("")
-      toast({ title: "Tool regenerated successfully!" })
-    } catch (error) {
-      addLog(`Regeneration failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
-      toast({ title: "Regeneration failed", variant: "destructive" })
-    } finally {
-      setIsRegenerating(false)
-    }
-  }
-
   const handleSendMessage = async () => {
     if (!chatMessage.trim() || !result || !currentToolId) return
 
@@ -9935,7 +11686,7 @@ export default function CreateToolPage() {
     const currentMessage = chatMessage
     setChatMessage("")
     setIsSendingMessage(true)
-    setIsEnhancing(true) // Show enhancement loading
+    setIsEnhancing(true)
 
     try {
       await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}/messages`, {
@@ -10034,7 +11785,7 @@ export default function CreateToolPage() {
       addLog(`Enhancement failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
     } finally {
       setIsSendingMessage(false)
-      setIsEnhancing(false) // Hide enhancement loading
+      setIsEnhancing(false)
     }
   }
 
@@ -10174,41 +11925,162 @@ export default function CreateToolPage() {
 
     let highlighted = code
 
-    // Highlight strings
     highlighted = highlighted.replace(
       /(['"`])((?:\\.|(?!\1)[^\\])*)\1/g,
       '<span class="text-emerald-400">$1$2$1</span>',
     )
 
-    // Highlight comments
     highlighted = highlighted.replace(/(\/\/.*$)/gm, '<span class="text-gray-500 italic">$1</span>')
     highlighted = highlighted.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="text-gray-500 italic">$1</span>')
 
-    // Highlight keywords
     keywords.forEach((keyword) => {
       const regex = new RegExp(`\\b(${keyword})\\b`, "g")
       highlighted = highlighted.replace(regex, '<span class="text-purple-400 font-semibold">$1</span>')
     })
 
-    // Highlight types
     types.forEach((type) => {
       const regex = new RegExp(`\\b(${type})\\b`, "g")
       highlighted = highlighted.replace(regex, '<span class="text-blue-400">$1</span>')
     })
 
-    // Highlight numbers
     highlighted = highlighted.replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>')
 
-    // Highlight functions
     highlighted = highlighted.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g, '<span class="text-yellow-400">$1</span>(')
 
     return highlighted
   }
 
+  const getLogIcon = (level: LogLevel) => {
+    switch (level) {
+      case "error":
+        return <AlertCircle className="h-4 w-4" />
+      case "success":
+        return <CheckCircle2 className="h-4 w-4" />
+      case "warning":
+        return <AlertCircle className="h-4 w-4" />
+      default:
+        return <Info className="h-4 w-4" />
+    }
+  }
+
+  const handleRegenerate = async () => {
+    if (!regenerationFeedback.trim() || !currentToolId || !result) {
+      toast({ title: "Please provide feedback", variant: "destructive" })
+      return
+    }
+
+    setIsRegenerating(true)
+    setShowRegenerationDialog(false)
+    addLog(`Regenerating tool with feedback: "${regenerationFeedback}"`, "info")
+    setStep("generating") // Transition back to generating state
+
+    try {
+      // Re-use the generation logic, but with the new feedback
+      const response = await v0ServiceAdvanced.generateToolWithStreaming(
+        {
+          toolName,
+          category,
+          requirements: regenerationFeedback, // Use feedback as new requirements
+          organizationSlug: orgSlug,
+          userEmail: "user@example.com",
+          integrations: selectedIntegrations,
+          attachments: [],
+          chatPrivacy: "private",
+          existingChatId: result.chatId, // Pass existing chat ID for conversational regeneration
+        },
+        (event: StreamEvent) => {
+          if (event.type === "chunk") {
+            addLog(event.data.message, "info")
+            setGenerationProgress((prev) => Math.min(prev + 5, 95))
+          } else if (event.type === "complete") {
+            addLog("Regeneration complete!", "success")
+            setGenerationProgress(100)
+          } else if (event.type === "error") {
+            addLog(`Regeneration error: ${event.data.error}`, "error")
+          }
+        },
+      )
+
+      const latestVersion = (response as any).latestVersion
+      const files: GeneratedFile[] =
+        latestVersion?.files?.map((file: any) => ({
+          name: file.name || file.path || "unnamed",
+          content: file.content || file.data || "",
+          type: file.type || file.language || "typescript",
+          path: file.path,
+        })) || []
+
+      const updatedResult: GenerationResult = {
+        ...result,
+        files,
+        chatId: response.id, // Update chatId
+        demoUrl: latestVersion?.demoUrl || result.demoUrl,
+      }
+
+      setResult(updatedResult)
+      if (files.length > 0) {
+        setSelectedFile(files[0])
+      }
+
+      addLog("Saving regenerated files...", "info")
+      await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          files: files.map((f) => ({
+            path: f.path || f.name,
+            content: f.content,
+            type: f.type,
+          })),
+        }),
+      })
+
+      await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          generationStatus: "completed",
+          v0ChatId: response.id,
+          previewUrl: latestVersion?.demoUrl,
+        }),
+      })
+
+      const newVersion: Version = {
+        id: `v${versions.length + 1}`,
+        name: `Regeneration ${versions.length}`,
+        timestamp: new Date(),
+        filesCount: files.length,
+      }
+      setVersions((prev) => [...prev, newVersion])
+      setSelectedVersion(newVersion.id)
+
+      addLog("Tool regenerated successfully!", "success")
+      toast({ title: "Tool regenerated successfully!" })
+    } catch (error) {
+      addLog(`Regeneration failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error")
+      toast({ title: "Regeneration failed", description: "Please try again", variant: "destructive" })
+
+      if (currentToolId) {
+        await fetch(`/api/organizations/${orgSlug}/tools/${currentToolId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            generationStatus: "error",
+            generationError: error instanceof Error ? error.message : "Unknown error",
+          }),
+        })
+      }
+    } finally {
+      setIsRegenerating(false)
+      setStep("preview") // Return to preview after regeneration attempt
+    }
+  }
+
   return (
-    <div className={`min-h-screen bg-background ${isFullscreen ? "fixed inset-0 z-50" : ""}`}>
-      <div className="border-b border-border bg-card/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
-        <div className="max-w-[2400px] mx-auto px-6 py-3 flex items-center justify-between">
+    <div className={`min-h-screen bg-[#0a0a0a] ${isFullscreen ? "fixed inset-0 z-50" : ""}`}>
+      {/* Header */}
+      <div className="border-b border-white/10 bg-[#111111]/95 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-[2400px] mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {!isFullscreen && (
               <>
@@ -10216,30 +12088,30 @@ export default function CreateToolPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => router.push(`/${orgSlug}/tools`)}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-gray-400 hover:text-white hover:bg-white/5"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Back
                 </Button>
-                <Separator orientation="vertical" className="h-6" />
+                <Separator orientation="vertical" className="h-6 bg-white/10" />
               </>
             )}
             <div className="flex items-center gap-3">
               <div
                 className={`w-2.5 h-2.5 rounded-full transition-all ${
                   step === "configure"
-                    ? "bg-muted-foreground"
+                    ? "bg-gray-500"
                     : step === "generating"
-                      ? "bg-primary animate-pulse shadow-lg shadow-primary/50"
+                      ? "bg-blue-500 animate-pulse shadow-lg shadow-blue-500/50"
                       : "bg-emerald-500 shadow-lg shadow-emerald-500/50"
                 }`}
               />
               <div>
-                <span className="text-sm font-semibold text-foreground">
+                <span className="text-sm font-semibold text-white">
                   {step === "configure" ? "Configure Tool" : step === "generating" ? "Generating..." : toolName}
                 </span>
                 {step === "preview" && result && (
-                  <p className="text-xs text-muted-foreground">{result.files.length} files generated</p>
+                  <p className="text-xs text-gray-500">{result.files.length} files generated</p>
                 )}
               </div>
             </div>
@@ -10248,96 +12120,66 @@ export default function CreateToolPage() {
           {step === "preview" && result && (
             <div className="flex items-center gap-3">
               {result.demoUrl && (
-                <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border">
+                <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
                   <Button
                     variant={viewMode === "preview" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("preview")}
-                    className="h-8 px-3 text-xs"
-                    title="Preview Only (⌘1)"
+                    className="h-9 px-4 text-xs"
                   >
-                    <Monitor className="h-3.5 w-3.5 mr-1.5" />
+                    <Monitor className="h-4 w-4 mr-2" />
                     Preview
                   </Button>
                   <Button
                     variant={viewMode === "code" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("code")}
-                    className="h-8 px-3 text-xs"
-                    title="Code Only (⌘2)"
+                    className="h-9 px-4 text-xs"
                   >
-                    <Code2 className="h-3.5 w-3.5 mr-1.5" />
+                    <Code2 className="h-4 w-4 mr-2" />
                     Code
-                  </Button>
-                  <Button
-                    variant={viewMode === "split" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("split")}
-                    className="h-8 px-3 text-xs"
-                    title="Split View (⌘3)"
-                  >
-                    <SplitSquareHorizontal className="h-3.5 w-3.5 mr-1.5" />
-                    Split
                   </Button>
                 </div>
               )}
 
-              {result.demoUrl && (viewMode === "preview" || viewMode === "split") && (
-                <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border">
+              {result.demoUrl && viewMode === "preview" && (
+                <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
                   <Button
                     variant={deviceMode === "desktop" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setDeviceMode("desktop")}
-                    className="h-8 w-8 p-0"
-                    title="Desktop View"
+                    className="h-9 w-9 p-0"
                   >
-                    <Laptop className="h-3.5 w-3.5" />
+                    <Laptop className="h-4 w-4" />
                   </Button>
                   <Button
                     variant={deviceMode === "tablet" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setDeviceMode("tablet")}
-                    className="h-8 w-8 p-0"
-                    title="Tablet View"
+                    className="h-9 w-9 p-0"
                   >
-                    <Tablet className="h-3.5 w-3.5" />
+                    <Tablet className="h-4 w-4" />
                   </Button>
                   <Button
                     variant={deviceMode === "mobile" ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setDeviceMode("mobile")}
-                    className="h-8 w-8 p-0"
-                    title="Mobile View"
+                    className="h-9 w-9 p-0"
                   >
-                    <Smartphone className="h-3.5 w-3.5" />
+                    <Smartphone className="h-4 w-4" />
                   </Button>
                 </div>
               )}
 
-              <Separator orientation="vertical" className="h-6" />
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowRegenerationDialog(true)}
-                disabled={isRegenerating}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                {isRegenerating ? (
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                ) : (
-                  <RotateCcw className="h-4 w-4 mr-1.5" />
-                )}
-                Regenerate
-              </Button>
+              <Separator orientation="vertical" className="h-6 bg-white/10" />
 
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={copyAllCode}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-gray-400 hover:text-white hover:bg-white/5"
               >
-                <Copy className="h-4 w-4 mr-1.5" />
+                <Copy className="h-4 w-4 mr-2" />
                 Copy All
               </Button>
 
@@ -10345,9 +12187,9 @@ export default function CreateToolPage() {
                 variant="ghost"
                 size="sm"
                 onClick={downloadFiles}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-gray-400 hover:text-white hover:bg-white/5"
               >
-                <Download className="h-4 w-4 mr-1.5" />
+                <Download className="h-4 w-4 mr-2" />
                 Download
               </Button>
 
@@ -10355,50 +12197,46 @@ export default function CreateToolPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsFullscreen(!isFullscreen)}
-                className="text-muted-foreground hover:text-foreground"
-                title="Fullscreen (⌘F)"
+                className="text-gray-400 hover:text-white hover:bg-white/5"
               >
                 {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </Button>
 
-              <Separator orientation="vertical" className="h-6" />
+              <Separator orientation="vertical" className="h-6 bg-white/10" />
 
               <Button
                 size="sm"
                 onClick={handleDeploy}
                 disabled={isDeploying}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {isDeploying ? (
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                ) : (
-                  <Rocket className="h-4 w-4 mr-1.5" />
-                )}
-                Deploy to Vercel
+                {isDeploying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Rocket className="h-4 w-4 mr-2" />}
+                Deploy
               </Button>
             </div>
           )}
         </div>
       </div>
 
+      {/* Configure Step */}
       {step === "configure" && (
         <div className="max-w-6xl mx-auto px-6 py-16">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-3xl mb-8 relative">
-              <Sparkles className="h-10 w-10 text-primary" />
-              <div className="absolute inset-0 rounded-3xl bg-primary/10 animate-pulse" />
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-3xl mb-8 relative">
+              <Sparkles className="h-10 w-10 text-blue-500" />
+              <div className="absolute inset-0 rounded-3xl bg-blue-500/10 animate-pulse" />
             </div>
-            <h1 className="text-5xl font-bold text-foreground mb-4 text-balance">Create Your Business Tool</h1>
-            <p className="text-muted-foreground text-xl text-pretty max-w-2xl mx-auto">
+            <h1 className="text-5xl font-bold text-white mb-4 text-balance">Create Your Business Tool</h1>
+            <p className="text-gray-400 text-xl text-pretty max-w-2xl mx-auto">
               Describe your vision and watch AI transform it into a production-ready application
             </p>
           </div>
 
           <div className="space-y-8">
-            <Card className="bg-card border-border p-10 shadow-lg">
+            <Card className="bg-[#111111] border-white/10 p-10 shadow-2xl">
               <div className="space-y-8">
                 <div>
-                  <Label htmlFor="toolName" className="text-lg font-semibold text-foreground mb-4 block">
+                  <Label htmlFor="toolName" className="text-lg font-semibold text-white mb-4 block">
                     Tool Name
                   </Label>
                   <Input
@@ -10406,19 +12244,19 @@ export default function CreateToolPage() {
                     value={toolName}
                     onChange={(e) => setToolName(e.target.value)}
                     placeholder="e.g., Customer Support Dashboard, Inventory Manager, Analytics Platform"
-                    className="h-14 bg-background border-border text-foreground placeholder-muted-foreground text-base"
+                    className="h-14 bg-white/5 border-white/10 text-white placeholder-gray-500 text-base"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="category" className="text-lg font-semibold text-foreground mb-4 block">
+                  <Label htmlFor="category" className="text-lg font-semibold text-white mb-4 block">
                     Category
                   </Label>
                   <select
                     id="category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full h-14 px-4 rounded-lg bg-background border border-border text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-base"
+                    className="w-full h-14 px-4 rounded-lg bg-white/5 border border-white/10 text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-base"
                   >
                     <option value="dashboard">Dashboard & Analytics</option>
                     <option value="form">Forms & Data Collection</option>
@@ -10432,7 +12270,7 @@ export default function CreateToolPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="requirements" className="text-lg font-semibold text-foreground mb-4 block">
+                  <Label htmlFor="requirements" className="text-lg font-semibold text-white mb-4 block">
                     Detailed Requirements
                   </Label>
                   <Textarea
@@ -10441,19 +12279,19 @@ export default function CreateToolPage() {
                     onChange={(e) => setRequirements(e.target.value)}
                     placeholder="Describe your tool in detail:&#10;• What features do you need?&#10;• Who will use it?&#10;• What data will it display?&#10;• Any specific design preferences?&#10;• Integration requirements?"
                     rows={12}
-                    className="bg-background border-border text-foreground placeholder-muted-foreground resize-none text-base leading-relaxed"
+                    className="bg-white/5 border-white/10 text-white placeholder-gray-500 resize-none text-base leading-relaxed"
                   />
                   <div className="flex items-center justify-between mt-3">
-                    <p className="text-sm text-muted-foreground">{requirements.length} characters</p>
-                    <p className="text-xs text-muted-foreground">Tip: More detail = better results</p>
+                    <p className="text-sm text-gray-500">{requirements.length} characters</p>
+                    <p className="text-xs text-gray-500">Tip: More detail = better results</p>
                   </div>
                 </div>
               </div>
             </Card>
 
-            <Card className="bg-card border-border p-10 shadow-lg">
-              <Label className="text-lg font-semibold text-foreground mb-6 block">
-                Integrations <span className="text-muted-foreground font-normal text-base">(Optional)</span>
+            <Card className="bg-[#111111] border-white/10 p-10 shadow-2xl">
+              <Label className="text-lg font-semibold text-white mb-6 block">
+                Integrations <span className="text-gray-500 font-normal text-base">(Optional)</span>
               </Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {integrationOptions.map((integration) => {
@@ -10471,21 +12309,17 @@ export default function CreateToolPage() {
                       }}
                       className={`relative p-8 rounded-2xl border-2 transition-all ${
                         isSelected
-                          ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
-                          : "border-border bg-background hover:border-primary/50 hover:shadow-md"
+                          ? "border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20"
+                          : "border-white/10 bg-white/5 hover:border-blue-500/50 hover:shadow-md"
                       }`}
                     >
                       {isSelected && (
                         <div className="absolute top-3 right-3">
-                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                          <CheckCircle2 className="h-5 w-5 text-blue-500" />
                         </div>
                       )}
-                      <Icon
-                        className={`h-10 w-10 mx-auto mb-4 ${isSelected ? "text-primary" : "text-muted-foreground"}`}
-                      />
-                      <p
-                        className={`text-base font-semibold ${isSelected ? "text-foreground" : "text-muted-foreground"}`}
-                      >
+                      <Icon className={`h-10 w-10 mx-auto mb-4 ${isSelected ? "text-blue-500" : "text-gray-500"}`} />
+                      <p className={`text-base font-semibold ${isSelected ? "text-white" : "text-gray-400"}`}>
                         {integration.name}
                       </p>
                     </button>
@@ -10497,7 +12331,7 @@ export default function CreateToolPage() {
             <Button
               onClick={handleGenerate}
               disabled={isGenerating || !toolName || !requirements}
-              className="w-full h-16 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:shadow-primary/40"
+              className="w-full h-16 text-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-600/30 transition-all hover:shadow-xl hover:shadow-blue-600/40"
             >
               {isGenerating ? (
                 <>
@@ -10515,27 +12349,28 @@ export default function CreateToolPage() {
         </div>
       )}
 
+      {/* Generating Step */}
       {step === "generating" && (
         <div className="h-[calc(100vh-73px)] flex items-center justify-center p-6">
           <div className="w-full max-w-5xl space-y-10">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-primary/10 rounded-full mb-8 relative">
-                <Sparkles className="h-12 w-12 text-primary animate-pulse" />
-                <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
-                <div className="absolute inset-0 rounded-full border-4 border-primary/10 animate-pulse" />
+              <div className="inline-flex items-center justify-center w-24 h-24 bg-blue-500/10 rounded-full mb-8 relative">
+                <Sparkles className="h-12 w-12 text-blue-500 animate-pulse" />
+                <div className="absolute inset-0 rounded-full border-4 border-blue-500/20 animate-ping" />
+                <div className="absolute inset-0 rounded-full border-4 border-blue-500/10 animate-pulse" />
               </div>
-              <h2 className="text-4xl font-bold text-foreground mb-3">Generating Your Tool</h2>
-              <p className="text-muted-foreground text-lg">
+              <h2 className="text-4xl font-bold text-white mb-3">Generating Your Tool</h2>
+              <p className="text-gray-400 text-lg">
                 Our AI is analyzing your requirements and crafting a custom solution...
               </p>
             </div>
 
-            <Card className="bg-card border-border p-10 shadow-2xl">
+            <Card className="bg-[#111111] border-white/10 p-10 shadow-2xl">
               <div className="space-y-8">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-foreground font-semibold text-lg">Generation Progress</span>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <span className="text-white font-semibold text-lg">Generation Progress</span>
+                    <p className="text-sm text-gray-500 mt-1">
                       {generationProgress < 30
                         ? "Analyzing requirements..."
                         : generationProgress < 60
@@ -10545,25 +12380,25 @@ export default function CreateToolPage() {
                             : "Finalizing..."}
                     </p>
                   </div>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-xl px-6 py-2 font-bold">
+                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xl px-6 py-2 font-bold">
                     {generationProgress}%
                   </Badge>
                 </div>
 
-                <div className="w-full bg-muted rounded-full h-4 overflow-hidden shadow-inner">
+                <div className="w-full bg-white/5 rounded-full h-4 overflow-hidden shadow-inner">
                   <div
-                    className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out shadow-lg"
+                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out shadow-lg"
                     style={{ width: `${generationProgress}%` }}
                   />
                 </div>
 
-                <Card className="bg-background border-border p-6 shadow-inner">
+                <Card className="bg-[#0a0a0a] border-white/10 p-6 shadow-inner">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <Terminal className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-semibold text-foreground">Generation Logs</span>
+                      <Terminal className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm font-semibold text-white">Generation Logs</span>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs bg-white/5 text-gray-400">
                       {logs.length} events
                     </Badge>
                   </div>
@@ -10572,18 +12407,21 @@ export default function CreateToolPage() {
                       {logs.map((log) => (
                         <div
                           key={log.id}
-                          className={`flex items-start gap-3 p-2 rounded ${
+                          className={`flex items-start gap-3 p-3 rounded-lg ${
                             log.level === "error"
-                              ? "bg-red-500/10 text-red-500"
+                              ? "bg-red-500/10 text-red-400 border border-red-500/20"
                               : log.level === "success"
-                                ? "bg-emerald-500/10 text-emerald-500"
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                                 : log.level === "warning"
-                                  ? "bg-yellow-500/10 text-yellow-500"
-                                  : "text-muted-foreground"
+                                  ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+                                  : "bg-white/5 text-gray-400 border border-white/5"
                           }`}
                         >
-                          <span className="text-xs opacity-60 flex-shrink-0">{log.timestamp.toLocaleTimeString()}</span>
-                          <span className="flex-1">{log.message}</span>
+                          <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.level)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm">{log.message}</p>
+                            <p className="text-xs opacity-60 mt-1">{log.timestamp.toLocaleTimeString()}</p>
+                          </div>
                         </div>
                       ))}
                       <div ref={logsEndRef} />
@@ -10596,12 +12434,13 @@ export default function CreateToolPage() {
         </div>
       )}
 
+      {/* Preview Step */}
       {step === "preview" && result && (
         <div className={`flex ${isFullscreen ? "h-screen" : "h-[calc(100vh-73px)]"}`}>
           {/* Left Sidebar - File Explorer */}
           <div
-            className={`border-r border-border bg-card flex flex-col transition-all duration-300 ${
-              isSidebarCollapsed ? "w-14" : "w-96"
+            className={`border-r border-white/10 bg-[#111111] flex flex-col transition-all duration-300 ${
+              isSidebarCollapsed ? "w-14" : "w-80"
             }`}
           >
             {isSidebarCollapsed ? (
@@ -10610,26 +12449,25 @@ export default function CreateToolPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsSidebarCollapsed(false)}
-                  className="w-full h-10"
-                  title="Expand Sidebar"
+                  className="w-full h-10 text-gray-400 hover:text-white hover:bg-white/5"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>
-                <Separator />
-                <Button variant="ghost" size="sm" className="w-full h-10" title="Files">
+                <Separator className="bg-white/10" />
+                <Button variant="ghost" size="sm" className="w-full h-10 text-gray-400">
                   <FolderTree className="h-5 w-5" />
                 </Button>
               </div>
             ) : (
               <>
-                <div className="p-5 border-b border-border space-y-4">
+                <div className="p-5 border-b border-white/10 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
                         <FolderTree className="h-4 w-4" />
                         Project Files
                       </h3>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         {result.files.length} files • {selectedVersion || "v1"}
                       </p>
                     </div>
@@ -10637,20 +12475,19 @@ export default function CreateToolPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsSidebarCollapsed(true)}
-                      className="h-8 w-8 p-0"
-                      title="Collapse Sidebar"
+                      className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/5"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                   </div>
 
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <Input
                       value={fileSearchQuery}
                       onChange={(e) => setFileSearchQuery(e.target.value)}
                       placeholder="Search files..."
-                      className="pl-10 h-10 bg-background border-border"
+                      className="pl-10 h-10 bg-white/5 border-white/10 text-white placeholder-gray-500"
                     />
                   </div>
 
@@ -10686,27 +12523,35 @@ export default function CreateToolPage() {
                   <div className="space-y-1">
                     {filteredFiles.length === 0 ? (
                       <div className="text-center py-12">
-                        <FileCode className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                        <p className="text-sm text-muted-foreground">No files found</p>
+                        <FileCode className="h-12 w-12 text-gray-700 mx-auto mb-3" />
+                        <p className="text-sm text-gray-500">No files found</p>
                       </div>
                     ) : (
                       filteredFiles.map((file, index) => (
                         <div
                           key={index}
                           className={`group rounded-lg transition-all ${
-                            selectedFile === file ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-muted/50"
+                            selectedFile === file
+                              ? "bg-blue-500/10 border border-blue-500/20"
+                              : "hover:bg-white/5 border border-transparent"
                           }`}
                         >
                           <button
                             onClick={() => setSelectedFile(file)}
                             className="w-full text-left p-3 flex items-center gap-3"
                           >
-                            <FileCode className="h-4 w-4 flex-shrink-0" />
+                            <FileCode
+                              className={`h-4 w-4 flex-shrink-0 ${selectedFile === file ? "text-blue-500" : "text-gray-500"}`}
+                            />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium font-mono truncate">{file.name}</p>
-                              <p className="text-xs opacity-70 mt-0.5">{file.content.split("\n").length} lines</p>
+                              <p
+                                className={`text-sm font-medium font-mono truncate ${selectedFile === file ? "text-white" : "text-gray-400"}`}
+                              >
+                                {file.name}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-0.5">{file.content.split("\n").length} lines</p>
                             </div>
-                            {selectedFile === file && <Check className="h-4 w-4 flex-shrink-0" />}
+                            {selectedFile === file && <Check className="h-4 w-4 flex-shrink-0 text-blue-500" />}
                           </button>
                           <div
                             className={`px-3 pb-2 flex items-center gap-1 transition-all ${
@@ -10721,7 +12566,7 @@ export default function CreateToolPage() {
                                 navigator.clipboard.writeText(file.content)
                                 toast({ title: "Copied to clipboard" })
                               }}
-                              className="h-7 px-2 text-xs"
+                              className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/5"
                             >
                               <Copy className="h-3 w-3 mr-1" />
                               Copy
@@ -10733,7 +12578,7 @@ export default function CreateToolPage() {
                                 e.stopPropagation()
                                 downloadSingleFile(file)
                               }}
-                              className="h-7 px-2 text-xs"
+                              className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/5"
                             >
                               <Download className="h-3 w-3 mr-1" />
                               Save
@@ -10749,24 +12594,25 @@ export default function CreateToolPage() {
           </div>
 
           {/* Center - Main Preview/Code Area */}
-          <div className="flex-1 flex flex-col bg-background overflow-hidden">
+          <div className="flex-1 flex flex-col bg-[#0a0a0a] overflow-hidden relative">
             {isEnhancing && (
-              <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-40 flex items-center justify-center">
+              <div className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-sm z-40 flex items-center justify-center">
                 <div className="w-full max-w-4xl px-8">
                   <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6 relative">
-                      <Sparkles className="h-10 w-10 text-primary animate-pulse" />
-                      <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-500/10 rounded-full mb-6 relative">
+                      <Sparkles className="h-10 w-10 text-blue-500 animate-pulse" />
+                      <div className="absolute inset-0 rounded-full border-4 border-blue-500/20 animate-ping" />
+                      <div className="absolute inset-0 rounded-full border-4 border-blue-500/10 animate-pulse" />
                     </div>
-                    <h3 className="text-2xl font-bold text-foreground mb-2">Enhancing Your Tool</h3>
-                    <p className="text-muted-foreground">AI is applying your requested changes...</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">Enhancing Your Tool</h3>
+                    <p className="text-gray-400">AI is applying your requested changes...</p>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="h-12 bg-gradient-to-r from-muted via-muted/50 to-muted rounded-lg animate-pulse" />
+                    <div className="h-12 bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded-lg animate-pulse" />
                     <div className="grid grid-cols-3 gap-4">
                       <div
-                        className="h-32 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-lg animate-pulse"
+                        className="h-32 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent rounded-lg animate-pulse"
                         style={{ animationDelay: "0.1s" }}
                       />
                       <div
@@ -10774,34 +12620,24 @@ export default function CreateToolPage() {
                         style={{ animationDelay: "0.2s" }}
                       />
                       <div
-                        className="h-32 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent rounded-lg animate-pulse"
+                        className="h-32 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent rounded-lg animate-pulse"
                         style={{ animationDelay: "0.3s" }}
                       />
                     </div>
                     <div
-                      className="h-64 bg-gradient-to-b from-muted via-muted/30 to-muted rounded-lg animate-pulse"
+                      className="h-64 bg-gradient-to-b from-white/5 via-white/10 to-white/5 rounded-lg animate-pulse"
                       style={{ animationDelay: "0.4s" }}
                     />
-                    <div className="grid grid-cols-2 gap-4">
-                      <div
-                        className="h-24 bg-gradient-to-r from-muted via-muted/50 to-muted rounded-lg animate-pulse"
-                        style={{ animationDelay: "0.5s" }}
-                      />
-                      <div
-                        className="h-24 bg-gradient-to-r from-muted via-muted/50 to-muted rounded-lg animate-pulse"
-                        style={{ animationDelay: "0.6s" }}
-                      />
-                    </div>
                   </div>
 
                   <div className="mt-8 flex items-center justify-center gap-2">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0s" }} />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0s" }} />
                     <div
-                      className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                      className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
                       style={{ animationDelay: "0.2s" }}
                     />
                     <div
-                      className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                      className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
                       style={{ animationDelay: "0.4s" }}
                     />
                   </div>
@@ -10811,48 +12647,19 @@ export default function CreateToolPage() {
 
             <div className="flex-1 flex overflow-hidden">
               {viewMode === "preview" && result.demoUrl ? (
-                <div className="flex-1 flex flex-col bg-muted/30">
-                  <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-sm">
+                <div className="flex-1 flex flex-col bg-[#0f0f0f]">
+                  <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#111111]/50 backdrop-blur-sm">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm" />
                         <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm" />
                         <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm" />
                       </div>
-                      <div className="flex-1 min-w-0 bg-background/50 rounded-lg px-3 py-1.5 border border-border">
-                        <span className="text-xs text-muted-foreground font-mono truncate block">{result.demoUrl}</span>
+                      <div className="flex-1 min-w-0 bg-white/5 rounded-lg px-3 py-1.5 border border-white/10">
+                        <span className="text-xs text-gray-500 font-mono truncate block">{result.demoUrl}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-3">
-                      <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 border border-border mr-2">
-                        <Button
-                          variant={deviceMode === "desktop" ? "secondary" : "ghost"}
-                          size="sm"
-                          onClick={() => setDeviceMode("desktop")}
-                          className="h-7 w-7 p-0"
-                          title="Desktop View"
-                        >
-                          <Laptop className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant={deviceMode === "tablet" ? "secondary" : "ghost"}
-                          size="sm"
-                          onClick={() => setDeviceMode("tablet")}
-                          className="h-7 w-7 p-0"
-                          title="Tablet View"
-                        >
-                          <Tablet className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant={deviceMode === "mobile" ? "secondary" : "ghost"}
-                          size="sm"
-                          onClick={() => setDeviceMode("mobile")}
-                          className="h-7 w-7 p-0"
-                          title="Mobile View"
-                        >
-                          <Smartphone className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -10861,8 +12668,7 @@ export default function CreateToolPage() {
                             iframeRef.current.src = result.demoUrl!
                           }
                         }}
-                        className="h-8 w-8 p-0"
-                        title="Refresh Preview"
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/5"
                       >
                         <RefreshCw className="h-4 w-4" />
                       </Button>
@@ -10870,14 +12676,13 @@ export default function CreateToolPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => window.open(result.demoUrl!, "_blank")}
-                        className="h-8 w-8 p-0"
-                        title="Open in New Tab"
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-white/5"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                  <div className="flex-1 relative overflow-hidden flex items-center justify-center bg-gradient-to-br from-muted/20 to-muted/5 p-8">
+                  <div className="flex-1 relative overflow-hidden flex items-center justify-center bg-gradient-to-br from-white/5 to-transparent p-8">
                     <div
                       className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300"
                       style={{
@@ -10899,18 +12704,18 @@ export default function CreateToolPage() {
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col">
-                  <div className="p-4 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-sm">
+                  <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#111111]/50 backdrop-blur-sm">
                     <div className="flex items-center gap-3">
-                      <FileCode className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold font-mono text-foreground">
+                      <FileCode className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm font-semibold font-mono text-white">
                         {selectedFile?.name || "No file selected"}
                       </span>
                       {selectedFile && (
                         <>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-xs bg-white/5 text-gray-400">
                             {selectedFile.type}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs border-white/10 text-gray-500">
                             {selectedFile.content.split("\n").length} lines
                           </Badge>
                         </>
@@ -10926,7 +12731,7 @@ export default function CreateToolPage() {
                             toast({ title: "Copied to clipboard" })
                           }
                         }}
-                        className="h-8 px-3 text-xs"
+                        className="h-8 px-3 text-xs text-gray-400 hover:text-white hover:bg-white/5"
                         disabled={!selectedFile}
                       >
                         <Copy className="h-3.5 w-3.5 mr-1.5" />
@@ -10936,7 +12741,7 @@ export default function CreateToolPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => selectedFile && downloadSingleFile(selectedFile)}
-                        className="h-8 px-3 text-xs"
+                        className="h-8 px-3 text-xs text-gray-400 hover:text-white hover:bg-white/5"
                         disabled={!selectedFile}
                       >
                         <Download className="h-3.5 w-3.5 mr-1.5" />
@@ -10966,8 +12771,8 @@ export default function CreateToolPage() {
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-center">
-                          <FileCode className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                          <p className="text-muted-foreground">Select a file to view its code</p>
+                          <FileCode className="h-16 w-16 text-gray-700 mx-auto mb-4" />
+                          <p className="text-gray-500">Select a file to view its code</p>
                         </div>
                       </div>
                     )}
@@ -10977,9 +12782,10 @@ export default function CreateToolPage() {
             </div>
           </div>
 
+          {/* Right Sidebar - Enhanced */}
           <div
-            className={`border-l border-border bg-card flex flex-col transition-all duration-300 ${
-              isRightSidebarCollapsed ? "w-14" : "w-96"
+            className={`border-l border-white/10 bg-[#111111] flex flex-col transition-all duration-300 ${
+              isRightSidebarCollapsed ? "w-14" : "w-[420px]"
             }`}
           >
             {isRightSidebarCollapsed ? (
@@ -10988,300 +12794,411 @@ export default function CreateToolPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsRightSidebarCollapsed(false)}
-                  className="w-full h-10"
-                  title="Expand Panel"
+                  className="w-full h-10 text-gray-400 hover:text-white hover:bg-white/5"
                 >
                   <PanelRightOpen className="h-5 w-5" />
                 </Button>
-                <Separator />
-                <Button variant="ghost" size="sm" className="w-full h-10" title="Logs">
+                <Separator className="bg-white/10" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-10 text-gray-400"
+                  onClick={() => {
+                    setIsRightSidebarCollapsed(false)
+                    setRightPanelTab("logs")
+                  }}
+                >
                   <Terminal className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="sm" className="w-full h-10" title="Chat">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-10 text-gray-400"
+                  onClick={() => {
+                    setIsRightSidebarCollapsed(false)
+                    setRightPanelTab("chat")
+                  }}
+                >
                   <MessageSquare className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="sm" className="w-full h-10" title="Versions">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-10 text-gray-400"
+                  onClick={() => {
+                    setIsRightSidebarCollapsed(false)
+                    setRightPanelTab("versions")
+                  }}
+                >
                   <GitBranch className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="sm" className="w-full h-10" title="Stats">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-10 text-gray-400"
+                  onClick={() => {
+                    setIsRightSidebarCollapsed(false)
+                    setRightPanelTab("analytics")
+                  }}
+                >
                   <BarChart3 className="h-5 w-5" />
                 </Button>
               </div>
             ) : (
-              <Tabs
-                value={rightPanelTab}
-                onValueChange={(v) => setRightPanelTab(v as any)}
-                className="flex-1 flex flex-col h-full"
-              >
-                <div className="border-b border-border bg-card/50 backdrop-blur-sm flex-shrink-0">
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <TabsList className="grid grid-cols-4 h-10 bg-transparent p-0 gap-1 flex-1">
-                      <TabsTrigger value="logs" className="text-xs h-9" title="Logs (⌘L)">
-                        <Terminal className="h-4 w-4 mr-1.5" />
-                        Logs
-                      </TabsTrigger>
-                      <TabsTrigger value="chat" className="text-xs h-9" title="Chat (⌘K)">
-                        <MessageSquare className="h-4 w-4 mr-1.5" />
+              <div className="flex flex-col h-full">
+                {/* Tab Header */}
+                <div className="border-b border-white/10 bg-[#111111]/50 backdrop-blur-sm flex-shrink-0">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Button
+                        variant={rightPanelTab === "chat" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setRightPanelTab("chat")}
+                        className="h-9 px-4 text-xs"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
                         Chat
-                      </TabsTrigger>
-                      <TabsTrigger value="versions" className="text-xs h-9">
-                        <GitBranch className="h-4 w-4 mr-1.5" />
+                      </Button>
+                      <Button
+                        variant={rightPanelTab === "logs" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setRightPanelTab("logs")}
+                        className="h-9 px-4 text-xs"
+                      >
+                        <Terminal className="h-4 w-4 mr-2" />
+                        Logs
+                      </Button>
+                      <Button
+                        variant={rightPanelTab === "versions" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setRightPanelTab("versions")}
+                        className="h-9 px-4 text-xs"
+                      >
+                        <GitBranch className="h-4 w-4 mr-2" />
                         Versions
-                      </TabsTrigger>
-                      <TabsTrigger value="analytics" className="text-xs h-9">
-                        <BarChart3 className="h-4 w-4 mr-1.5" />
+                      </Button>
+                      <Button
+                        variant={rightPanelTab === "analytics" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setRightPanelTab("analytics")}
+                        className="h-9 px-4 text-xs"
+                      >
+                        <BarChart3 className="h-4 w-4 mr-2" />
                         Stats
-                      </TabsTrigger>
-                    </TabsList>
+                      </Button>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsRightSidebarCollapsed(true)}
-                      className="h-8 w-8 p-0 ml-2"
-                      title="Collapse Panel"
+                      className="h-8 w-8 p-0 ml-2 text-gray-400 hover:text-white hover:bg-white/5"
                     >
                       <PanelRightClose className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
-                <TabsContent value="logs" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
-                  <div className="p-4 border-b border-border flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Terminal className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-semibold text-foreground">Generation Logs</span>
+                {/* Tab Content */}
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                  {rightPanelTab === "chat" && (
+                    <>
+                      <div className="p-5 border-b border-white/10 flex-shrink-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                            <Sparkles className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold text-white">AI Assistant</h3>
+                            <p className="text-xs text-gray-500">Ready to enhance your tool</p>
+                          </div>
+                        </div>
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {logs.length} events
-                      </Badge>
-                    </div>
-                  </div>
-                  <ScrollArea className="flex-1 min-h-0">
-                    <div className="p-4 space-y-2">
-                      {logs.map((log) => (
-                        <div
-                          key={log.id}
-                          className={`p-3 rounded-lg border ${
-                            log.level === "error"
-                              ? "bg-red-500/10 border-red-500/20 text-red-500"
-                              : log.level === "success"
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                                : log.level === "warning"
-                                  ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
-                                  : "bg-muted/50 border-border text-muted-foreground"
-                          }`}
-                        >
-                          <div className="flex items-start gap-2">
-                            {log.level === "error" && <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
-                            {log.level === "success" && <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" />}
-                            {log.level === "warning" && <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
-                            {log.level === "info" && <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium">{log.message}</p>
-                              <p className="text-xs opacity-60 mt-1">{log.timestamp.toLocaleTimeString()}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div ref={logsEndRef} />
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
 
-                <TabsContent value="chat" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
-                  <div className="p-4 border-b border-border flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-semibold text-foreground">Chat with AI</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Request changes or improvements</p>
-                  </div>
-                  <ScrollArea className="flex-1 min-h-0">
-                    <div className="p-4 space-y-4">
-                      {chatHistory.length === 0 ? (
-                        <div className="text-center py-12">
-                          <MessageSquare className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                          <p className="text-sm text-muted-foreground">No messages yet</p>
-                          <p className="text-xs text-muted-foreground mt-1">Start a conversation with AI</p>
-                        </div>
-                      ) : (
-                        chatHistory.map((msg) => (
-                          <div
-                            key={msg.id}
-                            className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                          >
-                            <div
-                              className={`max-w-[85%] rounded-lg p-3 ${
-                                msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                              }`}
-                            >
-                              <p className="text-sm leading-relaxed">{msg.message}</p>
-                              <p className="text-xs opacity-60 mt-1.5">{msg.timestamp.toLocaleTimeString()}</p>
+                      <ScrollArea className="flex-1 min-h-0">
+                        <div className="p-5 space-y-4">
+                          {chatHistory.length === 0 ? (
+                            <div className="text-center py-12">
+                              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-4">
+                                <MessageSquare className="h-8 w-8 text-blue-500" />
+                              </div>
+                              <p className="text-sm text-white font-medium mb-1">Start a conversation</p>
+                              <p className="text-xs text-gray-500">Ask AI to improve or modify your tool</p>
                             </div>
-                          </div>
-                        ))
-                      )}
-                      <div ref={chatEndRef} />
-                    </div>
-                  </ScrollArea>
-                  <div className="p-4 border-t border-border flex-shrink-0">
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={chatMessage}
-                        onChange={(e) => setChatMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault()
-                            handleSendMessage()
-                          }
-                        }}
-                        placeholder="Describe what you want to improve..."
-                        className="flex-1 min-h-[80px] max-h-[120px] bg-background resize-none"
-                        disabled={isSendingMessage}
-                      />
-                    </div>
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={!chatMessage.trim() || isSendingMessage}
-                      size="sm"
-                      className="w-full mt-2 h-9"
-                    >
-                      {isSendingMessage ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Enhancing...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Enhance Tool
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="versions" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
-                  <div className="p-4 border-b border-border flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <GitBranch className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-semibold text-foreground">Version History</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{versions.length} versions</p>
-                  </div>
-                  <ScrollArea className="flex-1 min-h-0">
-                    <div className="p-4 space-y-2">
-                      {versions.length === 0 ? (
-                        <div className="text-center py-12">
-                          <GitBranch className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                          <p className="text-sm text-muted-foreground">No versions yet</p>
+                          ) : (
+                            chatHistory.map((msg) => (
+                              <div
+                                key={msg.id}
+                                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                              >
+                                {msg.role === "assistant" && (
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                                    <Sparkles className="h-4 w-4 text-white" />
+                                  </div>
+                                )}
+                                <div
+                                  className={`max-w-[75%] rounded-2xl p-4 ${
+                                    msg.role === "user"
+                                      ? "bg-blue-600 text-white"
+                                      : "bg-white/5 text-gray-300 border border-white/10"
+                                  }`}
+                                >
+                                  <p className="text-sm leading-relaxed">{msg.message}</p>
+                                  <p className="text-xs opacity-60 mt-2">{msg.timestamp.toLocaleTimeString()}</p>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                          <div ref={chatEndRef} />
                         </div>
-                      ) : (
-                        versions.map((version) => (
-                          <button
-                            key={version.id}
-                            onClick={() => setSelectedVersion(version.id)}
-                            className={`w-full text-left p-4 rounded-lg border transition-all ${
-                              selectedVersion === version.id
-                                ? "bg-primary/10 border-primary"
-                                : "bg-muted/50 border-border hover:border-primary/50"
-                            }`}
+                      </ScrollArea>
+
+                      <div className="p-5 border-t border-white/10 flex-shrink-0 bg-[#0f0f0f]">
+                        <div className="space-y-3">
+                          <Textarea
+                            value={chatMessage}
+                            onChange={(e) => setChatMessage(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault()
+                                handleSendMessage()
+                              }
+                            }}
+                            placeholder="Describe what you want to improve...&#10;&#10;Examples:&#10;• Add a dark mode toggle&#10;• Make the layout more responsive&#10;• Add animation to the buttons"
+                            className="min-h-[120px] max-h-[200px] bg-white/5 border-white/10 text-white placeholder-gray-500 resize-none text-sm leading-relaxed"
+                            disabled={isSendingMessage}
+                          />
+                          <Button
+                            onClick={handleSendMessage}
+                            disabled={!chatMessage.trim() || isSendingMessage}
+                            size="sm"
+                            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-foreground">{version.name}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {version.filesCount} files • {version.timestamp.toLocaleString()}
+                            {isSendingMessage ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Enhancing Tool...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Enhance Tool
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {rightPanelTab === "logs" && (
+                    <>
+                      <div className="p-5 border-b border-white/10 flex-shrink-0">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Terminal className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm font-semibold text-white">Generation Logs</span>
+                          </div>
+                          <Badge variant="secondary" className="text-xs bg-white/5 text-gray-400">
+                            {logs.length} events
+                          </Badge>
+                        </div>
+                      </div>
+                      <ScrollArea className="flex-1 min-h-0">
+                        <div className="p-5 space-y-3">
+                          {logs.length === 0 ? (
+                            <div className="text-center py-12">
+                              <Terminal className="h-12 w-12 text-gray-700 mx-auto mb-3" />
+                              <p className="text-sm text-gray-500">No logs yet</p>
+                            </div>
+                          ) : (
+                            logs.map((log) => (
+                              <div
+                                key={log.id}
+                                className={`p-4 rounded-xl border ${
+                                  log.level === "error"
+                                    ? "bg-red-500/10 border-red-500/20"
+                                    : log.level === "success"
+                                      ? "bg-emerald-500/10 border-emerald-500/20"
+                                      : log.level === "warning"
+                                        ? "bg-yellow-500/10 border-yellow-500/20"
+                                        : "bg-white/5 border-white/10"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <span
+                                    className={`flex-shrink-0 mt-0.5 ${
+                                      log.level === "error"
+                                        ? "text-red-400"
+                                        : log.level === "success"
+                                          ? "text-emerald-400"
+                                          : log.level === "warning"
+                                            ? "text-yellow-400"
+                                            : "text-gray-400"
+                                    }`}
+                                  >
+                                    {getLogIcon(log.level)}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <p
+                                      className={`text-sm font-medium ${
+                                        log.level === "error"
+                                          ? "text-red-400"
+                                          : log.level === "success"
+                                            ? "text-emerald-400"
+                                            : log.level === "warning"
+                                              ? "text-yellow-400"
+                                              : "text-gray-300"
+                                      }`}
+                                    >
+                                      {log.message}
+                                    </p>
+                                    <p className="text-xs text-gray-600 mt-1.5">{log.timestamp.toLocaleTimeString()}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                          <div ref={logsEndRef} />
+                        </div>
+                      </ScrollArea>
+                    </>
+                  )}
+
+                  {rightPanelTab === "versions" && (
+                    <>
+                      <div className="p-5 border-b border-white/10 flex-shrink-0">
+                        <div className="flex items-center gap-2">
+                          <GitBranch className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-semibold text-white">Version History</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{versions.length} versions</p>
+                      </div>
+                      <ScrollArea className="flex-1 min-h-0">
+                        <div className="p-5 space-y-3">
+                          {versions.length === 0 ? (
+                            <div className="text-center py-12">
+                              <GitBranch className="h-12 w-12 text-gray-700 mx-auto mb-3" />
+                              <p className="text-sm text-gray-500">No versions yet</p>
+                            </div>
+                          ) : (
+                            versions.map((version) => (
+                              <button
+                                key={version.id}
+                                onClick={() => setSelectedVersion(version.id)}
+                                className={`w-full text-left p-4 rounded-xl border transition-all ${
+                                  selectedVersion === version.id
+                                    ? "bg-blue-500/10 border-blue-500/20"
+                                    : "bg-white/5 border-white/10 hover:border-blue-500/30"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-white">{version.name}</p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {version.filesCount} files • {version.timestamp.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  {selectedVersion === version.id && (
+                                    <CheckCircle2 className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </>
+                  )}
+
+                  {rightPanelTab === "analytics" && (
+                    <>
+                      <div className="p-5 border-b border-white/10 flex-shrink-0">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-semibold text-white">Generation Stats</span>
+                        </div>
+                      </div>
+                      <ScrollArea className="flex-1 min-h-0">
+                        <div className="p-5 space-y-4">
+                          <Card className="bg-white/5 border-white/10 p-5">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Total Files</p>
+                                <p className="text-3xl font-bold text-white">{result.files.length}</p>
+                              </div>
+                              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <FileCode className="h-6 w-6 text-blue-500" />
+                              </div>
+                            </div>
+                          </Card>
+
+                          <Card className="bg-white/5 border-white/10 p-5">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Lines of Code</p>
+                                <p className="text-3xl font-bold text-white">
+                                  {result.files.reduce((acc, f) => acc + f.content.split("\n").length, 0)}
                                 </p>
                               </div>
-                              {selectedVersion === version.id && (
-                                <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                              )}
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-
-                <TabsContent value="analytics" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
-                  <div className="p-4 border-b border-border flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-semibold text-foreground">Generation Stats</span>
-                    </div>
-                  </div>
-                  <ScrollArea className="flex-1 min-h-0">
-                    <div className="p-4 space-y-4">
-                      <Card className="bg-muted/50 border-border p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Total Files</p>
-                            <p className="text-2xl font-bold text-foreground mt-1">{result.files.length}</p>
-                          </div>
-                          <FileCode className="h-8 w-8 text-primary" />
-                        </div>
-                      </Card>
-
-                      <Card className="bg-muted/50 border-border p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Lines of Code</p>
-                            <p className="text-2xl font-bold text-foreground mt-1">
-                              {result.files.reduce((acc, f) => acc + f.content.split("\n").length, 0)}
-                            </p>
-                          </div>
-                          <Code2 className="h-8 w-8 text-emerald-500" />
-                        </div>
-                      </Card>
-
-                      <Card className="bg-muted/50 border-border p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Versions</p>
-                            <p className="text-2xl font-bold text-foreground mt-1">{versions.length}</p>
-                          </div>
-                          <GitBranch className="h-8 w-8 text-blue-500" />
-                        </div>
-                      </Card>
-
-                      <Card className="bg-muted/50 border-border p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Generation Time</p>
-                            <p className="text-2xl font-bold text-foreground mt-1">
-                              {logs.length > 0
-                                ? `${Math.round((logs[logs.length - 1].timestamp.getTime() - logs[0].timestamp.getTime()) / 1000)}s`
-                                : "0s"}
-                            </p>
-                          </div>
-                          <Clock className="h-8 w-8 text-orange-500" />
-                        </div>
-                      </Card>
-
-                      <Separator />
-
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-3">File Breakdown</h4>
-                        <div className="space-y-2">
-                          {["tsx", "ts", "css", "json"].map((ext) => {
-                            const count = result.files.filter((f) => f.name.endsWith(`.${ext}`)).length
-                            if (count === 0) return null
-                            return (
-                              <div key={ext} className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">.{ext} files</span>
-                                <Badge variant="secondary">{count}</Badge>
+                              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <Code2 className="h-6 w-6 text-emerald-500" />
                               </div>
-                            )
-                          })}
+                            </div>
+                          </Card>
+
+                          <Card className="bg-white/5 border-white/10 p-5">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Versions</p>
+                                <p className="text-3xl font-bold text-white">{versions.length}</p>
+                              </div>
+                              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                                <GitBranch className="h-6 w-6 text-purple-500" />
+                              </div>
+                            </div>
+                          </Card>
+
+                          <Card className="bg-white/5 border-white/10 p-5">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Generation Time</p>
+                                <p className="text-3xl font-bold text-white">
+                                  {logs.length > 0
+                                    ? `${Math.round((logs[logs.length - 1].timestamp.getTime() - logs[0].timestamp.getTime()) / 1000)}s`
+                                    : "0s"}
+                                </p>
+                              </div>
+                              <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                                <Clock className="h-6 w-6 text-orange-500" />
+                              </div>
+                            </div>
+                          </Card>
+
+                          <Separator className="bg-white/10" />
+
+                          <div>
+                            <h4 className="text-sm font-semibold text-white mb-4">File Breakdown</h4>
+                            <div className="space-y-3">
+                              {["tsx", "ts", "css", "json"].map((ext) => {
+                                const count = result.files.filter((f) => f.name.endsWith(`.${ext}`)).length
+                                if (count === 0) return null
+                                return (
+                                  <div key={ext} className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-400">.{ext} files</span>
+                                    <Badge variant="secondary" className="bg-white/5 text-gray-300">
+                                      {count}
+                                    </Badge>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-              </Tabs>
+                      </ScrollArea>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

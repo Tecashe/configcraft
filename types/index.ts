@@ -29,24 +29,6 @@ export interface ChatMessage {
   metadata?: Record<string, any>
 }
 
-export interface ChatHistory {
-  messages: ChatMessage[]
-  sessionId: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface GenerationResult {
-  success: boolean
-  toolId?: string
-  chatSessionId?: string
-  files?: GeneratedFile[]
-  previewUrl?: string
-  chatUrl?: string
-  error?: string
-  logs?: LogEntry[]
-}
-
 // Tool Types
 export type ToolStatus = "draft" | "generating" | "completed" | "failed" | "published"
 export type ToolCategory = "dashboard" | "form" | "chart" | "table" | "report" | "other"
@@ -324,4 +306,26 @@ export interface ToolFilters {
 export interface SortConfig {
   field: string
   direction: "asc" | "desc"
+}
+
+// Generation Result Types
+export interface GenerationResult {
+  success: boolean
+  toolId?: string
+  chatSessionId?: string
+  files?: GeneratedFile[]
+  previewUrl?: string
+  chatUrl?: string
+  error?: string
+  logs?: LogEntry[]
+}
+
+// Advanced Generation Options Types
+export interface AdvancedGenerationOptions {
+  toolName: string
+  category: string
+  requirements: string
+  integrations: string[]
+  existingChatId?: string // For conversational regeneration
+  feedback?: string // User feedback for improvements
 }

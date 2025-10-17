@@ -191,6 +191,7 @@ export interface AdvancedGenerationOptions {
   organizationSlug: string
   userEmail: string
   integrations?: string[]
+   existingChatId?: string
   systemPrompt?: string
   attachments?: Array<{ url: string }>
   modelConfig?: {
