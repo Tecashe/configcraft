@@ -3637,7 +3637,6 @@
 //   )
 // }
 
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -3790,11 +3789,11 @@ export default function ToolDetailPage() {
       } else if (toolData.status === "GENERATED" || toolData.status === "PUBLISHED") {
         console.log("[v0] No chat session but tool is generated, loading from files API")
 
-        // Try to load files from the files API
         try {
           const filesResponse = await fetch(`/api/organizations/${orgSlug}/tools/${toolId}/files`)
           if (filesResponse.ok) {
-            const filesData = await filesResponse.json()
+            const filesResponseData = await filesResponse.json()
+            const filesData = filesResponseData.files || [] // Extract files array from response object
             console.log("[v0] Files loaded from API:", filesData.length)
 
             if (filesData.length > 0) {
